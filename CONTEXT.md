@@ -72,11 +72,13 @@ There are four roles in the system:
 3. **Class Coach** - access only to the specific classes they are assigned to. Cannot view or modify members, attendance, or data for classes they are not assigned to. This was an explicit requirement - a gym might run multiple classes (e.g. judo and boxing) with different coaches, and coaches must be siloed to their own classes.
 4. **Member/Parent** - no login. Access via tokenised links only (see below).
 
-### Tokenised Parent/Member Portal
+### Tokenised Member Portal
 
-There is **no login system for parents or members**. This was a deliberate decision to keep things simple for a small club context (70 members was the original scale). A full login system for parents adds overhead (password resets, forgotten accounts, support burden) for something they might use a handful of times a year.
+There is **no login system for members**. This was a deliberate decision to keep things simple for a small club context (70 members was the original scale). A full login system adds overhead (password resets, forgotten accounts, support burden) for something members might use a handful of times a year.
 
-Instead, the system generates a **secure unique token per member**. A link containing this token is emailed to the parent or member. The link gives them access to:
+The portal is called the **Member Portal** — not the "parent portal". Most members are adults managing their own subscriptions. Guardians managing on behalf of a child are a subset, not the primary case.
+
+Instead, the system generates a **secure unique token per member**. A link containing this token is emailed to the member (or their guardian if they are a child). The link gives them access to:
 - Their attendance history
 - Their invoices
 - A Stripe-powered payment page to pay outstanding invoices
@@ -107,7 +109,9 @@ In SaaS mode, each organisation connects their own Stripe account via Stripe Con
 
 ## Database Schema
 
-These are the core models. They have not been written in code yet - this is the planned schema.
+These are the core models. All models below are implemented and migrated **except** Document. See notes on Session — the model exists but needs updating for scheduled sessions.
+
+**Session scheduling design decision (agreed):** Sessions are auto-generated from the class schedule (e.g. every Tuesday and Thursday for Backwell Judo Club). Each session is individually editable and can be cancelled. One-off extra sessions can be added outside the normal schedule. The `Session` model needs `is_cancelled` and `is_extra` boolean fields. The `Class.schedule` field needs to store structured recurrence data (days of week + time), not just free text — implementation TBD.
 
 ```
 Organisation
@@ -231,47 +235,68 @@ Coach (handled via OrganisationMember and ClassCoach, not a separate model)
 
 ## Project Structure (Current State)
 
-The project is in very early setup. Here is what exists so far:
+The project has a working Django + MySQL stack running in Docker, with all core models implemented and the Django admin functional.
 
-- GitHub repo created, public, AGPL-3.0 licenced
-- `README.md` - written and committed, includes logo, description, features, tech stack, roadmap, contributing guide, and licence section
-- `Dockerfile` - written, uses `python:3.12-slim`, installs `gcc`, `default-libmysqlclient-dev`, `pkg-config`, copies `requirements.txt` and installs dependencies, copies project
-- `docker-compose.yml` - written, defines two services: `db` (MySQL 8.0) and `web` (Django app). MySQL data is persisted via a named volume. Environment variables are read from `.env`.
-- `.env` - created locally, not committed to git (in `.gitignore`)
-- `.env.example` - committed, shows required variables without values
-- `.gitignore` - includes `.env`, `__pycache__/`, `*.pyc`, `.DS_Store`, `venv/`
-- `requirements.txt` - currently contains `django`, `mysqlclient`, `python-dotenv`
-- Django project has been created via `django-admin startproject dojo .`
-- `docker-compose up --build` has been run successfully. Both containers start. Django dev server is running on port 8000.
-- `ALLOWED_HOSTS` needs to be updated in `dojo/settings.py` - currently `[]`, needs to be `['*']` for development
+### Infrastructure
+
+- GitHub repo: public, AGPL-3.0 licenced, at `github.com/M4ttW00d/Dojo`
+- 26 GitHub issues created covering the full roadmap (issues #1–#9 closed, #10–#26 open)
+- `Dockerfile` — `python:3.12-slim`, installs MySQL client libs, copies and installs dependencies
+- `docker-compose.yml` — two services: `db` (MySQL 8.0) and `web` (Django). MySQL data persisted via named volume.
+- `.env` — created locally, not committed. `.env.example` committed with variable names.
+- `.gitignore` — covers `.env`, `__pycache__/`, `*.pyc`, `.DS_Store`, `venv/`, `.idea/`, `staticfiles/`
+- `requirements.txt` — `django`, `mysqlclient`, `python-dotenv`
+- `docker compose up` confirmed working. Admin accessible at `http://localhost:8000/admin/`. Superuser created (username: `admin`).
+
+### settings.py
+
+Fully configured:
+- `python-dotenv` loads `.env`
+- `SECRET_KEY`, `DEBUG`, and all DB credentials read from environment variables
+- MySQL database backend (`DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`)
+- `ALLOWED_HOSTS = ['*']` for development
+- `LANGUAGE_CODE = 'en-gb'`, `TIME_ZONE = 'Europe/London'`
+- `DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'`
+
+### Django Apps and Models
+
+All apps are in `INSTALLED_APPS`. All models are migrated against the running MySQL instance.
+
+| App | Models | Migrated | Admin |
+|---|---|---|---|
+| `organisations` | Organisation, OrganisationMember | ✅ | ✅ |
+| `members` | Member, Guardian, CustomField | ✅ | ✅ |
+| `classes` | Class, ClassCoach, ClassMember, Session, Attendance | ✅ | ✅ |
+| `progression` | ProgressionStage, MemberProgression | ✅ | ✅ |
+| `billing` | Invoice, Payment | ✅ | ✅ |
+| `documents` | — | ❌ not created yet | ❌ |
+
+**Admin notes:** Guardian is an inline on MemberAdmin (not top-level). ClassCoach and ClassMember are inlines on ClassAdmin. Attendance is an inline on SessionAdmin. Payment is an inline on InvoiceAdmin.
 
 ### What Has NOT Been Done Yet
 
-- Django apps have not been created (e.g. `organisations`, `members`, `classes`, `billing`, `documents`)
-- No models have been written
-- No migrations have been run beyond Django's default ones
-- `settings.py` has not been fully configured (database, static files, media files, environment variable loading)
-- No views, URLs, or templates exist yet
-- No admin configuration
+- `Session` model needs updating: add `is_cancelled` and `is_extra` boolean fields; `Class.schedule` needs structured recurrence data instead of free text
+- `documents` app not yet created
+- No views, URLs, or templates (beyond Django admin)
+- No permission middleware (org-scoping, role enforcement, coach silo)
+- No member portal (`/p/<token>/`)
+- No email sending
+- No Stripe integration
+- No DocuSeal integration
+- No S3/R2 file storage
 - HTMX not yet installed or integrated
-- Stripe not yet integrated
-- DocuSeal not yet integrated
-- S3/R2 not yet configured
 
 ---
 
 ## Suggested Next Steps (In Order)
 
-1. Fix `ALLOWED_HOSTS` in `settings.py`
-2. Configure `settings.py` to read from environment variables using `python-dotenv`
-3. Configure the database in `settings.py` to use MySQL via environment variables
-4. Run `python manage.py migrate` inside the Docker container to apply Django's default migrations
-5. Create Django apps: start with `organisations` and `members`
-6. Write models for `Organisation`, `OrganisationMember`, `Member`, `Guardian`, `CustomField`
-7. Run migrations
-8. Register models in Django admin
-9. Create a superuser and verify admin works
-10. Continue with `classes`, `billing`, `documents` apps
+1. Update `Session` model: add `is_cancelled` and `is_extra` fields. Update `Class.schedule` to store structured recurring schedule (days + time). Run migrations.
+2. Build permission middleware — org-scoping and role enforcement on all views, coach silo enforcement (issue #13)
+3. Build base templates and HTMX integration — base layout, nav, HTMX wired up (issue #12)
+4. Build member management views — list, add, edit, archive (issue #14)
+5. Build class management views — list, add, edit, assign coaches, enrol members (issue #15)
+6. Build attendance recording UI — session register with HTMX toggles (issue #16)
+7. Continue with billing views, member portal, email, Stripe, documents
 
 ---
 
@@ -281,6 +306,6 @@ The project is in very early setup. Here is what exists so far:
 - They are using PyCharm (JetBrains, licensed) on Linux
 - They are comfortable with Django from prior experience
 - They are using this project partly to improve their TypeScript skills - however the decision was made to use Django for this project for speed and familiarity. TypeScript is not in use here.
-- The developer runs a judo club with approximately 70 members and 5 coaches/leadership team members. This is the primary real-world use case driving requirements.
+- The developer runs **Backwell Judo Club** with approximately 70 members and 5 coaches/leadership team members. This is the primary real-world use case driving requirements. The club trains on **Tuesdays and Thursdays**.
 - Claude Code is being used in the terminal to assist with development
 - All decisions about stack, architecture, naming, and licencing documented above were made deliberately. Do not second-guess them without being asked.
