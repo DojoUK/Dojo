@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}Log in — Dojo{% endblock %}
+{% block body_class %}bg-dark{% endblock %}
+
+{% block body %}
+<div class="min-vh-100 d-flex align-items-center justify-content-center">
+    <div class="w-100" style="max-width: 380px;">
+
+        <div class="text-center mb-4">
+            <h2 class="text-white fw-bold">Dojo</h2>
+            <p class="text-secondary">Club management</p>
+        </div>
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <h5 class="card-title mb-4">Log in</h5>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    {% if form.errors %}
+                    <div class="alert alert-danger py-2 small">
+                        Username or password incorrect. Please try again.
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="id_username" class="form-label small fw-semibold">Username</label>
+                        <input type="text" name="username" id="id_username"
+                               class="form-control" autocomplete="username" autofocus required>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="id_password" class="form-label small fw-semibold">Password</label>
+                        <input type="password" name="password" id="id_password"
+                               class="form-control" autocomplete="current-password" required>
+                    </div>
+
+                    <input type="hidden" name="next" value="{{ next }}">
+                    <button type="submit" class="btn btn-dark w-100">Log in</button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
