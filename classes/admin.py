@@ -19,7 +19,7 @@ class AttendanceInline(admin.TabularInline):
 
 @admin.register(Class)
 class ClassAdmin(admin.ModelAdmin):
-    list_display = ('name', 'organisation', 'schedule')
+    list_display = ('name', 'organisation', 'schedule_display')
     list_filter = ('organisation',)
     search_fields = ('name', 'organisation__name')
     inlines = [ClassCoachInline, ClassMemberInline]
@@ -27,7 +27,7 @@ class ClassAdmin(admin.ModelAdmin):
 
 @admin.register(Session)
 class SessionAdmin(admin.ModelAdmin):
-    list_display = ('assigned_class', 'date')
-    list_filter = ('assigned_class__organisation', 'assigned_class')
+    list_display = ('assigned_class', 'date', 'is_cancelled', 'is_extra')
+    list_filter = ('assigned_class__organisation', 'assigned_class', 'is_cancelled', 'is_extra')
     date_hierarchy = 'date'
     inlines = [AttendanceInline]

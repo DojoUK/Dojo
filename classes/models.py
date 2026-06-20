@@ -8,7 +8,19 @@ class Class(models.Model):
     organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='classes')
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    schedule = models.CharField(max_length=255, blank=True)
+    schedule = models.JSONField(default=list, blank=True)
+    # e.g. [{"day": 1, "time": "18:00"}, {"day": 3, "time": "18:00"}]
+    # day follows Python weekday(): 0=Monday, 1=Tuesday, ..., 6=Sunday
+
+    DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+    def schedule_display(self):
+        if not self.schedule:
+            return '—'
+        return ', '.join(
+            f"{self.DAYS[entry['day']]} {entry.get('time', '')}".strip()
+            for entry in self.schedule
+        )
 
     def __str__(self):
         return f"{self.organisation} — {self.name}"
@@ -45,6 +57,8 @@ class Session(models.Model):
     assigned_class = models.ForeignKey(Class, on_delete=models.CASCADE, related_name='sessions')
     date = models.DateField()
     notes = models.TextField(blank=True)
+    is_cancelled = models.BooleanField(default=False)
+    is_extra = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.assigned_class} — {self.date}"
