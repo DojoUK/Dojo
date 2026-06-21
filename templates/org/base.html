@@ -71,6 +71,11 @@
                             <i class="bi bi-person-badge me-2"></i> Coaches
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-white-50 px-3 py-2" href="{% url 'org_audit_log' org_slug=org.slug %}">
+                            <i class="bi bi-journal-check me-2"></i> Audit log
+                        </a>
+                    </li>
                 </ul>
                 {% else %}
                 <p class="nav-label text-uppercase text-secondary small px-3 mt-3 mb-1" style="font-size: 0.7rem; letter-spacing: .08em;">My Classes</p>
