@@ -12,4 +12,8 @@ urlpatterns = [
     path('settings/test-email/', views.TestEmailView.as_view(), name='org_test_email'),
     path('settings/fields/', views.CustomFieldSettingsView.as_view(), name='org_custom_fields'),
     path('settings/progression/', include('progression.urls')),
+    path('announcements/', views.AnnouncementListView.as_view(), name='org_announcements'),
+    path('calendar/', views.CalendarView.as_view(), name='org_calendar'),
+    path('calendar/events/', views.CalendarEventsView.as_view(), name='org_calendar_events'),
+    path('finance/', views.FinancialReportView.as_view(), name='org_finance'),
 ]

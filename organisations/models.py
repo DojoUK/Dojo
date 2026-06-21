@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.text import slugify
+from django.utils import timezone
 
 
 class Organisation(models.Model):
@@ -33,9 +34,34 @@ class OrganisationMember(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='organisation_memberships')
     organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='members')
     role = models.CharField(max_length=20, choices=Role.choices)
+    dbs_number = models.CharField(max_length=100, blank=True)
+    dbs_expiry = models.DateField(null=True, blank=True)
+    coaching_licence = models.CharField(max_length=100, blank=True)
+    coaching_licence_expiry = models.DateField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.user.get_full_name() or self.user.username} — {self.organisation} ({self.get_role_display()})"
 
     class Meta:
         unique_together = ('user', 'organisation')
+
+
+class Announcement(models.Model):
+    class Recipients(models.TextChoices):
+        ALL = 'all', 'All active members'
+        CLASS = 'class', 'Specific class'
+        CUSTOM = 'custom', 'Custom selection'
+
+    organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='announcements')
+    subject = models.CharField(max_length=255)
+    body = models.TextField()
+    sent_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    sent_at = models.DateTimeField(default=timezone.now)
+    recipient_count = models.PositiveIntegerField(default=0)
+    recipient_label = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        return f"{self.subject} ({self.sent_at:%d %b %Y})"
+
+    class Meta:
+        ordering = ['-sent_at']

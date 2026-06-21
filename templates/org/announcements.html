@@ -1,0 +1,96 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Announcements — {{ org.name }}{% endblock %}
+{% block page_title %}Announcements{% endblock %}
+
+{% block main_content %}
+<div class="row g-4">
+
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Send announcement</h6>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Recipients</label>
+                        <select name="recipient_type" class="form-select form-select-sm" id="recipient-type">
+                            <option value="all">All active members</option>
+                            <option value="class">Specific class</option>
+                        </select>
+                    </div>
+                    <div class="mb-3 d-none" id="class-picker">
+                        <label class="form-label small fw-semibold">Class</label>
+                        <select name="class_pk" class="form-select form-select-sm">
+                            <option value="">— Select class —</option>
+                            {% for cls in classes %}
+                            <option value="{{ cls.pk }}">{{ cls.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Subject</label>
+                        <input type="text" name="subject" class="form-control form-control-sm" required placeholder="e.g. Training this week">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Message</label>
+                        <textarea name="body" rows="6" class="form-control form-control-sm" required placeholder="Write your message here…"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-dark btn-sm w-100"
+                            onclick="return confirm('Send this email to all selected members?')">
+                        <i class="bi bi-send me-1"></i> Send announcement
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Sent announcements</h6>
+            </div>
+            {% if announcements %}
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3 small">Subject</th>
+                            <th class="small">Sent to</th>
+                            <th class="small">Recipients</th>
+                            <th class="small pe-3">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ann in announcements %}
+                        <tr>
+                            <td class="ps-3 py-2 small fw-semibold">{{ ann.subject }}</td>
+                            <td class="py-2 small text-muted">{{ ann.recipient_label }}</td>
+                            <td class="py-2 small text-muted">{{ ann.recipient_count }}</td>
+                            <td class="py-2 small text-muted pe-3">{{ ann.sent_at|date:"d M Y" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="card-body text-center py-5">
+                <i class="bi bi-megaphone display-6 text-muted d-block mb-2"></i>
+                <p class="text-muted small mb-0">No announcements sent yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.getElementById('recipient-type').addEventListener('change', function() {
+    document.getElementById('class-picker').classList.toggle('d-none', this.value !== 'class');
+});
+</script>
+{% endblock %}

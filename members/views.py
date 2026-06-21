@@ -24,6 +24,13 @@ class MemberListView(OrgAdminMixin, ListView):
             pass
         else:
             qs = qs.filter(is_active=True)
+        from datetime import date, timedelta
+        licence = self.request.GET.get('licence', '')
+        today = date.today()
+        if licence == 'expired':
+            qs = qs.filter(licence_expiry__lt=today)
+        elif licence == 'expiring':
+            qs = qs.filter(licence_expiry__lte=today + timedelta(days=30), licence_expiry__gte=today)
         return qs
 
     def get_template_names(self):
@@ -122,6 +129,10 @@ class MemberDetailView(OrgAdminMixin, DetailView):
             }
             for cf in CustomField.objects.filter(organisation=self.org)
         ]
+        from datetime import date, timedelta
+        today = date.today()
+        context['today'] = today
+        context['thirty_days'] = today + timedelta(days=30)
         return context
 
 

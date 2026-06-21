@@ -50,6 +50,16 @@
                             <div class="form-text">Used for autopay subscriptions. Leave blank if not applicable.</div>
                         </div>
                         <div class="col-sm-6">
+                            <label class="form-label fw-semibold small">Licence number</label>
+                            {{ form.licence_number }}
+                            {% if form.licence_number.errors %}<div class="text-danger small mt-1">{{ form.licence_number.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold small">Licence expiry</label>
+                            {{ form.licence_expiry }}
+                            {% if form.licence_expiry.errors %}<div class="text-danger small mt-1">{{ form.licence_expiry.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-sm-6">
                             <label class="form-label fw-semibold small">Email</label>
                             {{ form.email }}
                             {% if form.email.errors %}<div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>{% endif %}

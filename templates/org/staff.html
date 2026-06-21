@@ -62,22 +62,25 @@
             <thead class="table-light">
                 <tr>
                     <th class="ps-3 small fw-semibold">Name</th>
-                    <th class="small fw-semibold">Username</th>
                     <th class="small fw-semibold">Role</th>
+                    <th class="small fw-semibold">DBS</th>
+                    <th class="small fw-semibold">Coaching licence</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody>
                 {% for om in staff %}
                 <tr>
-                    <td class="ps-3 small fw-semibold">
-                        {{ om.user.get_full_name|default:om.user.username }}
-                        {% if om.user == request.user %}
-                        <span class="badge bg-secondary-subtle text-secondary ms-1" style="font-size:0.6rem;">You</span>
-                        {% endif %}
+                    <td class="ps-3 py-2">
+                        <div class="small fw-semibold">
+                            {{ om.user.get_full_name|default:om.user.username }}
+                            {% if om.user == request.user %}
+                            <span class="badge bg-secondary-subtle text-secondary ms-1" style="font-size:0.6rem;">You</span>
+                            {% endif %}
+                        </div>
+                        <div class="text-muted" style="font-size:0.75rem;">{{ om.user.username }}</div>
                     </td>
-                    <td class="small text-muted">{{ om.user.username }}</td>
-                    <td class="small">
+                    <td class="py-2 small">
                         {% if om.user == request.user %}
                         <span class="text-muted">{{ om.get_role_display }}</span>
                         {% else %}
@@ -94,18 +97,91 @@
                         </form>
                         {% endif %}
                     </td>
-                    <td class="text-end pe-3">
-                        {% if om.user != request.user %}
-                        <form method="post" class="d-inline">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="remove">
-                            <input type="hidden" name="member_pk" value="{{ om.pk }}">
-                            <button type="submit" class="btn btn-sm btn-outline-danger"
-                                    onclick="return confirm('Remove {{ om.user.get_full_name|default:om.user.username }} from {{ org.name }}?')">
-                                Remove
-                            </button>
-                        </form>
+                    <td class="py-2 small">
+                        {% if om.dbs_number %}
+                            <div>{{ om.dbs_number }}</div>
                         {% endif %}
+                        {% if om.dbs_expiry %}
+                            <div class="text-muted" style="font-size:0.75rem;">
+                                Exp {{ om.dbs_expiry|date:"d M Y" }}
+                                {% if om.dbs_expiry < today %}
+                                    <span class="badge bg-danger-subtle text-danger">Expired</span>
+                                {% elif om.dbs_expiry <= thirty_days %}
+                                    <span class="badge bg-warning-subtle text-warning">Soon</span>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        {% if not om.dbs_number and not om.dbs_expiry %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-2 small">
+                        {% if om.coaching_licence %}
+                            <div>{{ om.coaching_licence }}</div>
+                        {% endif %}
+                        {% if om.coaching_licence_expiry %}
+                            <div class="text-muted" style="font-size:0.75rem;">
+                                Exp {{ om.coaching_licence_expiry|date:"d M Y" }}
+                                {% if om.coaching_licence_expiry < today %}
+                                    <span class="badge bg-danger-subtle text-danger">Expired</span>
+                                {% elif om.coaching_licence_expiry <= thirty_days %}
+                                    <span class="badge bg-warning-subtle text-warning">Soon</span>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        {% if not om.coaching_licence and not om.coaching_licence_expiry %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-2 pe-3 text-end">
+                        <div class="d-flex gap-1 justify-content-end">
+                            <button class="btn btn-sm btn-outline-secondary" type="button"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#quals-{{ om.pk }}">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            {% if om.user != request.user %}
+                            <form method="post" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="remove">
+                                <input type="hidden" name="member_pk" value="{{ om.pk }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                        onclick="return confirm('Remove {{ om.user.get_full_name|default:om.user.username }}?')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                <tr class="collapse" id="quals-{{ om.pk }}">
+                    <td colspan="5" class="bg-light px-3 py-3">
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="update_qualifications">
+                            <input type="hidden" name="member_pk" value="{{ om.pk }}">
+                            <div class="row g-2">
+                                <div class="col-sm-3">
+                                    <label class="form-label small fw-semibold">DBS number</label>
+                                    <input type="text" name="dbs_number" value="{{ om.dbs_number }}" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-sm-3">
+                                    <label class="form-label small fw-semibold">DBS expiry</label>
+                                    <input type="date" name="dbs_expiry" value="{{ om.dbs_expiry|date:'Y-m-d' }}" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-sm-3">
+                                    <label class="form-label small fw-semibold">Coaching licence</label>
+                                    <input type="text" name="coaching_licence" value="{{ om.coaching_licence }}" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-sm-3">
+                                    <label class="form-label small fw-semibold">Coaching licence expiry</label>
+                                    <input type="date" name="coaching_licence_expiry" value="{{ om.coaching_licence_expiry|date:'Y-m-d' }}" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-sm btn-dark">Save qualifications</button>
+                                </div>
+                            </div>
+                        </form>
                     </td>
                 </tr>
                 {% endfor %}

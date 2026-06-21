@@ -54,10 +54,38 @@
 </div>
 
 {% if is_admin and pending_applications %}
-<div class="alert alert-warning d-flex align-items-center gap-2 py-2 mb-3">
+<div class="alert alert-warning d-flex align-items-center gap-2 py-2 mb-2">
     <i class="bi bi-person-plus-fill"></i>
     <span class="small"><strong>{{ pending_applications }} membership application{{ pending_applications|pluralize }}</strong> waiting for review.</span>
     <a href="{% url 'application_list' org_slug=org.slug %}" class="btn btn-sm btn-warning ms-auto">Review</a>
+</div>
+{% endif %}
+{% if is_admin and licences_expired %}
+<div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-2">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <span class="small"><strong>{{ licences_expired }} member licence{{ licences_expired|pluralize }} expired.</strong></span>
+    <a href="{% url 'member_list' org_slug=org.slug %}?licence=expired" class="btn btn-sm btn-danger ms-auto">View</a>
+</div>
+{% endif %}
+{% if is_admin and licences_expiring %}
+<div class="alert alert-warning d-flex align-items-center gap-2 py-2 mb-2">
+    <i class="bi bi-card-checklist"></i>
+    <span class="small"><strong>{{ licences_expiring }} member licence{{ licences_expiring|pluralize }}</strong> expiring in the next 30 days.</span>
+    <a href="{% url 'member_list' org_slug=org.slug %}?licence=expiring" class="btn btn-sm btn-warning ms-auto">View</a>
+</div>
+{% endif %}
+{% if is_admin and staff_expired %}
+<div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-2">
+    <i class="bi bi-shield-exclamation"></i>
+    <span class="small"><strong>{{ staff_expired }} staff member{{ staff_expired|pluralize }}</strong> with expired DBS or coaching licence.</span>
+    <a href="{% url 'org_staff' org_slug=org.slug %}" class="btn btn-sm btn-danger ms-auto">View staff</a>
+</div>
+{% endif %}
+{% if is_admin and staff_expiring %}
+<div class="alert alert-warning d-flex align-items-center gap-2 py-2 mb-2">
+    <i class="bi bi-shield-check"></i>
+    <span class="small"><strong>{{ staff_expiring }} staff member{{ staff_expiring|pluralize }}</strong> with DBS or coaching licence expiring soon.</span>
+    <a href="{% url 'org_staff' org_slug=org.slug %}" class="btn btn-sm btn-warning ms-auto">View staff</a>
 </div>
 {% endif %}
 

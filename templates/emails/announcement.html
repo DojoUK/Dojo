@@ -1,0 +1,17 @@
+{% extends 'emails/base.html' %}
+
+{% block subject %}{{ subject }}{% endblock %}
+
+{% block content %}
+{% if has_guardians and not member.email %}
+<p style="color:#374151;font-size:16px;margin:0 0 24px;">Dear guardian of {{ member.name }},</p>
+{% else %}
+<p style="color:#374151;font-size:16px;margin:0 0 24px;">Hi {{ member.name }},</p>
+{% endif %}
+
+<div style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 24px;white-space:pre-line;">{{ body }}</div>
+
+<p style="color:#374151;font-size:15px;margin:24px 0 0;">
+  {{ org_name }}
+</p>
+{% endblock %}

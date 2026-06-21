@@ -66,9 +66,24 @@
                     </dd>
 
                     <dt class="col-sm-4 text-muted fw-normal small">Phone</dt>
-                    <dd class="col-sm-8 small mb-0">
+                    <dd class="col-sm-8 small">
                         {% if member.phone %}
                             <a href="tel:{{ member.phone }}">{{ member.phone }}</a>
+                        {% else %}—{% endif %}
+                    </dd>
+
+                    <dt class="col-sm-4 text-muted fw-normal small">Licence no.</dt>
+                    <dd class="col-sm-8 small">{{ member.licence_number|default:"—" }}</dd>
+
+                    <dt class="col-sm-4 text-muted fw-normal small">Licence expiry</dt>
+                    <dd class="col-sm-8 small mb-0">
+                        {% if member.licence_expiry %}
+                            {{ member.licence_expiry|date:"d M Y" }}
+                            {% if member.licence_expiry < today %}
+                                <span class="badge bg-danger-subtle text-danger ms-1">Expired</span>
+                            {% elif member.licence_expiry <= thirty_days %}
+                                <span class="badge bg-warning-subtle text-warning ms-1">Expiring soon</span>
+                            {% endif %}
                         {% else %}—{% endif %}
                     </dd>
                 </dl>

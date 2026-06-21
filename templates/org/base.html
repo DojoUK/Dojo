@@ -69,6 +69,24 @@
                             <i class="bi bi-bar-chart me-2"></i> Attendance
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-3 py-2 {% if url_name == 'org_calendar' %}active text-white{% else %}text-white-50{% endif %}"
+                           href="{% url 'org_calendar' org_slug=org.slug %}">
+                            <i class="bi bi-calendar3 me-2"></i> Calendar
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-3 py-2 {% if url_name == 'org_finance' %}active text-white{% else %}text-white-50{% endif %}"
+                           href="{% url 'org_finance' org_slug=org.slug %}">
+                            <i class="bi bi-graph-up me-2"></i> Finance
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-3 py-2 {% if url_name == 'org_announcements' %}active text-white{% else %}text-white-50{% endif %}"
+                           href="{% url 'org_announcements' org_slug=org.slug %}">
+                            <i class="bi bi-megaphone me-2"></i> Announcements
+                        </a>
+                    </li>
                 </ul>
 
                 <p class="nav-label text-uppercase text-secondary small px-3 mt-3 mb-1" style="font-size: 0.7rem; letter-spacing: .08em;">Settings</p>

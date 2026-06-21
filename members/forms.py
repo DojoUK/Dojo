@@ -55,10 +55,12 @@ class MemberForm(forms.ModelForm):
             'emergency_contact_name', 'emergency_contact_phone',
             'emergency_contact_2_name', 'emergency_contact_2_phone',
             'joined_date', 'is_active', 'monthly_fee',
+            'licence_number', 'licence_expiry',
         ]
         widgets = {
             'date_of_birth': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
             'joined_date': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
+            'licence_expiry': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
         }
 
     def __init__(self, *args, **kwargs):

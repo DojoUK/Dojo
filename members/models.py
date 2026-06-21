@@ -26,6 +26,8 @@ class Member(models.Model):
     stripe_customer_id = models.CharField(max_length=255, blank=True)
     stripe_subscription_id = models.CharField(max_length=255, blank=True)
     subscription_status = models.CharField(max_length=20, blank=True)
+    licence_number = models.CharField(max_length=100, blank=True)
+    licence_expiry = models.DateField(null=True, blank=True)
 
     @property
     def has_active_subscription(self):
