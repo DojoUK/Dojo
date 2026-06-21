@@ -25,11 +25,11 @@ class StripeWebhookView(View):
 
         stripe.api_key = settings.STRIPE_SECRET_KEY
 
+        if not webhook_secret:
+            return HttpResponse(status=400)
+
         try:
-            if webhook_secret:
-                event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
-            else:
-                event = stripe.Event.construct_from(json.loads(payload), stripe.api_key)
+            event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
         except (ValueError, stripe.error.SignatureVerificationError):
             return HttpResponse(status=400)
 

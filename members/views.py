@@ -237,6 +237,8 @@ class ApproveApplicationView(OrgAdminMixin, View):
             )
         app.status = MemberApplication.Status.APPROVED
         app.save(update_fields=['status'])
+        from .emails import send_welcome_email
+        send_welcome_email(member)
         messages.success(request, f'{member.name} approved and added as a member.')
         return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
 
