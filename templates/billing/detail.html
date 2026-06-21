@@ -1,0 +1,163 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Invoice — {{ invoice.member.name }} — {{ org.name }}{% endblock %}
+{% block page_title %}Invoice{% endblock %}
+{% block page_subtitle %}{{ invoice.member.name }} &mdash; {{ invoice.period }}{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2">
+    <a href="{% url 'invoice_list' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Billing
+    </a>
+    {% if invoice.status != 'paid' %}
+    <form method="post" action="{% url 'invoice_mark_paid' org_slug=org.slug pk=invoice.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-success btn-sm">
+            <i class="bi bi-check2 me-1"></i> Mark as paid
+        </button>
+    </form>
+    {% else %}
+    <form method="post" action="{% url 'invoice_mark_unpaid' org_slug=org.slug pk=invoice.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-secondary btn-sm">Mark as unpaid</button>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block main_content %}
+<div class="row g-4">
+    <div class="col-lg-7">
+
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Invoice details</h6>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4 text-muted fw-normal small">Member</dt>
+                    <dd class="col-sm-8 small">
+                        <a href="{% url 'member_detail' org_slug=org.slug pk=invoice.member.pk %}">{{ invoice.member.name }}</a>
+                    </dd>
+
+                    <dt class="col-sm-4 text-muted fw-normal small">Period</dt>
+                    <dd class="col-sm-8 small">{{ invoice.period }}</dd>
+
+                    <dt class="col-sm-4 text-muted fw-normal small">Amount</dt>
+                    <dd class="col-sm-8 small fw-semibold">£{{ invoice.amount|floatformat:2 }}</dd>
+
+                    <dt class="col-sm-4 text-muted fw-normal small">Due date</dt>
+                    <dd class="col-sm-8 small">
+                        {{ invoice.due_date|date:"d M Y" }}
+                        {% if invoice.is_overdue %}<span class="badge bg-warning-subtle text-warning ms-1" style="font-size:0.6rem;">Overdue</span>{% endif %}
+                    </dd>
+
+                    <dt class="col-sm-4 text-muted fw-normal small">Status</dt>
+                    <dd class="col-sm-8 small">
+                        {% if invoice.status == 'paid' %}
+                        <span class="badge bg-success-subtle text-success">Paid</span>
+                        {% elif invoice.is_overdue %}
+                        <span class="badge bg-warning-subtle text-warning">Overdue</span>
+                        {% else %}
+                        <span class="badge bg-secondary-subtle text-secondary">Unpaid</span>
+                        {% endif %}
+                    </dd>
+
+                    <dt class="col-sm-4 text-muted fw-normal small">Created</dt>
+                    <dd class="col-sm-8 small mb-0">{{ invoice.created_at|date:"d M Y" }}</dd>
+
+                    {% if invoice.notes %}
+                    <dt class="col-sm-4 text-muted fw-normal small mt-2">Notes</dt>
+                    <dd class="col-sm-8 small mt-2 mb-0">{{ invoice.notes }}</dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    Payments
+                    {% if amount_paid %}
+                    <span class="text-muted fw-normal small ms-1">£{{ amount_paid|floatformat:2 }} of £{{ invoice.amount|floatformat:2 }} received</span>
+                    {% endif %}
+                </h6>
+                {% if invoice.status != 'paid' %}
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#record-payment">
+                    <i class="bi bi-plus-lg me-1"></i> Record payment
+                </button>
+                {% endif %}
+            </div>
+
+            {% if invoice.status != 'paid' %}
+            <div class="collapse" id="record-payment">
+                <div class="card-body border-bottom bg-light">
+                    <form method="post" action="{% url 'invoice_record_payment' org_slug=org.slug pk=invoice.pk %}">
+                        {% csrf_token %}
+                        <div class="row g-2">
+                            <div class="col-sm-3">
+                                <label class="form-label small fw-semibold">Amount (£)</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">£</span>
+                                    <input type="number" name="amount" class="form-control" step="0.01"
+                                           value="{{ invoice.amount|floatformat:2 }}">
+                                </div>
+                            </div>
+                            <div class="col-sm-3">
+                                <label class="form-label small fw-semibold">Method</label>
+                                <select name="method" class="form-select form-select-sm">
+                                    {% for value, label in payment_methods %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-sm-3">
+                                <label class="form-label small fw-semibold">Date</label>
+                                <input type="date" name="paid_at" class="form-control form-control-sm" value="{% now 'Y-m-d' %}">
+                            </div>
+                            <div class="col-sm-3">
+                                <label class="form-label small fw-semibold">Notes</label>
+                                <input type="text" name="notes" class="form-control form-control-sm" placeholder="Optional">
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-sm btn-dark">Save payment</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if payments %}
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3 small fw-semibold">Date</th>
+                            <th class="small fw-semibold">Method</th>
+                            <th class="small fw-semibold">Amount</th>
+                            <th class="small fw-semibold">Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in payments %}
+                        <tr>
+                            <td class="ps-3 small">{{ payment.paid_at|date:"d M Y" }}</td>
+                            <td class="small text-muted">{{ payment.get_method_display }}</td>
+                            <td class="small fw-semibold">£{{ payment.amount|floatformat:2 }}</td>
+                            <td class="small text-muted">{{ payment.notes|default:"—" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="card-body">
+                <p class="text-muted small mb-0">No payments recorded yet.</p>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

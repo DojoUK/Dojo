@@ -77,6 +77,7 @@ class MemberDetailView(OrgAdminMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['guardians'] = self.object.guardians.all()
+        context['invoices'] = self.object.invoices.order_by('-created_at')[:5]
         from .models import CustomField
         values = self.object.custom_field_values or {}
         context['custom_fields'] = [

@@ -1,0 +1,96 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Create invoice — {{ org.name }}{% endblock %}
+{% block page_title %}Create invoice{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'invoice_list' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Back to billing
+</a>
+{% endblock %}
+
+{% block main_content %}
+<div class="row">
+    <div class="col-lg-7">
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h6 class="mb-0">Who is this for?</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="target" id="target-one" value="one" checked>
+                            <label class="form-check-label small" for="target-one">Specific member</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="target" id="target-all" value="all">
+                            <label class="form-check-label small" for="target-all">All active members</label>
+                        </div>
+                    </div>
+                    <div id="member-select">
+                        <label class="form-label fw-semibold small">Member</label>
+                        <select name="member_id" class="form-select">
+                            <option value="">— select member —</option>
+                            {% for m in members %}
+                            <option value="{{ m.pk }}">{{ m.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div id="all-members-info" class="text-muted small d-none">
+                        One invoice will be created for each of the {{ members|length }} active member{{ members|length|pluralize }}.
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h6 class="mb-0">Invoice details</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold small">Period <span class="text-danger">*</span></label>
+                            <input type="text" name="period" class="form-control" placeholder="e.g. January 2026">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold small">Amount (£) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">£</span>
+                                <input type="number" name="amount" class="form-control" step="0.01" min="0" placeholder="0.00">
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold small">Due date <span class="text-danger">*</span></label>
+                            <input type="date" name="due_date" class="form-control" value="{{ today }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small">Notes <span class="text-muted fw-normal">(optional)</span></label>
+                            <textarea name="notes" class="form-control" rows="2" placeholder="Any internal notes…"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-dark">Create invoice</button>
+                <a href="{% url 'invoice_list' org_slug=org.slug %}" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.querySelectorAll('[name="target"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+        const one = document.getElementById('target-one').checked;
+        document.getElementById('member-select').classList.toggle('d-none', !one);
+        document.getElementById('all-members-info').classList.toggle('d-none', one);
+    });
+});
+</script>
+{% endblock %}

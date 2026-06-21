@@ -171,12 +171,39 @@
         </div>
 
         <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header bg-white border-bottom py-3">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                 <h6 class="mb-0">Billing</h6>
+                <a href="{% url 'invoice_list' org_slug=org.slug %}?q={{ member.name|urlencode }}" class="btn btn-sm btn-outline-secondary">View all</a>
             </div>
+            {% if invoices %}
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        {% for invoice in invoices %}
+                        <tr>
+                            <td class="ps-3 py-2 small">
+                                <a href="{% url 'invoice_detail' org_slug=org.slug pk=invoice.pk %}" class="text-decoration-none">{{ invoice.period }}</a>
+                            </td>
+                            <td class="small py-2 fw-semibold">£{{ invoice.amount|floatformat:2 }}</td>
+                            <td class="small py-2 text-end pe-3">
+                                {% if invoice.status == 'paid' %}
+                                <span class="badge bg-success-subtle text-success">Paid</span>
+                                {% elif invoice.is_overdue %}
+                                <span class="badge bg-warning-subtle text-warning">Overdue</span>
+                                {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary">Unpaid</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
             <div class="card-body">
                 <p class="text-muted small mb-0">No invoices yet.</p>
             </div>
+            {% endif %}
         </div>
 
     </div>
