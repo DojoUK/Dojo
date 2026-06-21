@@ -24,6 +24,10 @@ class DashboardView(OrgMixin, TemplateView):
         today = date.today()
         week_end = today + timedelta(days=7)
 
+        is_admin = self.request.user.is_superuser or (
+            self.org_membership and self.org_membership.role == 'org_admin'
+        )
+
         active_members = self.org.club_members.filter(is_active=True)
         member_count = active_members.count()
 
@@ -32,12 +36,16 @@ class DashboardView(OrgMixin, TemplateView):
         ).values_list('member_id', flat=True)
         unenrolled_count = active_members.exclude(pk__in=enrolled_ids).count()
 
-        upcoming_sessions = (
-            Session.objects
-            .filter(assigned_class__organisation=self.org, date__gte=today, date__lte=week_end)
-            .select_related('assigned_class')
-            .order_by('date')
-        )
+        sessions_qs = Session.objects.filter(
+            assigned_class__organisation=self.org, date__gte=today, date__lte=week_end
+        ).select_related('assigned_class').order_by('date')
+
+        if not is_admin:
+            sessions_qs = sessions_qs.filter(
+                assigned_class__coaches__user=self.request.user
+            )
+
+        upcoming_sessions = sessions_qs
 
         sessions_with_status = []
         for session in upcoming_sessions:
@@ -58,6 +66,7 @@ class DashboardView(OrgMixin, TemplateView):
             'sessions_this_week': len(upcoming_sessions),
             'upcoming': sessions_with_status,
             'today': today,
+            'is_admin': is_admin,
         })
         return context
 

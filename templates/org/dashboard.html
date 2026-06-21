@@ -8,37 +8,39 @@
 
 <div class="row g-3 mb-4">
     <div class="col-sm-6 col-lg-3">
+        {% if is_admin %}
         <a href="{% url 'member_list' org_slug=org.slug %}" class="text-decoration-none">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0 me-3">
-                            <i class="bi bi-people fs-2 text-primary"></i>
-                        </div>
-                        <div>
-                            <div class="fs-3 fw-bold text-dark">{{ member_count }}</div>
-                            <div class="text-muted small">Active members</div>
-                        </div>
+        {% endif %}
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 me-3">
+                        <i class="bi bi-people fs-2 text-primary"></i>
+                    </div>
+                    <div>
+                        <div class="fs-3 fw-bold text-dark">{{ member_count }}</div>
+                        <div class="text-muted small">Active members</div>
                     </div>
                 </div>
             </div>
-        </a>
+        </div>
+        {% if is_admin %}</a>{% endif %}
     </div>
     <div class="col-sm-6 col-lg-3">
-        <a href="{% url 'class_list' org_slug=org.slug %}" class="text-decoration-none">
-            <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0 me-3">
-                            <i class="bi bi-calendar-week fs-2 text-success"></i>
-                        </div>
-                        <div>
-                            <div class="fs-3 fw-bold text-dark">{{ class_count }}</div>
-                            <div class="text-muted small">Classes</div>
-                        </div>
+        <a href="{% if is_admin %}{% url 'class_list' org_slug=org.slug %}{% else %}{% url 'coach_class_list' org_slug=org.slug %}{% endif %}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 me-3">
+                        <i class="bi bi-calendar-week fs-2 text-success"></i>
+                    </div>
+                    <div>
+                        <div class="fs-3 fw-bold text-dark">{{ class_count }}</div>
+                        <div class="text-muted small">Classes</div>
                     </div>
                 </div>
             </div>
+        </div>
         </a>
     </div>
     <div class="col-sm-6 col-lg-3">
@@ -50,12 +52,13 @@
                     </div>
                     <div>
                         <div class="fs-3 fw-bold">{{ sessions_this_week }}</div>
-                        <div class="text-muted small">Sessions next 7 days</div>
+                        <div class="text-muted small">Sessions next 7 days{% if not is_admin %} (yours){% endif %}</div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+    {% if is_admin %}
     <div class="col-sm-6 col-lg-3">
         <div class="card border-0 shadow-sm h-100 {% if unenrolled_count %}border-warning{% endif %}">
             <div class="card-body">
@@ -71,13 +74,16 @@
             </div>
         </div>
     </div>
+    {% endif %}
 </div>
 
 <div class="row g-4">
     <div class="col-lg-8">
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white border-bottom py-3">
-                <h6 class="mb-0">Upcoming sessions <span class="text-muted fw-normal small">— next 7 days</span></h6>
+                <h6 class="mb-0">
+                    Upcoming sessions <span class="text-muted fw-normal small">— next 7 days{% if not is_admin %} (your classes){% endif %}</span>
+                </h6>
             </div>
             {% if upcoming %}
             <div class="card-body p-0">
@@ -97,9 +103,7 @@
                                 <span class="badge bg-danger-subtle text-danger" style="font-size:0.6rem;">Cancelled</span>
                                 {% endif %}
                             </td>
-                            <td class="py-3 text-muted small">
-                                {{ item.enrolled }} enrolled
-                            </td>
+                            <td class="py-3 text-muted small">{{ item.enrolled }} enrolled</td>
                             <td class="py-3 text-end pe-3">
                                 {% if item.taken %}
                                 <a href="{% url 'session_register' org_slug=org.slug pk=item.session.assigned_class.pk session_pk=item.session.pk %}"
@@ -122,15 +126,18 @@
             <div class="card-body text-center py-5 text-muted">
                 <i class="bi bi-calendar-check fs-2 d-block mb-2 text-secondary"></i>
                 No sessions in the next 7 days.
+                {% if is_admin %}
                 <div class="mt-2">
                     <a href="{% url 'class_list' org_slug=org.slug %}">Generate sessions from a class</a>
                 </div>
+                {% endif %}
             </div>
             {% endif %}
         </div>
     </div>
 
     <div class="col-lg-4">
+        {% if is_admin %}
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white border-bottom py-3">
                 <h6 class="mb-0">Quick actions</h6>
@@ -150,6 +157,18 @@
                 </a>
             </div>
         </div>
+        {% else %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Quick actions</h6>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{% url 'coach_class_list' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3">
+                    <i class="bi bi-calendar-week me-2 text-muted"></i> My classes
+                </a>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 
