@@ -592,10 +592,6 @@ class FinancialReportView(OrgAdminMixin, View):
                 y -= 1
             months.append(date(y, m, 1))
 
-        revenue_by_month = (
-            Payment.objects.filter(organisation__isnull=True)  # placeholder
-            .none()
-        )
         monthly_data = (
             Payment.objects.filter(invoice__organisation=self.org)
             .annotate(month=TruncMonth('paid_at'))
