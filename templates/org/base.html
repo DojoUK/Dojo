@@ -1,181 +1,289 @@
 {% extends 'base.html' %}
 
-{% block body_class %}bg-light{% endblock %}
+{% block body_class %}{% endblock %}
 
 {% block body %}
 
-<header class="navbar navbar-dark bg-dark sticky-top flex-md-nowrap p-0 shadow" style="height: 56px;">
-    <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3 fw-semibold text-truncate" href="#">{{ org.name }}</a>
-    <button class="navbar-toggler position-absolute d-md-none collapsed me-2 end-0" type="button"
-            data-bs-toggle="collapse" data-bs-target="#sidebarMenu"
-            aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="d-none d-md-flex align-items-center ms-auto pe-3 gap-3">
-        <span class="text-white-50 small">{{ request.user.get_full_name|default:request.user.username }}</span>
+<style>
+/* ── Sidebar ─────────────────────────────────────── */
+.dojo-sidebar {
+    width: 240px;
+    min-height: 100vh;
+    background: linear-gradient(180deg, #1E3A5F 0%, #162d4a 100%);
+    position: fixed;
+    top: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    overflow-y: auto;
+}
+.dojo-sidebar-brand {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+}
+.dojo-sidebar-brand .brand-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -.01em;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.dojo-sidebar-brand .brand-sub {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,.45);
+    font-weight: 400;
+    margin-top: 2px;
+    display: block;
+}
+.sidebar-section-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.35);
+    padding: 16px 20px 6px;
+}
+.sidebar-nav { list-style: none; padding: 0 10px; margin: 0; }
+.sidebar-nav li { margin-bottom: 1px; }
+.sidebar-nav a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 7px;
+    color: rgba(255,255,255,.6);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: background .15s, color .15s;
+}
+.sidebar-nav a:hover {
+    background: rgba(255,255,255,.08);
+    color: rgba(255,255,255,.9);
+}
+.sidebar-nav a.active {
+    background: rgba(255,255,255,.13);
+    color: #fff;
+}
+.sidebar-nav a i { font-size: 1rem; flex-shrink: 0; width: 18px; text-align: center; }
+.sidebar-footer {
+    margin-top: auto;
+    padding: 16px 20px;
+    border-top: 1px solid rgba(255,255,255,.08);
+}
+.sidebar-footer .user-name {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,.5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 8px;
+    display: block;
+}
+
+/* ── Main content ────────────────────────────────── */
+.dojo-main {
+    margin-left: 240px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+.dojo-topbar {
+    height: 60px;
+    background: #fff;
+    border-bottom: 1px solid var(--dojo-border);
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    gap: 12px;
+}
+.dojo-topbar h4 { font-size: 1.1rem; font-weight: 700; margin: 0; color: var(--dojo-text); flex: 1; }
+.dojo-content { padding: 28px; flex: 1; }
+
+/* ── Mobile ──────────────────────────────────────── */
+@media (max-width: 767px) {
+    .dojo-sidebar { transform: translateX(-100%); transition: transform .25s; }
+    .dojo-sidebar.open { transform: translateX(0); }
+    .dojo-main { margin-left: 0; }
+    .dojo-topbar { padding: 0 16px; }
+    .dojo-content { padding: 16px; }
+    .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 99; }
+    .sidebar-overlay.open { display: block; }
+}
+</style>
+
+{% with url_name=request.resolver_match.url_name %}
+
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<aside class="dojo-sidebar" id="sidebar">
+    <div class="dojo-sidebar-brand">
+        <a href="{% url 'org_dashboard' org_slug=org.slug %}" style="text-decoration:none;">
+            <span class="brand-name">{{ org.name }}</span>
+            <span class="brand-sub">dojoapp.co.uk</span>
+        </a>
+    </div>
+
+    <div style="padding: 10px 0 4px;">
+        <ul class="sidebar-nav">
+            <li>
+                <a href="{% url 'org_dashboard' org_slug=org.slug %}" class="{% if url_name == 'org_dashboard' %}active{% endif %}">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    {% if request.user.is_superuser or org_membership and org_membership.role == 'org_admin' %}
+
+    <div class="sidebar-section-label">Club</div>
+    <ul class="sidebar-nav">
+        <li>
+            <a href="{% url 'member_list' org_slug=org.slug %}" class="{% if 'member' in url_name and 'application' not in url_name %}active{% endif %}">
+                <i class="bi bi-people"></i> Members
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'application_list' org_slug=org.slug %}" class="{% if 'application' in url_name %}active{% endif %}">
+                <i class="bi bi-person-plus"></i> Applications
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'class_list' org_slug=org.slug %}" class="{% if 'class' in url_name or 'session' in url_name or 'coach_class' in url_name %}active{% endif %}">
+                <i class="bi bi-calendar-week"></i> Classes
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'invoice_list' org_slug=org.slug %}" class="{% if 'invoice' in url_name or 'billing' in url_name %}active{% endif %}">
+                <i class="bi bi-receipt"></i> Billing
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'attendance_analytics' org_slug=org.slug %}" class="{% if 'attendance' in url_name %}active{% endif %}">
+                <i class="bi bi-bar-chart"></i> Attendance
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'org_calendar' org_slug=org.slug %}" class="{% if url_name == 'org_calendar' %}active{% endif %}">
+                <i class="bi bi-calendar3"></i> Calendar
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'org_finance' org_slug=org.slug %}" class="{% if url_name == 'org_finance' %}active{% endif %}">
+                <i class="bi bi-graph-up"></i> Finance
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'org_announcements' org_slug=org.slug %}" class="{% if url_name == 'org_announcements' %}active{% endif %}">
+                <i class="bi bi-megaphone"></i> Announcements
+            </a>
+        </li>
+    </ul>
+
+    <div class="sidebar-section-label">Settings</div>
+    <ul class="sidebar-nav">
+        <li>
+            <a href="{% url 'org_settings' org_slug=org.slug %}" class="{% if url_name == 'org_settings' %}active{% endif %}">
+                <i class="bi bi-gear"></i> General
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'org_custom_fields' org_slug=org.slug %}" class="{% if url_name == 'org_custom_fields' %}active{% endif %}">
+                <i class="bi bi-tags"></i> Custom fields
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'progression_settings' org_slug=org.slug %}" class="{% if 'progression' in url_name %}active{% endif %}">
+                <i class="bi bi-award"></i> Progression
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'org_staff' org_slug=org.slug %}" class="{% if url_name == 'org_staff' %}active{% endif %}">
+                <i class="bi bi-person-badge"></i> Staff
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'org_audit_log' org_slug=org.slug %}" class="{% if url_name == 'org_audit_log' %}active{% endif %}">
+                <i class="bi bi-journal-check"></i> Audit log
+            </a>
+        </li>
+    </ul>
+
+    {% else %}
+
+    <div class="sidebar-section-label">My classes</div>
+    <ul class="sidebar-nav">
+        <li>
+            <a href="{% url 'coach_class_list' org_slug=org.slug %}" class="{% if 'coach_class' in url_name or 'session' in url_name %}active{% endif %}">
+                <i class="bi bi-calendar-week"></i> My classes
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'attendance_analytics' org_slug=org.slug %}" class="{% if 'attendance' in url_name %}active{% endif %}">
+                <i class="bi bi-bar-chart"></i> Attendance
+            </a>
+        </li>
+    </ul>
+
+    {% endif %}
+
+    <div class="sidebar-footer">
+        <span class="user-name"><i class="bi bi-person-circle me-1"></i>{{ request.user.get_full_name|default:request.user.username }}</span>
         <form method="post" action="{% url 'logout' %}">
             {% csrf_token %}
-            <button type="submit" class="btn btn-outline-secondary btn-sm text-white border-secondary">Log out</button>
+            <button type="submit" class="btn btn-sm w-100" style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.15);font-size:0.8rem;">
+                <i class="bi bi-box-arrow-right me-1"></i> Log out
+            </button>
         </form>
     </div>
-</header>
+</aside>
 
-<div class="container-fluid">
-    <div class="row">
+<div class="dojo-main">
+    <header class="dojo-topbar">
+        <button class="btn btn-sm d-md-none me-2 p-1" style="background:none;border:none;color:var(--dojo-muted);" onclick="openSidebar()">
+            <i class="bi bi-list" style="font-size:1.4rem;"></i>
+        </button>
+        <h4>{% block page_title %}{% endblock %}</h4>
+        <p class="text-muted mb-0 small d-none d-sm-block">{% block page_subtitle %}{% endblock %}</p>
+        <div class="ms-auto d-flex align-items-center gap-2">{% block page_actions %}{% endblock %}</div>
+    </header>
 
-        <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-dark sidebar collapse" style="min-height: calc(100vh - 56px);">
-            <div class="position-sticky pt-3">
+    <div class="dojo-content">
 
-                {% with url_name=request.resolver_match.url_name %}
-                <ul class="nav flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link px-3 py-2 {% if url_name == 'org_dashboard' %}active text-white{% else %}text-white-50{% endif %}"
-                           href="{% url 'org_dashboard' org_slug=org.slug %}">
-                            <i class="bi bi-speedometer2 me-2"></i> Dashboard
-                        </a>
-                    </li>
-                </ul>
-
-                {% if request.user.is_superuser or org_membership and org_membership.role == 'org_admin' %}
-                <p class="nav-label text-uppercase text-secondary small px-3 mt-3 mb-1" style="font-size: 0.7rem; letter-spacing: .08em;">Club</p>
-                <ul class="nav flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link px-3 py-2 {% if 'member' in url_name and 'application' not in url_name %}active text-white{% else %}text-white-50{% endif %}"
-                           href="{% url 'member_list' org_slug=org.slug %}">
-                            <i class="bi bi-people me-2"></i> Members
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link px-3 py-2 {% if 'application' in url_name %}active text-white{% else %}text-white-50{% endif %}"
-                           href="{% url 'application_list' org_slug=org.slug %}">
-                            <i class="bi bi-person-plus me-2"></i> Applications
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                    <a class="nav-link px-3 py-2 {% if 'class' in url_name or 'session' in url_name or 'coach_class' in url_name %}active text-white{% else %}text-white-50{% endif %}"
-                           href="{% url 'class_list' org_slug=org.slug %}">
-                            <i class="bi bi-calendar-week me-2"></i> Classes
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link px-3 py-2 {% if 'invoice' in url_name %}active text-white{% else %}text-white-50{% endif %}"
-                           href="{% url 'invoice_list' org_slug=org.slug %}">
-                            <i class="bi bi-receipt me-2"></i> Billing
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link px-3 py-2 {% if 'attendance' in url_name %}active text-white{% else %}text-white-50{% endif %}"
-                           href="{% url 'attendance_analytics' org_slug=org.slug %}">
-                            <i class="bi bi-bar-chart me-2"></i> Attendance
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link px-3 py-2 {% if url_name == 'org_calendar' %}active text-white{% else %}text-white-50{% endif %}"
-                           href="{% url 'org_calendar' org_slug=org.slug %}">
-                            <i class="bi bi-calendar3 me-2"></i> Calendar
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link px-3 py-2 {% if url_name == 'org_finance' %}active text-white{% else %}text-white-50{% endif %}"
-                           href="{% url 'org_finance' org_slug=org.slug %}">
-                            <i class="bi bi-graph-up me-2"></i> Finance
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link px-3 py-2 {% if url_name == 'org_announcements' %}active text-white{% else %}text-white-50{% endif %}"
-                           href="{% url 'org_announcements' org_slug=org.slug %}">
-                            <i class="bi bi-megaphone me-2"></i> Announcements
-                        </a>
-                    </li>
-                </ul>
-
-                <p class="nav-label text-uppercase text-secondary small px-3 mt-3 mb-1" style="font-size: 0.7rem; letter-spacing: .08em;">Settings</p>
-                <ul class="nav flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link px-3 py-2 {% if url_name == 'org_settings' %}active text-white{% else %}text-white-50{% endif %}"
-                           href="{% url 'org_settings' org_slug=org.slug %}">
-                            <i class="bi bi-gear me-2"></i> General
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link px-3 py-2 {% if url_name == 'org_custom_fields' %}active text-white{% else %}text-white-50{% endif %}"
-                           href="{% url 'org_custom_fields' org_slug=org.slug %}">
-                            <i class="bi bi-tags me-2"></i> Custom fields
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link px-3 py-2 {% if 'progression' in url_name %}active text-white{% else %}text-white-50{% endif %}"
-                           href="{% url 'progression_settings' org_slug=org.slug %}">
-                            <i class="bi bi-award me-2"></i> Progression
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link px-3 py-2 {% if url_name == 'org_staff' %}active text-white{% else %}text-white-50{% endif %}"
-                           href="{% url 'org_staff' org_slug=org.slug %}">
-                            <i class="bi bi-person-badge me-2"></i> Staff
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link px-3 py-2 {% if url_name == 'org_audit_log' %}active text-white{% else %}text-white-50{% endif %}"
-                           href="{% url 'org_audit_log' org_slug=org.slug %}">
-                            <i class="bi bi-journal-check me-2"></i> Audit log
-                        </a>
-                    </li>
-                </ul>
-                {% else %}
-                <p class="nav-label text-uppercase text-secondary small px-3 mt-3 mb-1" style="font-size: 0.7rem; letter-spacing: .08em;">My classes</p>
-                <ul class="nav flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link px-3 py-2 {% if 'coach_class' in url_name or 'session' in url_name %}active text-white{% else %}text-white-50{% endif %}"
-                           href="{% url 'coach_class_list' org_slug=org.slug %}">
-                            <i class="bi bi-calendar-week me-2"></i> My classes
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link px-3 py-2 {% if 'attendance' in url_name %}active text-white{% else %}text-white-50{% endif %}"
-                           href="{% url 'attendance_analytics' org_slug=org.slug %}">
-                            <i class="bi bi-bar-chart me-2"></i> Attendance
-                        </a>
-                    </li>
-                </ul>
-                {% endif %}
-                {% endwith %}
-
-                <div class="d-md-none border-top border-secondary mt-3 pt-3 px-3 pb-3">
-                    <span class="text-white-50 small d-block mb-2">{{ request.user.get_full_name|default:request.user.username }}</span>
-                    <form method="post" action="{% url 'logout' %}">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-outline-secondary btn-sm text-white border-secondary w-100">Log out</button>
-                    </form>
-                </div>
+        {% if messages %}
+        <div class="mb-4">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
-        </nav>
+            {% endfor %}
+        </div>
+        {% endif %}
 
-        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
+        {% block main_content %}{% endblock %}
 
-            {% if messages %}
-            <div class="mb-3">
-                {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
-                <div>
-                    <h4 class="mb-0">{% block page_title %}{% endblock %}</h4>
-                    <p class="text-muted mb-0 small">{% block page_subtitle %}{% endblock %}</p>
-                </div>
-                <div>{% block page_actions %}{% endblock %}</div>
-            </div>
-
-            {% block main_content %}{% endblock %}
-
-        </main>
     </div>
 </div>
+
+{% endwith %}
+
+<script>
+function openSidebar() {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('sidebarOverlay').classList.add('open');
+}
+function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebarOverlay').classList.remove('open');
+}
+</script>
 
 {% endblock %}

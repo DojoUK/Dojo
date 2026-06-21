@@ -6,46 +6,70 @@
 
 {% block main_content %}
 
-<div class="row g-3 mb-3">
+<div class="row g-3 mb-4">
     <div class="col-sm-6 col-lg-3">
         {% if is_admin %}<a href="{% url 'member_list' org_slug=org.slug %}" class="text-decoration-none">{% endif %}
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-                <div class="text-muted small mb-1">Active members</div>
-                <div class="fs-3 fw-bold text-dark">{{ member_count }}</div>
-                {% if new_members_month %}<div class="text-success small">+{{ new_members_month }} this month</div>{% endif %}
+        <div class="card h-100" style="background:linear-gradient(135deg,#2563EB,#1d4ed8);border:none!important;">
+            <div class="card-body py-4">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small fw-semibold" style="color:rgba(255,255,255,.75);">Active members</span>
+                    <i class="bi bi-people" style="color:rgba(255,255,255,.4);font-size:1.2rem;"></i>
+                </div>
+                <div class="fs-2 fw-bold text-white">{{ member_count }}</div>
+                {% if new_members_month %}
+                <div class="small mt-1" style="color:rgba(255,255,255,.7);">+{{ new_members_month }} this month</div>
+                {% else %}
+                <div class="small mt-1" style="color:rgba(255,255,255,.4);">Total active</div>
+                {% endif %}
             </div>
         </div>
         {% if is_admin %}</a>{% endif %}
     </div>
     <div class="col-sm-6 col-lg-3">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-                <div class="text-muted small mb-1">Sessions next 7 days</div>
-                <div class="fs-3 fw-bold">{{ sessions_this_week }}</div>
-                {% if attendance_rate is not None %}<div class="text-muted small">{{ attendance_rate }}% attendance (4 wks)</div>{% endif %}
+        <div class="card h-100" style="background:linear-gradient(135deg,#0891b2,#0e7490);border:none!important;">
+            <div class="card-body py-4">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small fw-semibold" style="color:rgba(255,255,255,.75);">Sessions this week</span>
+                    <i class="bi bi-calendar-check" style="color:rgba(255,255,255,.4);font-size:1.2rem;"></i>
+                </div>
+                <div class="fs-2 fw-bold text-white">{{ sessions_this_week }}</div>
+                {% if attendance_rate is not None %}
+                <div class="small mt-1" style="color:rgba(255,255,255,.7);">{{ attendance_rate }}% attendance (4 wks)</div>
+                {% else %}
+                <div class="small mt-1" style="color:rgba(255,255,255,.4);">Next 7 days</div>
+                {% endif %}
             </div>
         </div>
     </div>
     {% if is_admin %}
     <div class="col-sm-6 col-lg-3">
         <a href="{% url 'invoice_list' org_slug=org.slug %}" class="text-decoration-none">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body">
-                <div class="text-muted small mb-1">Revenue this month</div>
-                <div class="fs-3 fw-bold text-success">£{{ revenue_month|floatformat:2 }}</div>
-                {% if outstanding %}<div class="text-warning small">£{{ outstanding|floatformat:2 }} outstanding</div>{% endif %}
+        <div class="card h-100" style="background:linear-gradient(135deg,#059669,#047857);border:none!important;">
+            <div class="card-body py-4">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small fw-semibold" style="color:rgba(255,255,255,.75);">Revenue this month</span>
+                    <i class="bi bi-currency-pound" style="color:rgba(255,255,255,.4);font-size:1.2rem;"></i>
+                </div>
+                <div class="fs-2 fw-bold text-white">£{{ revenue_month|floatformat:2 }}</div>
+                {% if outstanding %}
+                <div class="small mt-1" style="color:rgba(255,255,255,.7);">£{{ outstanding|floatformat:2 }} outstanding</div>
+                {% else %}
+                <div class="small mt-1" style="color:rgba(255,255,255,.4);">All paid up</div>
+                {% endif %}
             </div>
         </div>
         </a>
     </div>
     <div class="col-sm-6 col-lg-3">
         <a href="{% url 'attendance_analytics' org_slug=org.slug %}" class="text-decoration-none">
-        <div class="card border-0 shadow-sm h-100 {% if at_risk_count %}border-start border-warning border-3{% endif %}">
-            <div class="card-body">
-                <div class="text-muted small mb-1">Members at risk</div>
-                <div class="fs-3 fw-bold {% if at_risk_count %}text-warning{% endif %}">{{ at_risk_count }}</div>
-                <div class="text-muted small">absent 2+ weeks</div>
+        <div class="card h-100" style="background:linear-gradient(135deg,{% if at_risk_count %}#d97706,#b45309{% else %}#7c3aed,#6d28d9{% endif %});border:none!important;">
+            <div class="card-body py-4">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small fw-semibold" style="color:rgba(255,255,255,.75);">Members at risk</span>
+                    <i class="bi bi-exclamation-triangle" style="color:rgba(255,255,255,.4);font-size:1.2rem;"></i>
+                </div>
+                <div class="fs-2 fw-bold text-white">{{ at_risk_count }}</div>
+                <div class="small mt-1" style="color:rgba(255,255,255,.7);">Absent 2+ weeks</div>
             </div>
         </div>
         </a>

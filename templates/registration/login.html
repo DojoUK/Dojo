@@ -1,26 +1,32 @@
 {% extends 'base.html' %}
 
 {% block title %}Log in — Dojo{% endblock %}
-{% block body_class %}bg-dark{% endblock %}
+{% block body_class %}{% endblock %}
 
 {% block body %}
-<div class="min-vh-100 d-flex align-items-center justify-content-center">
-    <div class="w-100" style="max-width: 380px;">
+<style>
+    body { background: linear-gradient(135deg, #1E3A5F 0%, #0f2139 100%); min-height: 100vh; }
+</style>
+<div class="min-vh-100 d-flex align-items-center justify-content-center px-3">
+    <div class="w-100" style="max-width: 400px;">
 
-        <div class="text-center mb-4">
-            <h2 class="text-white fw-bold">Dojo</h2>
-            <p class="text-secondary">Club management</p>
+        <div class="text-center mb-5">
+            <div style="display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;background:rgba(255,255,255,.12);border-radius:14px;margin-bottom:16px;">
+                <i class="bi bi-shield-fill" style="font-size:1.5rem;color:#fff;"></i>
+            </div>
+            <h2 class="text-white fw-bold mb-1" style="letter-spacing:-.02em;">Dojo</h2>
+            <p style="color:rgba(255,255,255,.5);font-size:0.9rem;">Club management platform</p>
         </div>
 
-        <div class="card shadow-sm border-0">
+        <div class="card" style="border:none!important;box-shadow:0 20px 60px rgba(0,0,0,.3)!important;">
             <div class="card-body p-4">
-                <h5 class="card-title mb-4">Log in</h5>
+                <h5 class="fw-semibold mb-4" style="font-size:1rem;">Sign in to your account</h5>
 
                 <form method="post">
                     {% csrf_token %}
 
                     {% if form.errors %}
-                    <div class="alert alert-danger py-2 small">
+                    <div class="alert alert-danger py-2 small mb-3">
                         Username or password incorrect. Please try again.
                     </div>
                     {% endif %}
@@ -38,13 +44,17 @@
                     </div>
 
                     <input type="hidden" name="next" value="{{ next }}">
-                    <button type="submit" class="btn btn-dark w-100">Log in</button>
+                    <button type="submit" class="btn btn-dark w-100 py-2">Sign in</button>
                 </form>
                 <div class="text-center mt-3">
                     <a href="{% url 'password_reset' %}" class="text-muted small">Forgot password?</a>
                 </div>
             </div>
         </div>
+
+        <p class="text-center mt-4" style="color:rgba(255,255,255,.3);font-size:0.75rem;">
+            dojoapp.co.uk
+        </p>
 
     </div>
 </div>
