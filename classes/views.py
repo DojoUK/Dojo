@@ -300,3 +300,102 @@ class RemoveCoachView(OrgAdminMixin, View):
         coach.delete()
         messages.success(request, f'{name} removed as coach.')
         return redirect('class_detail', org_slug=self.org.slug, pk=cls.pk)
+
+
+class AttendanceAnalyticsView(OrgAdminMixin, View):
+    template_name = 'classes/attendance_analytics.html'
+
+    def get(self, request, org_slug):
+        from django.db.models import Count, Max, Q
+
+        today = date.today()
+        four_weeks_ago = today - timedelta(weeks=4)
+        eight_weeks_ago = today - timedelta(weeks=8)
+        two_weeks_ago = today - timedelta(weeks=2)
+
+        class_pk = request.GET.get('class')
+        sort = request.GET.get('sort', 'status')
+
+        members = Member.objects.filter(organisation=self.org, is_active=True)
+
+        if class_pk:
+            members = members.filter(enrolments__assigned_class_id=class_pk)
+
+        members = members.annotate(
+            last_attended=Max(
+                'attendance__session__date',
+                filter=Q(attendance__present=True),
+            ),
+            sessions_4w=Count(
+                'attendance',
+                filter=Q(attendance__present=True, attendance__session__date__gte=four_weeks_ago),
+            ),
+            sessions_8w=Count(
+                'attendance',
+                filter=Q(attendance__present=True, attendance__session__date__gte=eight_weeks_ago),
+            ),
+        )
+
+        def status_order(m):
+            if not m.last_attended:
+                return (3, m.name)
+            if m.last_attended >= two_weeks_ago:
+                return (0, m.name)
+            if m.last_attended >= four_weeks_ago:
+                return (1, m.name)
+            return (2, m.name)
+
+        sort_map = {
+            'name': lambda m: m.name,
+            'last_seen': lambda m: m.last_attended or date(2000, 1, 1),
+            '-last_seen': lambda m: m.last_attended or date(2000, 1, 1),
+            'recent': lambda m: -m.sessions_4w,
+        }
+
+        member_list = list(members)
+
+        if sort == '-last_seen':
+            member_list.sort(key=sort_map[sort], reverse=True)
+        elif sort in sort_map:
+            member_list.sort(key=sort_map[sort])
+        else:
+            member_list.sort(key=status_order)
+
+        # Attach status label
+        for m in member_list:
+            if not m.last_attended:
+                m.attendance_status = 'never'
+            elif m.last_attended >= two_weeks_ago:
+                m.attendance_status = 'active'
+            elif m.last_attended >= four_weeks_ago:
+                m.attendance_status = 'at_risk'
+            else:
+                m.attendance_status = 'absent'
+
+        count_active = sum(1 for m in member_list if m.attendance_status == 'active')
+        count_at_risk = sum(1 for m in member_list if m.attendance_status == 'at_risk')
+        count_absent = sum(1 for m in member_list if m.attendance_status in ('absent', 'never'))
+
+        # Total sessions run in the last 4 weeks across all org classes
+        total_sessions_4w = Session.objects.filter(
+            assigned_class__organisation=self.org,
+            date__gte=four_weeks_ago,
+            is_cancelled=False,
+        ).count()
+
+        classes = Class.objects.filter(organisation=self.org).order_by('name')
+
+        return render(request, self.template_name, {
+            'org': self.org,
+            'org_membership': self.org_membership,
+            'members': member_list,
+            'count_active': count_active,
+            'count_at_risk': count_at_risk,
+            'count_absent': count_absent,
+            'total_sessions_4w': total_sessions_4w,
+            'classes': classes,
+            'selected_class': class_pk,
+            'sort': sort,
+            'today': today,
+            'four_weeks_ago': four_weeks_ago,
+        })

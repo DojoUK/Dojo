@@ -1,0 +1,125 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Attendance — {{ org.name }}{% endblock %}
+{% block page_title %}Attendance{% endblock %}
+
+{% block content %}
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-3">
+        <div class="card border-0 shadow-sm text-center py-3">
+            <div class="display-6 fw-bold text-success">{{ count_active }}</div>
+            <div class="small text-muted mt-1">Active<br><span class="text-success-emphasis">last 2 weeks</span></div>
+        </div>
+    </div>
+    <div class="col-sm-3">
+        <div class="card border-0 shadow-sm text-center py-3">
+            <div class="display-6 fw-bold text-warning">{{ count_at_risk }}</div>
+            <div class="small text-muted mt-1">At risk<br><span class="text-warning-emphasis">2–4 weeks absent</span></div>
+        </div>
+    </div>
+    <div class="col-sm-3">
+        <div class="card border-0 shadow-sm text-center py-3">
+            <div class="display-6 fw-bold text-danger">{{ count_absent }}</div>
+            <div class="small text-muted mt-1">Absent<br><span class="text-danger-emphasis">4+ weeks or never</span></div>
+        </div>
+    </div>
+    <div class="col-sm-3">
+        <div class="card border-0 shadow-sm text-center py-3">
+            <div class="display-6 fw-bold">{{ total_sessions_4w }}</div>
+            <div class="small text-muted mt-1">Sessions<br><span>last 4 weeks</span></div>
+        </div>
+    </div>
+</div>
+
+{% if count_at_risk or count_absent %}
+<div class="card border-warning border-0 shadow-sm mb-4" style="border-left: 4px solid #ffc107 !important;">
+    <div class="card-body py-2 px-3">
+        <p class="small mb-0 text-warning-emphasis fw-semibold">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            {{ count_at_risk|add:count_absent }} member{{ count_at_risk|add:count_absent|pluralize }} haven't trained in over 2 weeks.
+        </p>
+    </div>
+</div>
+{% endif %}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom py-3 d-flex flex-wrap gap-2 justify-content-between align-items-center">
+        <h6 class="mb-0">Member attendance</h6>
+        <div class="d-flex gap-2 flex-wrap align-items-center">
+            <form method="get" class="d-flex gap-2 align-items-center">
+                {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+                <select name="class" class="form-select form-select-sm" style="max-width:200px;" onchange="this.form.submit()">
+                    <option value="">All classes</option>
+                    {% for cls in classes %}
+                    <option value="{{ cls.pk }}" {% if selected_class == cls.pk|stringformat:"s" %}selected{% endif %}>{{ cls.name }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+            <form method="get" class="d-flex gap-2 align-items-center">
+                {% if selected_class %}<input type="hidden" name="class" value="{{ selected_class }}">{% endif %}
+                <select name="sort" class="form-select form-select-sm" style="max-width:170px;" onchange="this.form.submit()">
+                    <option value="status" {% if sort == "status" %}selected{% endif %}>Sort: Status</option>
+                    <option value="name" {% if sort == "name" %}selected{% endif %}>Sort: Name A–Z</option>
+                    <option value="last_seen" {% if sort == "last_seen" %}selected{% endif %}>Sort: Least recent</option>
+                    <option value="-last_seen" {% if sort == "-last_seen" %}selected{% endif %}>Sort: Most recent</option>
+                    <option value="recent" {% if sort == "recent" %}selected{% endif %}>Sort: Sessions (4 wks)</option>
+                </select>
+            </form>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if members %}
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3 small">Member</th>
+                    <th class="small">Last attended</th>
+                    <th class="small text-center">4 weeks</th>
+                    <th class="small text-center">8 weeks</th>
+                    <th class="small pe-3">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for member in members %}
+                <tr>
+                    <td class="ps-3 py-2">
+                        <a href="{% url 'member_detail' org_slug=org.slug pk=member.pk %}" class="text-decoration-none fw-semibold text-dark small">
+                            {{ member.name }}
+                        </a>
+                    </td>
+                    <td class="py-2 small text-muted">
+                        {% if member.last_attended %}
+                            {{ member.last_attended|date:"d M Y" }}
+                            <span class="text-muted" style="font-size:0.75rem;">
+                                ({{ member.last_attended|timesince }} ago)
+                            </span>
+                        {% else %}
+                            <span class="text-muted fst-italic">Never</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-2 small text-center fw-semibold">{{ member.sessions_4w }}</td>
+                    <td class="py-2 small text-center text-muted">{{ member.sessions_8w }}</td>
+                    <td class="py-2 pe-3">
+                        {% if member.attendance_status == 'active' %}
+                        <span class="badge bg-success-subtle text-success">Active</span>
+                        {% elif member.attendance_status == 'at_risk' %}
+                        <span class="badge bg-warning-subtle text-warning">At risk</span>
+                        {% elif member.attendance_status == 'absent' %}
+                        <span class="badge bg-danger-subtle text-danger">Absent</span>
+                        {% else %}
+                        <span class="badge bg-secondary-subtle text-secondary">Never attended</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="card-body text-center py-5">
+            <p class="text-muted small mb-0">No members found.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -12,6 +12,7 @@ urlpatterns = [
     path('<int:pk>/sessions/<int:session_pk>/register/', views.AttendanceRegisterView.as_view(), name='session_register'),
     path('<int:pk>/coaches/add/', views.AddCoachView.as_view(), name='class_coach_add'),
     path('<int:pk>/coaches/<int:coach_pk>/remove/', views.RemoveCoachView.as_view(), name='class_coach_remove'),
+    path('attendance/', views.AttendanceAnalyticsView.as_view(), name='attendance_analytics'),
     path('my-classes/', views.CoachClassListView.as_view(), name='coach_class_list'),
     path('<int:pk>/my-view/', views.CoachClassDetailView.as_view(), name='coach_class_detail'),
 ]
