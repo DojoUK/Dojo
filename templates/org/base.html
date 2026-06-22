@@ -180,8 +180,13 @@
             </a>
         </li>
         <li>
-            <a href="{% url 'invoice_list' org_slug=org.slug %}" class="{% if 'invoice' in url_name or 'billing' in url_name %}active{% endif %}">
+            <a href="{% url 'invoice_list' org_slug=org.slug %}" class="{% if 'invoice' in url_name or url_name == 'billing_export' %}active{% endif %}">
                 <i class="bi bi-receipt"></i> Billing
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'billing_policies' org_slug=org.slug %}" class="{% if 'billing_polic' in url_name or 'billing_discount' in url_name or 'billing_term' in url_name %}active{% endif %}">
+                <i class="bi bi-tags"></i> Billing policies
             </a>
         </li>
         <li>
@@ -234,6 +239,11 @@
             </a>
         </li>
         <li>
+            <a href="{% url 'former_members' org_slug=org.slug %}" class="{% if url_name == 'former_members' %}active{% endif %}">
+                <i class="bi bi-person-slash"></i> Former members
+            </a>
+        </li>
+        <li>
             <a href="{% url 'org_audit_log' org_slug=org.slug %}" class="{% if url_name == 'org_audit_log' %}active{% endif %}">
                 <i class="bi bi-journal-check"></i> Audit log
             </a>
@@ -266,6 +276,17 @@
                 <i class="bi bi-box-arrow-right me-1"></i> Log out
             </button>
         </form>
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.06);text-align:center;">
+            {% load static %}
+            <img src="{% static 'img/dojo-wordmark.png' %}" alt="Dojo" style="height:20px;opacity:0.25;filter:brightness(0) invert(1);">
+            <div style="margin-top:4px;font-size:0.65rem;color:rgba(255,255,255,.2);letter-spacing:.03em;">
+                {% if dojo_licence.type == 'commercial' %}
+                    Licensed to {{ dojo_licence.holder }}
+                {% else %}
+                    <a href="https://github.com/DojoUK/Dojo" target="_blank" rel="noopener" style="color:rgba(255,255,255,.2);text-decoration:none;">AGPL-3.0 &middot; source available</a>
+                {% endif %}
+            </div>
+        </div>
     </div>
 </aside>
 

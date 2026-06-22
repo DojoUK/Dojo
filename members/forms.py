@@ -56,7 +56,7 @@ class MemberForm(forms.ModelForm):
             'emergency_contact_2_name', 'emergency_contact_2_phone',
             'joined_date', 'is_active', 'monthly_fee',
             'licence_number', 'licence_expiry',
-            'medical_info',
+            'medical_info', 'billing_policy',
         ]
         widgets = {
             'date_of_birth': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
@@ -64,7 +64,7 @@ class MemberForm(forms.ModelForm):
             'licence_expiry': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, org=None, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             if isinstance(field.widget, forms.CheckboxInput):
@@ -72,6 +72,13 @@ class MemberForm(forms.ModelForm):
             else:
                 field.widget.attrs['class'] = 'form-control'
         self.fields['name'].widget.attrs['autofocus'] = True
+        self.fields['billing_policy'].required = False
+        self.fields['billing_policy'].empty_label = '— No policy —'
+        if org:
+            from billing.models import BillingPolicy
+            self.fields['billing_policy'].queryset = BillingPolicy.objects.filter(
+                organisation=org, is_active=True
+            )
 
 
 class GuardianForm(forms.ModelForm):

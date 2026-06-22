@@ -1,0 +1,301 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Billing policies{% endblock %}
+
+{% block page_title %}Billing policies{% endblock %}
+{% block page_subtitle %}Define pricing rules, billing cycles, and discounts{% endblock %}
+
+{% block page_actions %}
+<button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addPolicyModal">
+    <i class="bi bi-plus-lg me-1"></i> New policy
+</button>
+{% endblock %}
+
+{% block main_content %}
+
+<div class="row g-4">
+
+    <!-- Policies list -->
+    <div class="col-12">
+        {% if policies %}
+        <div class="row g-3">
+            {% for policy in policies %}
+            <div class="col-12 col-lg-6">
+                <div class="card h-100" style="border:1px solid var(--dojo-border);">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h6 class="fw-semibold mb-1">{{ policy.name }}</h6>
+                                <span class="badge bg-secondary">{{ policy.get_billing_cycle_display }}</span>
+                                {% if not policy.is_active %}<span class="badge bg-warning text-dark ms-1">Inactive</span>{% endif %}
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold fs-5">£{{ policy.amount }}</div>
+                                <div class="text-muted small">per {{ policy.get_billing_cycle_display|lower }}</div>
+                            </div>
+                        </div>
+                        {% if policy.description %}
+                        <p class="text-muted small mb-3">{{ policy.description }}</p>
+                        {% endif %}
+
+                        <!-- Discounts for this policy -->
+                        {% if policy.discounts.all %}
+                        <div class="mb-3">
+                            <div class="small fw-semibold text-muted mb-1">Discounts</div>
+                            <div class="d-flex flex-wrap gap-1">
+                                {% for d in policy.discounts.all %}
+                                <div class="d-flex align-items-center gap-1">
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                        {{ d }}
+                                        {% if d.auto_apply %}<i class="bi bi-lightning-fill" title="Auto-apply"></i>{% endif %}
+                                    </span>
+                                    <form method="post" action="{% url 'billing_discount_delete' org_slug=org.slug pk=d.pk %}" class="d-inline" onsubmit="return confirm('Remove this discount?')">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-link p-0 text-danger" style="font-size:0.75rem;" title="Remove discount"><i class="bi bi-x"></i></button>
+                                    </form>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Add discount button -->
+                        <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal"
+                                data-bs-target="#addDiscountModal{{ policy.pk }}">
+                            <i class="bi bi-percent me-1"></i> Add discount
+                        </button>
+
+                        <!-- Edit / Delete -->
+                        <div class="mt-3 pt-3 border-top d-flex gap-2">
+                            <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal"
+                                    data-bs-target="#editPolicyModal{{ policy.pk }}">
+                                <i class="bi bi-pencil me-1"></i> Edit
+                            </button>
+                            <form method="post" action="{% url 'billing_policy_delete' org_slug=org.slug pk=policy.pk %}" onsubmit="return confirm('Delete policy &quot;{{ policy.name }}&quot;? Members and classes using it will be unassigned.')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash me-1"></i> Delete</button>
+                            </form>
+                        </div>
+
+                        <!-- Usage stats -->
+                        <div class="mt-2 small text-muted">
+                            {{ policy.members.count }} member{{ policy.members.count|pluralize }} &middot;
+                            {{ policy.classes.count }} class{{ policy.classes.count|pluralize:"es" }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit policy modal -->
+            <div class="modal fade" id="editPolicyModal{{ policy.pk }}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <form method="post" action="{% url 'billing_policy_edit' org_slug=org.slug pk=policy.pk %}">
+                            {% csrf_token %}
+                            <div class="modal-header"><h5 class="modal-title">Edit — {{ policy.name }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold">Policy name</label>
+                                    <input type="text" name="name" class="form-control" value="{{ policy.name }}" required>
+                                </div>
+                                <div class="row g-2 mb-3">
+                                    <div class="col">
+                                        <label class="form-label small fw-semibold">Billing cycle</label>
+                                        <select name="billing_cycle" class="form-select">
+                                            <option value="monthly" {% if policy.billing_cycle == 'monthly' %}selected{% endif %}>Monthly</option>
+                                            <option value="termly" {% if policy.billing_cycle == 'termly' %}selected{% endif %}>Termly</option>
+                                            <option value="annual" {% if policy.billing_cycle == 'annual' %}selected{% endif %}>Annual</option>
+                                            <option value="custom" {% if policy.billing_cycle == 'custom' %}selected{% endif %}>Custom / Manual</option>
+                                        </select>
+                                    </div>
+                                    <div class="col">
+                                        <label class="form-label small fw-semibold">Amount (£)</label>
+                                        <input type="number" name="amount" class="form-control" step="0.01" min="0" value="{{ policy.amount }}" required>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold">Description</label>
+                                    <textarea name="description" class="form-control" rows="2">{{ policy.description }}</textarea>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="is_active" value="1" id="isActive{{ policy.pk }}" {% if policy.is_active %}checked{% endif %}>
+                                    <label class="form-check-label small" for="isActive{{ policy.pk }}">Active</label>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary btn-sm">Save changes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add discount modal -->
+            <div class="modal fade" id="addDiscountModal{{ policy.pk }}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <form method="post" action="{% url 'billing_discount_add' org_slug=org.slug pk=policy.pk %}">
+                            {% csrf_token %}
+                            <div class="modal-header"><h5 class="modal-title">Add discount — {{ policy.name }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold">Discount name</label>
+                                    <input type="text" name="name" class="form-control" placeholder="e.g. Sibling discount" required>
+                                </div>
+                                <div class="row g-2 mb-3">
+                                    <div class="col">
+                                        <label class="form-label small fw-semibold">Type</label>
+                                        <select name="discount_type" class="form-select">
+                                            <option value="percentage">Percentage (%)</option>
+                                            <option value="fixed">Fixed amount (£)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col">
+                                        <label class="form-label small fw-semibold">Value</label>
+                                        <input type="number" name="value" class="form-control" step="0.01" min="0" placeholder="e.g. 10" required>
+                                    </div>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="auto_apply" value="1" id="autoApply{{ policy.pk }}">
+                                    <label class="form-check-label small" for="autoApply{{ policy.pk }}">
+                                        Auto-apply to all members on this policy
+                                        <span class="text-muted d-block" style="font-size:0.8rem;">When set, this discount applies automatically when billing. Members can still have it removed per-invoice.</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary btn-sm">Add discount</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-tags" style="font-size:2.5rem;opacity:.3;"></i>
+            <p class="mt-3">No billing policies yet. Create one to start assigning pricing to classes and members.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Terms -->
+    <div class="col-12 mt-2">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="fw-semibold mb-0">Terms</h6>
+            <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#addTermModal">
+                <i class="bi bi-plus-lg me-1"></i> Add term
+            </button>
+        </div>
+        {% if terms %}
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead><tr>
+                    <th>Name</th><th>Start</th><th>End</th><th></th>
+                </tr></thead>
+                <tbody>
+                    {% for term in terms %}
+                    <tr>
+                        <td class="fw-medium">{{ term.name }}</td>
+                        <td>{{ term.start_date|date:"d M Y" }}</td>
+                        <td>{{ term.end_date|date:"d M Y" }}</td>
+                        <td class="text-end">
+                            <form method="post" action="{% url 'billing_term_delete' org_slug=org.slug pk=term.pk %}" class="d-inline" onsubmit="return confirm('Delete this term?')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted small">No terms defined. Add terms to use termly billing cycles.</p>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- Add policy modal -->
+<div class="modal fade" id="addPolicyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'billing_policy_create' org_slug=org.slug %}">
+                {% csrf_token %}
+                <div class="modal-header"><h5 class="modal-title">New billing policy</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Policy name</label>
+                        <input type="text" name="name" class="form-control" placeholder="e.g. Adult monthly, Kids termly" required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col">
+                            <label class="form-label small fw-semibold">Billing cycle</label>
+                            <select name="billing_cycle" class="form-select">
+                                <option value="monthly">Monthly</option>
+                                <option value="termly">Termly</option>
+                                <option value="annual">Annual</option>
+                                <option value="custom">Custom / Manual</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label class="form-label small fw-semibold">Amount (£)</label>
+                            <input type="number" name="amount" class="form-control" step="0.01" min="0" placeholder="0.00" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Description <span class="text-muted fw-normal">(optional)</span></label>
+                        <textarea name="description" class="form-control" rows="2" placeholder="Internal notes about this policy"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Create policy</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add term modal -->
+<div class="modal fade" id="addTermModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'billing_term_add' org_slug=org.slug %}">
+                {% csrf_token %}
+                <div class="modal-header"><h5 class="modal-title">Add term</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Term name</label>
+                        <input type="text" name="name" class="form-control" placeholder="e.g. Autumn Term 2025" required>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col">
+                            <label class="form-label small fw-semibold">Start date</label>
+                            <input type="date" name="start_date" class="form-control" required>
+                        </div>
+                        <div class="col">
+                            <label class="form-label small fw-semibold">End date</label>
+                            <input type="date" name="end_date" class="form-control" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Add term</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

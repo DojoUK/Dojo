@@ -16,19 +16,26 @@ DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sun
 DAYS_JSON = json.dumps(DAYS)
 
 
-def _class_form_class():
+def _class_form_class(org=None):
     from django import forms
+    from billing.models import BillingPolicy
 
     class ClassForm(forms.ModelForm):
         class Meta:
             model = Class
-            fields = ['name', 'description', 'max_capacity']
+            fields = ['name', 'description', 'max_capacity', 'billing_policy']
             widgets = {'description': forms.Textarea(attrs={'rows': 3})}
 
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             for field in self.fields.values():
                 field.widget.attrs['class'] = 'form-control'
+            if org:
+                self.fields['billing_policy'].queryset = BillingPolicy.objects.filter(
+                    organisation=org, is_active=True
+                )
+            self.fields['billing_policy'].required = False
+            self.fields['billing_policy'].empty_label = '— No policy —'
 
     return ClassForm
 
@@ -66,14 +73,14 @@ class ClassListView(OrgAdminMixin, ListView):
 
 class ClassCreateView(OrgAdminMixin, View):
     def get(self, request, org_slug):
-        form = _class_form_class()()
+        form = _class_form_class(self.org)()
         return render(request, 'classes/form.html', {
             'org': self.org, 'org_membership': self.org_membership,
             'form': form, 'title': 'Add class', 'days': DAYS, 'days_json': DAYS_JSON, 'schedule': [],
         })
 
     def post(self, request, org_slug):
-        FormClass = _class_form_class()
+        FormClass = _class_form_class(self.org)
         form = FormClass(request.POST)
         if form.is_valid():
             obj = form.save(commit=False)
@@ -95,7 +102,7 @@ class ClassUpdateView(OrgAdminMixin, View):
 
     def get(self, request, org_slug, pk):
         cls = self.get_class(pk)
-        form = _class_form_class()(instance=cls)
+        form = _class_form_class(self.org)(instance=cls)
         return render(request, 'classes/form.html', {
             'org': self.org, 'org_membership': self.org_membership,
             'form': form, 'title': f'Edit {cls.name}',
@@ -104,7 +111,7 @@ class ClassUpdateView(OrgAdminMixin, View):
 
     def post(self, request, org_slug, pk):
         cls = self.get_class(pk)
-        FormClass = _class_form_class()
+        FormClass = _class_form_class(self.org)
         form = FormClass(request.POST, instance=cls)
         if form.is_valid():
             obj = form.save(commit=False)
@@ -563,3 +570,58 @@ class AttendanceAnalyticsView(OrgAdminMixin, View):
             'today': today,
             'four_weeks_ago': four_weeks_ago,
         })
+
+
+class AttendanceExportView(OrgAdminMixin, View):
+    def get(self, request, org_slug):
+        import csv
+        from django.http import HttpResponse
+        from .models import Session, Attendance
+
+        date_from_raw = request.GET.get('date_from', '')
+        date_to_raw = request.GET.get('date_to', '')
+        class_pk = request.GET.get('class', '')
+
+        sessions = Session.objects.filter(
+            assigned_class__organisation=self.org,
+            is_cancelled=False,
+        ).select_related('assigned_class').order_by('date')
+
+        if date_from_raw:
+            try:
+                sessions = sessions.filter(date__gte=date.fromisoformat(date_from_raw))
+            except ValueError:
+                pass
+        if date_to_raw:
+            try:
+                sessions = sessions.filter(date__lte=date.fromisoformat(date_to_raw))
+            except ValueError:
+                pass
+        if class_pk:
+            sessions = sessions.filter(assigned_class_id=class_pk)
+
+        attendance = (
+            Attendance.objects.filter(session__in=sessions)
+            .select_related('member', 'session', 'session__assigned_class')
+            .order_by('session__date', 'session__assigned_class__name', 'member__name')
+        )
+
+        response = HttpResponse(content_type='text/csv')
+        label_parts = []
+        if date_from_raw:
+            label_parts.append(date_from_raw)
+        if date_to_raw:
+            label_parts.append(date_to_raw)
+        suffix = '-'.join(label_parts) or 'all'
+        response['Content-Disposition'] = f'attachment; filename="{self.org.slug}-attendance-{suffix}.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow(['Date', 'Class', 'Member', 'Present'])
+        for a in attendance:
+            writer.writerow([
+                a.session.date.isoformat(),
+                a.session.assigned_class.name,
+                a.member.name,
+                'Yes' if a.present else 'No',
+            ])
+        return response

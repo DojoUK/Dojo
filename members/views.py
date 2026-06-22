@@ -147,6 +147,11 @@ class MemberCreateView(OrgAdminMixin, CreateView):
     template_name = 'members/form.html'
     form_class = MemberForm
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['org'] = self.org
+        return kwargs
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = 'Add member'
@@ -242,6 +247,18 @@ class MemberDetailView(OrgAdminMixin, DetailView):
         context['missing_waivers'] = context['waiver_templates'].filter(
             is_required=True
         ).exclude(pk__in=signed_template_ids)
+        from billing.models import BillingPolicy, PolicyDiscount, MemberDiscount
+        context['member_discounts'] = MemberDiscount.objects.filter(
+            member=self.object, is_active=True
+        ).select_related('discount__policy')
+        context['org_policies'] = BillingPolicy.objects.filter(
+            organisation=self.org, is_active=True
+        ).prefetch_related('discounts')
+        context['available_discounts'] = PolicyDiscount.objects.filter(
+            policy__organisation=self.org
+        ).exclude(
+            member_discounts__member=self.object, member_discounts__is_active=True
+        ).select_related('policy')
         return context
 
 
@@ -251,6 +268,11 @@ class MemberUpdateView(OrgAdminMixin, UpdateView):
 
     def get_object(self):
         return get_object_or_404(Member, pk=self.kwargs['pk'], organisation=self.org)
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['org'] = self.org
+        return kwargs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -283,9 +305,14 @@ class MemberUpdateView(OrgAdminMixin, UpdateView):
 
 class MemberArchiveView(OrgAdminMixin, View):
     def post(self, request, org_slug, pk):
+        from django.utils import timezone
         member = get_object_or_404(Member, pk=pk, organisation=self.org)
         member.is_active = not member.is_active
-        member.save(update_fields=['is_active'])
+        if not member.is_active:
+            member.archived_at = timezone.now()
+        else:
+            member.archived_at = None
+        member.save(update_fields=['is_active', 'archived_at'])
         status = 'reactivated' if member.is_active else 'archived'
         messages.success(request, f'{member.name} {status}.')
         return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
@@ -569,3 +596,31 @@ class SendWelcomeEmailView(OrgAdminMixin, View):
         except Exception as e:
             messages.error(request, f'Email failed: {e}')
         return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
+
+
+class FormerMembersView(OrgAdminMixin, View):
+    template_name = 'members/former_members.html'
+
+    def get(self, request, org_slug):
+        from datetime import timedelta
+        from django.utils import timezone
+        cutoff = timezone.now() - timedelta(days=3 * 365)
+        former = (
+            Member.objects.filter(organisation=self.org, is_active=False)
+            .order_by('-archived_at', 'name')
+        )
+        return render(request, self.template_name, {
+            'org': self.org,
+            'org_membership': self.org_membership,
+            'former_members': former,
+            'retention_cutoff': cutoff,
+        })
+
+
+class MemberRetentionNotesView(OrgAdminMixin, View):
+    def post(self, request, org_slug, pk):
+        member = get_object_or_404(Member, pk=pk, organisation=self.org)
+        member.retention_notes = request.POST.get('retention_notes', '').strip()
+        member.save(update_fields=['retention_notes'])
+        messages.success(request, 'Retention notes saved.')
+        return redirect('former_members', org_slug=self.org.slug)

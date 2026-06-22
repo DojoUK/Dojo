@@ -9,7 +9,7 @@ from django.views.generic import DetailView, ListView
 from dojo.mixins import OrgAdminMixin
 from members.models import Member
 
-from .models import Invoice, Payment
+from .models import Invoice, Payment, BillingPolicy, OrgTerm, PolicyDiscount, MemberDiscount
 
 
 class InvoiceListView(OrgAdminMixin, ListView):
@@ -380,3 +380,172 @@ class SendReminderEmailView(OrgAdminMixin, View):
         except Exception as e:
             messages.error(request, f'Reminder failed: {e}')
         return redirect('invoice_detail', org_slug=self.org.slug, pk=pk)
+
+
+# ── Billing Policies ──────────────────────────────────────────────────────────
+
+class BillingPolicyListView(OrgAdminMixin, View):
+    template_name = 'billing/policies.html'
+
+    def get(self, request, org_slug):
+        policies = BillingPolicy.objects.filter(organisation=self.org).prefetch_related('discounts')
+        terms = OrgTerm.objects.filter(organisation=self.org).order_by('-start_date')
+        return render(request, self.template_name, {
+            'org': self.org,
+            'org_membership': self.org_membership,
+            'policies': policies,
+            'terms': terms,
+        })
+
+
+class BillingPolicyCreateView(OrgAdminMixin, View):
+    def post(self, request, org_slug):
+        name = request.POST.get('name', '').strip()
+        billing_cycle = request.POST.get('billing_cycle', '').strip()
+        amount = request.POST.get('amount', '').strip()
+        description = request.POST.get('description', '').strip()
+
+        if not name or not billing_cycle or not amount:
+            messages.error(request, 'Name, billing cycle, and amount are required.')
+            return redirect('billing_policies', org_slug=self.org.slug)
+
+        try:
+            amount_val = float(amount)
+        except ValueError:
+            messages.error(request, 'Invalid amount.')
+            return redirect('billing_policies', org_slug=self.org.slug)
+
+        BillingPolicy.objects.create(
+            organisation=self.org,
+            name=name,
+            billing_cycle=billing_cycle,
+            amount=amount_val,
+            description=description,
+        )
+        messages.success(request, f'Policy "{name}" created.')
+        return redirect('billing_policies', org_slug=self.org.slug)
+
+
+class BillingPolicyEditView(OrgAdminMixin, View):
+    def post(self, request, org_slug, pk):
+        policy = get_object_or_404(BillingPolicy, pk=pk, organisation=self.org)
+        policy.name = request.POST.get('name', policy.name).strip()
+        policy.billing_cycle = request.POST.get('billing_cycle', policy.billing_cycle).strip()
+        policy.description = request.POST.get('description', '').strip()
+        try:
+            policy.amount = float(request.POST.get('amount', policy.amount))
+        except ValueError:
+            messages.error(request, 'Invalid amount.')
+            return redirect('billing_policies', org_slug=self.org.slug)
+        policy.is_active = request.POST.get('is_active') == '1'
+        policy.save()
+        messages.success(request, f'Policy "{policy.name}" updated.')
+        return redirect('billing_policies', org_slug=self.org.slug)
+
+
+class BillingPolicyDeleteView(OrgAdminMixin, View):
+    def post(self, request, org_slug, pk):
+        policy = get_object_or_404(BillingPolicy, pk=pk, organisation=self.org)
+        name = policy.name
+        policy.delete()
+        messages.success(request, f'Policy "{name}" deleted.')
+        return redirect('billing_policies', org_slug=self.org.slug)
+
+
+class PolicyDiscountCreateView(OrgAdminMixin, View):
+    def post(self, request, org_slug, pk):
+        policy = get_object_or_404(BillingPolicy, pk=pk, organisation=self.org)
+        name = request.POST.get('name', '').strip()
+        discount_type = request.POST.get('discount_type', '').strip()
+        value = request.POST.get('value', '').strip()
+        auto_apply = request.POST.get('auto_apply') == '1'
+
+        if not name or not discount_type or not value:
+            messages.error(request, 'All discount fields are required.')
+            return redirect('billing_policies', org_slug=self.org.slug)
+
+        try:
+            value_val = float(value)
+        except ValueError:
+            messages.error(request, 'Invalid discount value.')
+            return redirect('billing_policies', org_slug=self.org.slug)
+
+        PolicyDiscount.objects.create(
+            policy=policy,
+            name=name,
+            discount_type=discount_type,
+            value=value_val,
+            auto_apply=auto_apply,
+        )
+        messages.success(request, f'Discount "{name}" added to {policy.name}.')
+        return redirect('billing_policies', org_slug=self.org.slug)
+
+
+class PolicyDiscountDeleteView(OrgAdminMixin, View):
+    def post(self, request, org_slug, pk):
+        discount = get_object_or_404(PolicyDiscount, pk=pk, policy__organisation=self.org)
+        name = discount.name
+        discount.delete()
+        messages.success(request, f'Discount "{name}" removed.')
+        return redirect('billing_policies', org_slug=self.org.slug)
+
+
+# ── Org Terms ─────────────────────────────────────────────────────────────────
+
+class OrgTermCreateView(OrgAdminMixin, View):
+    def post(self, request, org_slug):
+        name = request.POST.get('name', '').strip()
+        start_date_raw = request.POST.get('start_date', '').strip()
+        end_date_raw = request.POST.get('end_date', '').strip()
+
+        if not name or not start_date_raw or not end_date_raw:
+            messages.error(request, 'All term fields are required.')
+            return redirect('billing_policies', org_slug=self.org.slug)
+
+        try:
+            start_date = date.fromisoformat(start_date_raw)
+            end_date = date.fromisoformat(end_date_raw)
+        except ValueError:
+            messages.error(request, 'Invalid term dates.')
+            return redirect('billing_policies', org_slug=self.org.slug)
+
+        OrgTerm.objects.create(
+            organisation=self.org,
+            name=name,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        messages.success(request, f'Term "{name}" added.')
+        return redirect('billing_policies', org_slug=self.org.slug)
+
+
+class OrgTermDeleteView(OrgAdminMixin, View):
+    def post(self, request, org_slug, pk):
+        term = get_object_or_404(OrgTerm, pk=pk, organisation=self.org)
+        name = term.name
+        term.delete()
+        messages.success(request, f'Term "{name}" deleted.')
+        return redirect('billing_policies', org_slug=self.org.slug)
+
+
+# ── Member Discounts ──────────────────────────────────────────────────────────
+
+class MemberDiscountAddView(OrgAdminMixin, View):
+    def post(self, request, org_slug, member_pk):
+        from members.models import Member as MemberModel
+        member = get_object_or_404(MemberModel, pk=member_pk, organisation=self.org)
+        discount_id = request.POST.get('discount_id')
+        discount = get_object_or_404(PolicyDiscount, pk=discount_id, policy__organisation=self.org)
+        MemberDiscount.objects.get_or_create(member=member, discount=discount)
+        messages.success(request, f'Discount "{discount.name}" applied to {member.name}.')
+        return redirect('member_detail', org_slug=self.org.slug, pk=member_pk)
+
+
+class MemberDiscountRemoveView(OrgAdminMixin, View):
+    def post(self, request, org_slug, pk):
+        md = get_object_or_404(MemberDiscount, pk=pk, member__organisation=self.org)
+        member_pk = md.member_id
+        name = md.discount.name
+        md.delete()
+        messages.success(request, f'Discount "{name}" removed.')
+        return redirect('member_detail', org_slug=self.org.slug, pk=member_pk)

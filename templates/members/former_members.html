@@ -1,0 +1,118 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Former members{% endblock %}
+
+{% block page_title %}Former members{% endblock %}
+{% block page_subtitle %}Data retained for auditing, insurance, medical, and safeguarding purposes{% endblock %}
+
+{% block main_content %}
+
+{% with cutoff_date=retention_cutoff %}
+
+{% if former_members %}
+
+<div class="alert alert-info d-flex gap-2 mb-4" style="font-size:0.875rem;">
+    <i class="bi bi-info-circle-fill flex-shrink-0 mt-1"></i>
+    <div>
+        Former member records are retained for <strong>3 years</strong> after archiving to support auditing, insurance, medical, and safeguarding requirements. Members archived before <strong>{{ retention_cutoff|date:"d M Y" }}</strong> should be reviewed before removal.
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Member</th>
+                <th>Archived</th>
+                <th>Retention status</th>
+                <th>Notes</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for member in former_members %}
+            {% with past_cutoff=member.archived_at|default:None %}
+            <tr {% if member.archived_at and member.archived_at < retention_cutoff %}class="table-warning"{% endif %}>
+                <td>
+                    <a href="{% url 'member_detail' org_slug=org.slug pk=member.pk %}" class="fw-medium text-decoration-none">
+                        {{ member.name }}
+                    </a>
+                    {% if member.email %}<div class="text-muted small">{{ member.email }}</div>{% endif %}
+                </td>
+                <td>
+                    {% if member.archived_at %}
+                        {{ member.archived_at|date:"d M Y" }}
+                    {% else %}
+                        <span class="text-muted small">Unknown</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if not member.archived_at %}
+                        <span class="badge bg-secondary">No date recorded</span>
+                    {% elif member.archived_at < retention_cutoff %}
+                        <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i> Past 3-year mark</span>
+                    {% else %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle">Within retention period</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="text-muted small">{{ member.retention_notes|default:"—"|truncatechars:60 }}</span>
+                </td>
+                <td class="text-end">
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal"
+                                data-bs-target="#retentionNotesModal{{ member.pk }}" title="Edit retention notes">
+                            <i class="bi bi-sticky"></i>
+                        </button>
+                        <form method="post" action="{% url 'member_archive' org_slug=org.slug pk=member.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-success" title="Reactivate member"
+                                    onclick="return confirm('Reactivate {{ member.name }}?')">
+                                <i class="bi bi-person-check"></i>
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+
+            <!-- Retention notes modal -->
+            <div class="modal fade" id="retentionNotesModal{{ member.pk }}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <form method="post" action="{% url 'member_retention_notes' org_slug=org.slug pk=member.pk %}">
+                            {% csrf_token %}
+                            <div class="modal-header">
+                                <h5 class="modal-title">Retention notes — {{ member.name }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="text-muted small mb-3">
+                                    Record the reason data is being retained beyond the standard period (e.g. ongoing insurance claim, police investigation, medical records).
+                                </p>
+                                <textarea name="retention_notes" class="form-control" rows="4"
+                                          placeholder="e.g. Retained pending insurance review — incident 2025-03-01">{{ member.retention_notes }}</textarea>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary btn-sm">Save notes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endwith %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% else %}
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-person-slash" style="font-size:2.5rem;opacity:.3;"></i>
+    <p class="mt-3">No archived members.</p>
+</div>
+{% endif %}
+
+{% endwith %}
+
+{% endblock %}

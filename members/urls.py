@@ -18,4 +18,6 @@ urlpatterns = [
     path('applications/', views.ApplicationListView.as_view(), name='application_list'),
     path('applications/<int:pk>/approve/', views.ApproveApplicationView.as_view(), name='application_approve'),
     path('applications/<int:pk>/reject/', views.RejectApplicationView.as_view(), name='application_reject'),
+    path('former/', views.FormerMembersView.as_view(), name='former_members'),
+    path('<int:pk>/retention-notes/', views.MemberRetentionNotesView.as_view(), name='member_retention_notes'),
 ]

@@ -29,6 +29,9 @@ class Member(models.Model):
     licence_number = models.CharField(max_length=100, blank=True)
     licence_expiry = models.DateField(null=True, blank=True)
     medical_info = models.TextField(blank=True, help_text='Medical conditions, allergies, or other health information coaches should know about')
+    billing_policy = models.ForeignKey('billing.BillingPolicy', null=True, blank=True, on_delete=models.SET_NULL, related_name='members')
+    archived_at = models.DateTimeField(null=True, blank=True)
+    retention_notes = models.TextField(blank=True, help_text='Reason for retaining data beyond the standard period')
 
     @property
     def has_active_subscription(self):
