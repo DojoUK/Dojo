@@ -22,7 +22,7 @@
 /* ── Sidebar ─────────────────────────────────────── */
 .dojo-sidebar {
     width: 240px;
-    min-height: 100vh;
+    height: 100vh;
     background: linear-gradient(180deg, var(--dojo-sidebar) 0%, var(--dojo-sidebar-dark) 100%);
     position: fixed;
     top: 0;
@@ -30,7 +30,13 @@
     display: flex;
     flex-direction: column;
     z-index: 100;
+    overflow: hidden;
+}
+.dojo-sidebar-nav-scroll {
+    flex: 1;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,.15) transparent;
 }
 .dojo-sidebar-brand {
     padding: 20px 20px 16px;
@@ -85,7 +91,7 @@
 }
 .sidebar-nav a i { font-size: 1rem; flex-shrink: 0; width: 18px; text-align: center; }
 .sidebar-footer {
-    margin-top: auto;
+    flex-shrink: 0;
     padding: 16px 20px;
     border-top: 1px solid rgba(255,255,255,.08);
 }
@@ -150,6 +156,7 @@
         </a>
     </div>
 
+    <div class="dojo-sidebar-nav-scroll">
     <div style="padding: 10px 0 4px;">
         <ul class="sidebar-nav">
             <li>
@@ -267,6 +274,7 @@
     </ul>
 
     {% endif %}
+    </div><!-- end dojo-sidebar-nav-scroll -->
 
     <div class="sidebar-footer">
         <span class="user-name"><i class="bi bi-person-circle me-1"></i>{{ request.user.get_full_name|default:request.user.username }}</span>
