@@ -1,0 +1,148 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Generate monthly invoices — {{ org.name }}{% endblock %}
+{% block page_title %}Generate monthly invoices{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'invoice_list' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Back to billing
+</a>
+{% endblock %}
+
+{% block main_content %}
+<div class="row">
+    <div class="col-lg-8">
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <form method="get" class="row g-2 align-items-end">
+                    <div class="col-sm-5">
+                        <label class="form-label small fw-semibold">Period</label>
+                        <input type="text" name="period" value="{{ period }}" class="form-control form-control-sm"
+                               placeholder="e.g. July 2026">
+                    </div>
+                    <div class="col-sm-auto">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">Preview</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if rows %}
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="period" value="{{ period }}">
+
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0">{{ period }}</h6>
+                        <p class="text-muted small mb-0">{{ rows|length }} member{{ rows|length|pluralize }} with a monthly fee configured</p>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-link text-secondary p-0 me-2" id="select-all">Select all</button>
+                        <button type="button" class="btn btn-sm btn-link text-secondary p-0" id="deselect-all">Deselect all</button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3" style="width:40px;"></th>
+                                <th class="small">Member</th>
+                                <th class="small">Amount</th>
+                                <th class="small">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in rows %}
+                            <tr {% if row.already_invoiced %}class="text-muted"{% endif %}>
+                                <td class="ps-3">
+                                    <input type="checkbox" name="member_ids" value="{{ row.member.pk }}"
+                                           class="form-check-input member-checkbox"
+                                           {% if not row.already_invoiced %}checked{% endif %}
+                                           {% if row.already_invoiced %}disabled{% endif %}>
+                                </td>
+                                <td class="small fw-semibold py-2">{{ row.member.name }}</td>
+                                <td class="small py-2">£{{ row.amount|floatformat:2 }}</td>
+                                <td class="small py-2">
+                                    {% if row.already_invoiced %}
+                                    <span class="badge bg-secondary-subtle text-secondary">Already invoiced</span>
+                                    {% elif row.has_subscription %}
+                                    <span class="badge bg-success-subtle text-success">Autopay active</span>
+                                    {% else %}
+                                    <span class="badge bg-light text-secondary border">Will invoice</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-sm-5">
+                            <label class="form-label small fw-semibold">Due date</label>
+                            <input type="date" name="due_date" value="{{ due_date }}" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-sm-7 d-flex align-items-end">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="send_emails" value="1" id="send-emails">
+                                <label class="form-check-label small" for="send-emails">
+                                    Send invoice emails after creating
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-between">
+                <p class="text-muted small mb-0">
+                    Members on autopay will still receive an invoice — Stripe handles the charge separately.
+                </p>
+                <button type="submit" class="btn btn-dark btn-sm">
+                    <i class="bi bi-lightning me-1"></i> Generate invoices
+                </button>
+            </div>
+        </form>
+
+        {% else %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-people display-6 text-muted d-block mb-2"></i>
+                <p class="fw-semibold mb-1">No members with a monthly fee</p>
+                <p class="text-muted small mb-3">Set a monthly fee on each member's profile to use bulk invoicing.</p>
+                <a href="{% url 'member_list' org_slug=org.slug %}" class="btn btn-sm btn-outline-secondary">Go to members</a>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">How it works</h6>
+            </div>
+            <div class="card-body small text-muted">
+                <p>Each member with a monthly fee configured will appear in the list. Their individual fee is used as the invoice amount.</p>
+                <p>Members who already have an invoice for this period are shown but cannot be re-selected — preventing duplicates.</p>
+                <p class="mb-0">Members on autopay will be invoiced too so you have a record, but Stripe handles the actual charge automatically.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('select-all')?.addEventListener('click', () => {
+    document.querySelectorAll('.member-checkbox:not([disabled])').forEach(cb => cb.checked = true);
+});
+document.getElementById('deselect-all')?.addEventListener('click', () => {
+    document.querySelectorAll('.member-checkbox:not([disabled])').forEach(cb => cb.checked = false);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,224 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Dashboard — {{ org.name }}{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Welcome back, {{ request.user.get_full_name|default:request.user.username }}{% endblock %}
+
+{% block main_content %}
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3">
+        {% if is_admin %}<a href="{% url 'member_list' org_slug=org.slug %}" class="text-decoration-none">{% endif %}
+        <div class="card h-100" style="background:linear-gradient(135deg,#2563EB,#1d4ed8);border:none!important;">
+            <div class="card-body py-4">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small fw-semibold" style="color:rgba(255,255,255,.75);">Active members</span>
+                    <i class="bi bi-people" style="color:rgba(255,255,255,.4);font-size:1.2rem;"></i>
+                </div>
+                <div class="fs-2 fw-bold text-white">{{ member_count }}</div>
+                {% if new_members_month %}
+                <div class="small mt-1" style="color:rgba(255,255,255,.7);">+{{ new_members_month }} this month</div>
+                {% else %}
+                <div class="small mt-1" style="color:rgba(255,255,255,.4);">Total active</div>
+                {% endif %}
+            </div>
+        </div>
+        {% if is_admin %}</a>{% endif %}
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card h-100" style="background:linear-gradient(135deg,#0891b2,#0e7490);border:none!important;">
+            <div class="card-body py-4">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small fw-semibold" style="color:rgba(255,255,255,.75);">Sessions this week</span>
+                    <i class="bi bi-calendar-check" style="color:rgba(255,255,255,.4);font-size:1.2rem;"></i>
+                </div>
+                <div class="fs-2 fw-bold text-white">{{ sessions_this_week }}</div>
+                {% if attendance_rate is not None %}
+                <div class="small mt-1" style="color:rgba(255,255,255,.7);">{{ attendance_rate }}% attendance (4 wks)</div>
+                {% else %}
+                <div class="small mt-1" style="color:rgba(255,255,255,.4);">Next 7 days</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% if is_admin %}
+    <div class="col-sm-6 col-lg-3">
+        <a href="{% url 'invoice_list' org_slug=org.slug %}" class="text-decoration-none">
+        <div class="card h-100" style="background:linear-gradient(135deg,#059669,#047857);border:none!important;">
+            <div class="card-body py-4">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small fw-semibold" style="color:rgba(255,255,255,.75);">Revenue this month</span>
+                    <i class="bi bi-currency-pound" style="color:rgba(255,255,255,.4);font-size:1.2rem;"></i>
+                </div>
+                <div class="fs-2 fw-bold text-white">£{{ revenue_month|floatformat:2 }}</div>
+                {% if outstanding %}
+                <div class="small mt-1" style="color:rgba(255,255,255,.7);">£{{ outstanding|floatformat:2 }} outstanding</div>
+                {% else %}
+                <div class="small mt-1" style="color:rgba(255,255,255,.4);">All paid up</div>
+                {% endif %}
+            </div>
+        </div>
+        </a>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <a href="{% url 'attendance_analytics' org_slug=org.slug %}" class="text-decoration-none">
+        <div class="card h-100" style="background:linear-gradient(135deg,{% if at_risk_count %}#d97706,#b45309{% else %}#7c3aed,#6d28d9{% endif %});border:none!important;">
+            <div class="card-body py-4">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="small fw-semibold" style="color:rgba(255,255,255,.75);">Members at risk</span>
+                    <i class="bi bi-exclamation-triangle" style="color:rgba(255,255,255,.4);font-size:1.2rem;"></i>
+                </div>
+                <div class="fs-2 fw-bold text-white">{{ at_risk_count }}</div>
+                <div class="small mt-1" style="color:rgba(255,255,255,.7);">Absent 2+ weeks</div>
+            </div>
+        </div>
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+{% if is_admin and unsigned_waivers_count %}
+<div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-2">
+    <i class="bi bi-file-earmark-x-fill"></i>
+    <span class="small"><strong>{{ unsigned_waivers_count }} member{{ unsigned_waivers_count|pluralize }}</strong> without a signed waiver — they should not train.</span>
+    <a href="{% url 'member_list' org_slug=org.slug %}?waiver=unsigned" class="btn btn-sm btn-danger ms-auto">View</a>
+</div>
+{% endif %}
+{% if is_admin and pending_applications %}
+<div class="alert alert-warning d-flex align-items-center gap-2 py-2 mb-2">
+    <i class="bi bi-person-plus-fill"></i>
+    <span class="small"><strong>{{ pending_applications }} membership application{{ pending_applications|pluralize }}</strong> waiting for review.</span>
+    <a href="{% url 'application_list' org_slug=org.slug %}" class="btn btn-sm btn-warning ms-auto">Review</a>
+</div>
+{% endif %}
+{% if is_admin and licences_expired %}
+<div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-2">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <span class="small"><strong>{{ licences_expired }} member licence{{ licences_expired|pluralize }} expired.</strong></span>
+    <a href="{% url 'member_list' org_slug=org.slug %}?licence=expired" class="btn btn-sm btn-danger ms-auto">View</a>
+</div>
+{% endif %}
+{% if is_admin and licences_expiring %}
+<div class="alert alert-warning d-flex align-items-center gap-2 py-2 mb-2">
+    <i class="bi bi-card-checklist"></i>
+    <span class="small"><strong>{{ licences_expiring }} member licence{{ licences_expiring|pluralize }}</strong> expiring in the next 30 days.</span>
+    <a href="{% url 'member_list' org_slug=org.slug %}?licence=expiring" class="btn btn-sm btn-warning ms-auto">View</a>
+</div>
+{% endif %}
+{% if is_admin and staff_expired %}
+<div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-2">
+    <i class="bi bi-shield-exclamation"></i>
+    <span class="small"><strong>{{ staff_expired }} staff member{{ staff_expired|pluralize }}</strong> with expired DBS or coaching licence.</span>
+    <a href="{% url 'org_staff' org_slug=org.slug %}" class="btn btn-sm btn-danger ms-auto">View staff</a>
+</div>
+{% endif %}
+{% if is_admin and staff_expiring %}
+<div class="alert alert-warning d-flex align-items-center gap-2 py-2 mb-2">
+    <i class="bi bi-shield-check"></i>
+    <span class="small"><strong>{{ staff_expiring }} staff member{{ staff_expiring|pluralize }}</strong> with DBS or coaching licence expiring soon.</span>
+    <a href="{% url 'org_staff' org_slug=org.slug %}" class="btn btn-sm btn-warning ms-auto">View staff</a>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">
+                    Upcoming sessions <span class="text-muted fw-normal small">— next 7 days{% if not is_admin %} (your classes){% endif %}</span>
+                </h6>
+            </div>
+            {% if upcoming %}
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0 align-middle">
+                    <tbody>
+                        {% for item in upcoming %}
+                        <tr>
+                            <td class="ps-3 py-3" style="width: 110px;">
+                                <div class="fw-semibold small">{{ item.session.date|date:"D d M" }}</div>
+                                {% if item.session.date == today %}
+                                <span class="badge bg-primary-subtle text-primary" style="font-size:0.6rem;">Today</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3">
+                                <div class="fw-semibold small">{{ item.session.assigned_class.name }}</div>
+                                {% if item.session.is_cancelled %}
+                                <span class="badge bg-danger-subtle text-danger" style="font-size:0.6rem;">Cancelled</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 text-muted small">{{ item.enrolled }} enrolled</td>
+                            <td class="py-3 text-end pe-3">
+                                {% if item.taken %}
+                                <a href="{% url 'session_register' org_slug=org.slug pk=item.session.assigned_class.pk session_pk=item.session.pk %}"
+                                   class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-check2 me-1"></i>{{ item.present }}/{{ item.enrolled }} taken
+                                </a>
+                                {% else %}
+                                <a href="{% url 'session_register' org_slug=org.slug pk=item.session.assigned_class.pk session_pk=item.session.pk %}"
+                                   class="btn btn-sm btn-dark">
+                                    <i class="bi bi-clipboard me-1"></i>Take register
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="card-body text-center py-5 text-muted">
+                <i class="bi bi-calendar-check fs-2 d-block mb-2 text-secondary"></i>
+                No sessions in the next 7 days.
+                {% if is_admin %}
+                <div class="mt-2">
+                    <a href="{% url 'class_list' org_slug=org.slug %}">Generate sessions from a class</a>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        {% if is_admin %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Quick actions</h6>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{% url 'member_add' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3">
+                    <i class="bi bi-person-plus me-2 text-muted"></i> Add member
+                </a>
+                <a href="{% url 'class_add' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3">
+                    <i class="bi bi-plus-circle me-2 text-muted"></i> Add class
+                </a>
+                <a href="{% url 'member_list' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3">
+                    <i class="bi bi-people me-2 text-muted"></i> View all members
+                </a>
+                <a href="{% url 'attendance_analytics' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3">
+                    <i class="bi bi-bar-chart me-2 text-muted"></i> Attendance analytics
+                </a>
+                <a href="{% url 'org_settings' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3">
+                    <i class="bi bi-gear me-2 text-muted"></i> Organisation settings
+                </a>
+                <a href="{% url 'org_audit_log' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3">
+                    <i class="bi bi-journal-check me-2 text-muted"></i> Audit log
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Quick actions</h6>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{% url 'coach_class_list' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3">
+                    <i class="bi bi-calendar-week me-2 text-muted"></i> My classes
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

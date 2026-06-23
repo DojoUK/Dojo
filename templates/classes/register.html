@@ -1,0 +1,166 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Register — {{ session.date|date:"d M Y" }} — {{ org.name }}{% endblock %}
+{% block page_title %}Register{% endblock %}
+{% block page_subtitle %}{{ cls.name }} &mdash; {{ session.date|date:"l d M Y" }}{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2">
+    <a href="{% url 'session_print' org_slug=org.slug pk=cls.pk session_pk=session.pk %}"
+       target="_blank" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-printer me-1"></i> Print register
+    </a>
+    <a href="{% url 'class_detail' org_slug=org.slug pk=cls.pk %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Back to {{ cls.name }}
+    </a>
+</div>
+{% endblock %}
+
+{% block main_content %}
+<div class="row">
+    <div class="col-lg-7">
+
+        {% if session.is_cancelled %}
+        <div class="alert alert-warning">This session is marked as cancelled.</div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Attendance
+                        <span class="text-muted fw-normal small ms-1">{{ enrolled|length }} enrolled</span>
+                    </h6>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="mark-all">Mark all present</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="clear-all">Clear all</button>
+                    </div>
+                </div>
+
+                {% if enrolled %}
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0 align-middle">
+                        <tbody>
+                            {% for cm in enrolled %}
+                            <tr class="cursor-pointer" onclick="toggleCheck(this)">
+                                <td class="ps-3 py-3" style="width:40px;">
+                                    <input class="form-check-input attendance-check" type="checkbox"
+                                           name="present" value="{{ cm.member.pk }}"
+                                           id="m{{ cm.member.pk }}"
+                                           {% if cm.member.pk in present_ids %}checked{% endif %}
+                                           onclick="event.stopPropagation()">
+                                </td>
+                                <td class="py-3">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <label class="form-check-label fw-semibold mb-0" for="m{{ cm.member.pk }}" style="cursor:pointer;">
+                                            {{ cm.member.name }}
+                                        </label>
+                                        {% if cm.member.medical_info %}
+                                        <button type="button"
+                                                class="badge bg-warning text-dark border-0 d-flex align-items-center gap-1"
+                                                style="font-size:0.65rem;cursor:pointer;"
+                                                data-bs-toggle="collapse"
+                                                data-bs-target="#med{{ cm.member.pk }}"
+                                                onclick="event.stopPropagation()">
+                                            <i class="bi bi-heart-pulse-fill"></i> Medical info
+                                        </button>
+                                        {% endif %}
+                                        {% if cm.member.pk in unsigned_waiver_ids %}
+                                        <span class="badge bg-danger d-flex align-items-center gap-1" style="font-size:0.65rem;">
+                                            <i class="bi bi-exclamation-triangle-fill"></i> No waiver
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                    {% if cm.member.medical_info %}
+                                    <div class="collapse mt-2" id="med{{ cm.member.pk }}" onclick="event.stopPropagation()">
+                                        <div class="p-2 rounded small" style="background:#fef9c3;border:1px solid #fde68a;color:#78350f;white-space:pre-line;">
+                                            <i class="bi bi-heart-pulse-fill me-1"></i>{{ cm.member.medical_info }}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end pe-3 py-3">
+                                    <span class="present-badge {% if cm.member.pk in present_ids %}text-success{% else %}text-muted{% endif %} small">
+                                        {% if cm.member.pk in present_ids %}Present{% else %}Absent{% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="card-body">
+                    <p class="text-muted small mb-0">No members enrolled in this class.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h6 class="mb-0">Session notes <span class="text-muted fw-normal small">(optional)</span></h6>
+                </div>
+                <div class="card-body">
+                    <textarea name="notes" class="form-control" rows="3" placeholder="Any notes about this session…">{{ session.notes }}</textarea>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 align-items-center">
+                <button type="submit" class="btn btn-dark">
+                    <i class="bi bi-check2 me-1"></i> Save register
+                </button>
+                <span class="text-muted small" id="present-count"></span>
+            </div>
+        </form>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function updateCount() {
+    const total = document.querySelectorAll('.attendance-check').length;
+    const checked = document.querySelectorAll('.attendance-check:checked').length;
+    document.getElementById('present-count').textContent = `${checked} of ${total} present`;
+}
+
+function toggleCheck(row) {
+    const cb = row.querySelector('.attendance-check');
+    cb.checked = !cb.checked;
+    updateBadge(row, cb.checked);
+    updateCount();
+}
+
+function updateBadge(row, present) {
+    const badge = row.querySelector('.present-badge');
+    badge.textContent = present ? 'Present' : 'Absent';
+    badge.className = `present-badge small ${present ? 'text-success' : 'text-muted'}`;
+}
+
+document.querySelectorAll('.attendance-check').forEach(cb => {
+    cb.addEventListener('change', () => {
+        updateBadge(cb.closest('tr'), cb.checked);
+        updateCount();
+    });
+});
+
+document.getElementById('mark-all').addEventListener('click', () => {
+    document.querySelectorAll('.attendance-check').forEach(cb => {
+        cb.checked = true;
+        updateBadge(cb.closest('tr'), true);
+    });
+    updateCount();
+});
+
+document.getElementById('clear-all').addEventListener('click', () => {
+    document.querySelectorAll('.attendance-check').forEach(cb => {
+        cb.checked = false;
+        updateBadge(cb.closest('tr'), false);
+    });
+    updateCount();
+});
+
+updateCount();
+</script>
+{% endblock %}

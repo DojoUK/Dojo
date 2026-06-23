@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+{% block title %}Register interest — {{ org.name }}{% endblock %}
+
+{% block body %}
+<style>
+    body { background: var(--dojo-body-bg); }
+    .signup-header { background: linear-gradient(135deg, var(--dojo-sidebar) 0%, #152d4a 100%); color: #fff; padding: 40px 0 32px; }
+    .sig-canvas { border: 2px dashed #cbd5e1; border-radius: 8px; background: #fff; cursor: crosshair; touch-action: none; display: block; width: 100%; }
+    .sig-canvas.signed { border-color: #22c55e; border-style: solid; }
+</style>
+
+<div class="signup-header mb-5">
+    <div class="container" style="max-width:680px;">
+        {% if org.logo %}
+        <img src="{{ org.logo.url }}" style="width:44px;height:44px;border-radius:10px;object-fit:cover;margin-bottom:14px;">
+        {% endif %}
+        <h2 class="fw-bold mb-1">Register interest</h2>
+        <p style="color:rgba(255,255,255,.7);margin:0;">{{ org.name }}{% if org.website %} · <a href="{{ org.website }}" style="color:rgba(255,255,255,.6);">{{ org.website }}</a>{% endif %}</p>
+    </div>
+</div>
+
+<div class="container pb-5" style="max-width:680px;">
+
+    {% if errors %}
+    <div class="alert alert-danger mb-4">
+        <ul class="mb-0 ps-3">
+            {% for e in errors %}<li>{{ e }}</li>{% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <form method="post" id="signupForm">
+        {% csrf_token %}
+        <input type="hidden" name="signature_data" id="signatureData">
+
+        {# ── Personal details ── #}
+        <div class="card mb-4">
+            <div class="card-header bg-white py-3"><h6 class="mb-0">Personal details</h6></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold">Full name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" value="{{ data.name|default:'' }}" required autofocus>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold">Date of birth</label>
+                        <input type="date" name="date_of_birth" id="dobInput" class="form-control" value="{{ data.date_of_birth|default:'' }}">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold">Phone</label>
+                        <input type="tel" name="phone" class="form-control" value="{{ data.phone|default:'' }}">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold">Email</label>
+                        <input type="email" name="email" class="form-control" value="{{ data.email|default:'' }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ── Address ── #}
+        <div class="card mb-4">
+            <div class="card-header bg-white py-3"><h6 class="mb-0">Address</h6></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold">Address line 1</label>
+                        <input type="text" name="address_line1" class="form-control" value="{{ data.address_line1|default:'' }}" placeholder="House number and street">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold">Address line 2</label>
+                        <input type="text" name="address_line2" class="form-control" value="{{ data.address_line2|default:'' }}" placeholder="Apartment, suite, etc. (optional)">
+                    </div>
+                    <div class="col-sm-5">
+                        <label class="form-label small fw-semibold">Town / City</label>
+                        <input type="text" name="city" class="form-control" value="{{ data.city|default:'' }}">
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label small fw-semibold">County</label>
+                        <input type="text" name="county" class="form-control" value="{{ data.county|default:'' }}">
+                    </div>
+                    <div class="col-sm-3">
+                        <label class="form-label small fw-semibold">Postcode</label>
+                        <input type="text" name="postcode" class="form-control" value="{{ data.postcode|default:'' }}" style="text-transform:uppercase;">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ── Guardian (shown for under-18s via JS) ── #}
+        <div class="card mb-4" id="guardianCard" style="display:none;">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0">Parent / Guardian details</h6>
+                <p class="text-muted small mb-0 mt-1">Required for members under 18.</p>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold">Guardian name</label>
+                        <input type="text" name="guardian_name" class="form-control" value="{{ data.guardian_name|default:'' }}">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold">Guardian email</label>
+                        <input type="email" name="guardian_email" class="form-control" value="{{ data.guardian_email|default:'' }}">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold">Guardian phone</label>
+                        <input type="tel" name="guardian_phone" class="form-control" value="{{ data.guardian_phone|default:'' }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ── Medical info ── #}
+        <div class="card mb-4" style="border-color:#fca5a5!important;">
+            <div class="card-header py-3" style="background:#fff5f5;border-bottom-color:#fca5a5;">
+                <h6 class="mb-0"><i class="bi bi-heart-pulse text-danger me-2"></i>Medical information</h6>
+                <p class="text-muted small mb-0 mt-1">This is shared with coaches before every session for safety purposes.</p>
+            </div>
+            <div class="card-body">
+                <label class="form-label small fw-semibold">Medical conditions, allergies, or anything coaches should know</label>
+                <textarea name="medical_info" rows="3" class="form-control" placeholder="e.g. Asthma (uses inhaler), nut allergy, epilepsy. Leave blank if none.">{{ data.medical_info|default:'' }}</textarea>
+            </div>
+        </div>
+
+        {# ── Additional notes ── #}
+        <div class="card mb-4">
+            <div class="card-header bg-white py-3"><h6 class="mb-0">Anything else?</h6></div>
+            <div class="card-body">
+                <label class="form-label small fw-semibold">Additional information</label>
+                <textarea name="notes" rows="3" class="form-control" placeholder="Previous experience, questions for the club…">{{ data.notes|default:'' }}</textarea>
+            </div>
+        </div>
+
+        {# ── Waiver / e-signature ── #}
+        {% if waivers %}
+        <div class="card mb-4">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0">Documents &amp; signature</h6>
+                <p class="text-muted small mb-0 mt-1">Please read the document(s) below, then sign.</p>
+            </div>
+            <div class="card-body">
+                {% for waiver in waivers %}
+                <div class="mb-4 {% if not forloop.last %}pb-4 border-bottom{% endif %}">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <span class="fw-semibold small">{{ waiver.name }}</span>
+                        {% if waiver.is_required %}
+                        <span class="badge bg-danger-subtle text-danger" style="font-size:0.65rem;">Required</span>
+                        {% endif %}
+                    </div>
+                    {% if waiver.description %}
+                    <p class="text-muted small mb-2">{{ waiver.description }}</p>
+                    {% endif %}
+                    <a href="{{ waiver.file.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-file-pdf me-1"></i> View / download PDF
+                    </a>
+                </div>
+                {% endfor %}
+
+                <div class="mt-2 pt-3 border-top">
+                    <label class="form-label small fw-semibold">Your signature <span class="text-danger">*</span></label>
+                    <p class="text-muted small mb-2">Draw your signature below using your mouse or finger.</p>
+                    <canvas id="sigCanvas" class="sig-canvas" height="150"></canvas>
+                    <div class="d-flex align-items-center gap-3 mt-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="clearSig">
+                            <i class="bi bi-eraser me-1"></i> Clear
+                        </button>
+                        <span class="small" id="sigStatus" style="color:#94a3b8;">Not yet signed</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="d-grid">
+            <button type="submit" class="btn btn-dark btn-lg">Submit application</button>
+        </div>
+        <p class="text-muted small text-center mt-3">
+            Your application will be reviewed by {{ org.name }}. You'll hear back by email once it's approved.
+        </p>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Show guardian card for under-18s
+const dobInput = document.getElementById('dobInput');
+const guardianCard = document.getElementById('guardianCard');
+function checkAge() {
+    if (!dobInput.value) { guardianCard.style.display = 'none'; return; }
+    const age = (new Date() - new Date(dobInput.value)) / (1000 * 60 * 60 * 24 * 365.25);
+    guardianCard.style.display = age < 18 ? 'block' : 'none';
+}
+dobInput.addEventListener('change', checkAge);
+checkAge();
+
+{% if waivers %}
+// Canvas signature
+const canvas = document.getElementById('sigCanvas');
+const ctx = canvas.getContext('2d');
+const sigDataInput = document.getElementById('signatureData');
+const sigStatus = document.getElementById('sigStatus');
+let drawing = false;
+let hasSig = false;
+
+function resizeCanvas() {
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    canvas.width = canvas.parentElement.clientWidth;
+    ctx.putImageData(imageData, 0, 0);
+    ctx.strokeStyle = '#1E3A5F';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+}
+canvas.width = canvas.parentElement.clientWidth;
+ctx.strokeStyle = '#1E3A5F';
+ctx.lineWidth = 2.5;
+ctx.lineCap = 'round';
+ctx.lineJoin = 'round';
+
+function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return { x: src.clientX - rect.left, y: src.clientY - rect.top };
+}
+
+canvas.addEventListener('mousedown', e => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
+canvas.addEventListener('mousemove', e => { if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); markSigned(); });
+canvas.addEventListener('mouseup', () => drawing = false);
+canvas.addEventListener('mouseleave', () => drawing = false);
+canvas.addEventListener('touchstart', e => { e.preventDefault(); drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }, { passive: false });
+canvas.addEventListener('touchmove', e => { e.preventDefault(); if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); markSigned(); }, { passive: false });
+canvas.addEventListener('touchend', () => drawing = false);
+
+function markSigned() {
+    if (!hasSig) {
+        hasSig = true;
+        canvas.classList.add('signed');
+        sigStatus.textContent = '✓ Signed';
+        sigStatus.style.color = '#16a34a';
+    }
+}
+
+document.getElementById('clearSig').addEventListener('click', () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    hasSig = false;
+    canvas.classList.remove('signed');
+    sigStatus.textContent = 'Not yet signed';
+    sigStatus.style.color = '#94a3b8';
+    sigDataInput.value = '';
+});
+
+document.getElementById('signupForm').addEventListener('submit', () => {
+    if (hasSig) sigDataInput.value = canvas.toDataURL('image/png');
+});
+{% endif %}
+</script>
+{% endblock %}

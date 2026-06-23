@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: sans-serif; color: #1a1a1a; max-width: 560px; margin: 0 auto; padding: 24px 16px;">
+    <h2 style="font-size: 1.1rem; margin-bottom: 4px;">{{ org_name }}</h2>
+    <hr style="border: none; border-top: 1px solid #e5e7eb; margin-bottom: 24px;">
+
+    <p>{% if has_guardians %}Dear guardian of {{ member.name }}{% else %}Hi {{ member.name }}{% endif %},</p>
+
+    <p>We wanted to let you know that the following session has been <strong>cancelled</strong>:</p>
+
+    <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 4px; margin: 20px 0;">
+        <strong>{{ class_name }}</strong><br>
+        <span style="color: #6b7280;">{{ session.date|date:"l, d F Y" }}</span>
+    </div>
+
+    <p style="color: #6b7280; font-size: 0.9rem;">We'll be in touch if anything changes. Sorry for any inconvenience.</p>
+
+    <p style="margin-top: 32px; color: #6b7280; font-size: 0.85rem; border-top: 1px solid #e5e7eb; padding-top: 16px;">
+        {{ org_name }}
+    </p>
+</body>
+</html>

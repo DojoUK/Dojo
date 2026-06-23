@@ -1,0 +1,55 @@
+{% for member in members %}
+{% with guardian=member.guardians.all.0 %}
+<tr>
+    <td style="width:40px;">
+        <input type="checkbox" name="member_ids" value="{{ member.pk }}" class="form-check-input member-check">
+    </td>
+    <td>
+        <a href="{% url 'member_detail' org_slug=org.slug pk=member.pk %}" class="text-decoration-none fw-semibold">{{ member.name }}</a>
+        {% if member.medical_info %}
+        <span class="badge bg-warning-subtle text-warning ms-1" style="font-size:0.6rem;" title="{{ member.medical_info }}">
+            <i class="bi bi-heart-pulse-fill"></i>
+        </span>
+        {% endif %}
+        {% if guardian %}
+        <div class="text-muted small">via {{ guardian.name }}{% if guardian.relationship %} ({{ guardian.relationship }}){% endif %}</div>
+        {% endif %}
+    </td>
+    <td class="text-muted small">
+        {% if member.email %}
+            {{ member.email }}
+        {% elif guardian and guardian.email %}
+            {{ guardian.email }}
+            <span class="badge bg-light text-secondary border ms-1" style="font-size: 0.65rem;">guardian</span>
+        {% else %}
+            —
+        {% endif %}
+    </td>
+    <td class="text-muted small">
+        {% if member.phone %}
+            {{ member.phone }}
+        {% elif guardian and guardian.phone %}
+            {{ guardian.phone }}
+            <span class="badge bg-light text-secondary border ms-1" style="font-size: 0.65rem;">guardian</span>
+        {% else %}
+            —
+        {% endif %}
+    </td>
+    <td class="text-muted small">{{ member.joined_date|date:"d M Y"|default:"—" }}</td>
+    <td>
+        {% if member.is_active %}
+        <span class="badge bg-success-subtle text-success">Active</span>
+        {% else %}
+        <span class="badge bg-secondary-subtle text-secondary">Inactive</span>
+        {% endif %}
+    </td>
+    <td class="text-end">
+        <a href="{% url 'member_detail' org_slug=org.slug pk=member.pk %}" class="btn btn-sm btn-outline-secondary">View</a>
+    </td>
+</tr>
+{% endwith %}
+{% empty %}
+<tr>
+    <td colspan="7" class="text-center text-muted py-4">No members found.</td>
+</tr>
+{% endfor %}

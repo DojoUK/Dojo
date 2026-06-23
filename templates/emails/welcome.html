@@ -1,0 +1,43 @@
+{% extends 'emails/base.html' %}
+
+{% block subject %}Welcome to {{ org_name }}{% endblock %}
+
+{% block content %}
+{% if has_guardians and not member.email %}
+<p style="color:#374151;font-size:16px;margin:0 0 24px;">Dear guardian of {{ member.name }},</p>
+{% else %}
+<p style="color:#374151;font-size:16px;margin:0 0 24px;">Hi {{ member.name }},</p>
+{% endif %}
+
+<p style="color:#374151;font-size:15px;margin:0 0 24px;">
+  Welcome to <strong>{{ org_name }}</strong>! We're glad to have you with us.
+</p>
+
+<p style="color:#374151;font-size:15px;margin:0 0 24px;">
+  You can view membership details, check invoices, and pay online using your personal member portal:
+</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+  <tr>
+    <td align="center">
+      <a href="{{ portal_url }}"
+         style="display:inline-block;background:#212529;color:#fff;font-size:15px;font-weight:600;padding:14px 32px;border-radius:6px;text-decoration:none;">
+        Go to member portal
+      </a>
+    </td>
+  </tr>
+</table>
+
+<p style="color:#6b7280;font-size:12px;text-align:center;margin:0 0 24px;">
+  Or copy this link: <a href="{{ portal_url }}" style="color:#6b7280;">{{ portal_url }}</a>
+</p>
+
+<p style="color:#6b7280;font-size:14px;margin:0 0 24px;">
+  If you have any questions, please don't hesitate to get in touch.
+</p>
+
+<p style="color:#374151;font-size:15px;margin:24px 0 0;">
+  See you on the mat,<br>
+  <strong>{{ org_name }}</strong>
+</p>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends 'org/base.html' %}
+{% block title %}Waiver templates — {{ org.name }}{% endblock %}
+{% block page_title %}Waiver templates{% endblock %}
+{% block page_subtitle %}PDFs that prospective members must sign when registering interest{% endblock %}
+
+{% block main_content %}
+<div class="row g-4">
+    <div class="col-lg-7">
+        {% if waivers %}
+        <div class="card mb-4">
+            <div class="card-header bg-white py-3"><h6 class="mb-0">Active templates</h6></div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3 small">Name</th>
+                            <th class="small">Required</th>
+                            <th class="small">Signed copies</th>
+                            <th class="small">Added</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for w in waivers %}
+                        <tr>
+                            <td class="ps-3 py-3">
+                                <div class="fw-semibold small">{{ w.name }}</div>
+                                {% if w.description %}<div class="text-muted small">{{ w.description }}</div>{% endif %}
+                            </td>
+                            <td class="py-3">
+                                {% if w.is_required %}
+                                <span class="badge bg-danger-subtle text-danger">Required</span>
+                                {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary">Optional</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 small text-muted">{{ w.signed_copies.count }}</td>
+                            <td class="py-3 small text-muted">{{ w.created_at|date:"d M Y" }}</td>
+                            <td class="py-3 text-end pe-3">
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <a href="{% url 'waiver_download' org_slug=org.slug pk=w.pk %}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                    <form method="post" action="{% url 'waiver_delete' org_slug=org.slug pk=w.pk %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                onclick="return confirm('Delete this template? Signed copies will remain, but the template will no longer appear on the signup form.')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="card mb-4">
+            <div class="card-body text-center py-5 text-muted">
+                <i class="bi bi-file-earmark-text fs-2 d-block mb-2 text-secondary"></i>
+                No waiver templates yet. Upload one to require a signature on the registration form.
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header bg-white py-3"><h6 class="mb-0">Upload template</h6></div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Name</label>
+                        <input type="text" name="name" class="form-control" placeholder="e.g. Membership agreement" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Description <span class="text-muted fw-normal">(optional)</span></label>
+                        <textarea name="description" rows="2" class="form-control" placeholder="Shown to the applicant on the signup form"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">PDF file</label>
+                        <input type="file" name="file" class="form-control" accept=".pdf" required>
+                    </div>
+                    <div class="mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="is_required" value="1" id="isRequired" checked>
+                            <label class="form-check-label small" for="isRequired">
+                                Required — block submission if not signed
+                            </label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-dark btn-sm w-100">Upload template</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header bg-white py-3"><h6 class="mb-0">Registration link</h6></div>
+            <div class="card-body">
+                <p class="text-muted small mb-2">Share this link with prospective members:</p>
+                <div class="input-group input-group-sm">
+                    <input type="text" class="form-control font-monospace" id="signupLink"
+                           value="{{ request.scheme }}://{{ request.get_host }}{% url 'member_signup' org_slug=org.slug %}" readonly>
+                    <button class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('signupLink').value);this.textContent='Copied!'">
+                        Copy
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

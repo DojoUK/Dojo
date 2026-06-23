@@ -1,0 +1,558 @@
+{% extends 'org/base.html' %}
+
+{% block title %}{{ member.name }} — {{ org.name }}{% endblock %}
+
+{% block page_title %}
+    {{ member.name }}
+    {% if member.is_active %}
+    <span class="badge bg-success-subtle text-success ms-2" style="font-size: 0.6rem; vertical-align: middle;">Active</span>
+    {% else %}
+    <span class="badge bg-secondary-subtle text-secondary ms-2" style="font-size: 0.6rem; vertical-align: middle;">Inactive</span>
+    {% endif %}
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'member_list' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Members
+    </a>
+    <a href="{% url 'member_edit' org_slug=org.slug pk=member.pk %}" class="btn btn-dark btn-sm">
+        <i class="bi bi-pencil me-1"></i> Edit
+    </a>
+    <form method="post" action="{% url 'member_send_welcome' org_slug=org.slug pk=member.pk %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-envelope me-1"></i> Send welcome
+        </button>
+    </form>
+    <form method="post" action="{% url 'member_archive' org_slug=org.slug pk=member.pk %}" class="d-inline">
+        {% csrf_token %}
+        {% if member.is_active %}
+        <button type="submit" class="btn btn-outline-danger btn-sm"
+                onclick="return confirm('Archive {{ member.name }}? They will be marked inactive.')">
+            <i class="bi bi-archive me-1"></i> Archive
+        </button>
+        {% else %}
+        <button type="submit" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-arrow-counterclockwise me-1"></i> Reactivate
+        </button>
+        {% endif %}
+    </form>
+</div>
+{% endblock %}
+
+{% block main_content %}
+<div class="row g-4">
+
+    <div class="col-lg-8">
+
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Personal details</h6>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4 text-muted fw-normal small">Date of birth</dt>
+                    <dd class="col-sm-8 small">{{ member.date_of_birth|date:"d M Y"|default:"—" }}</dd>
+
+                    <dt class="col-sm-4 text-muted fw-normal small">Joined</dt>
+                    <dd class="col-sm-8 small">{{ member.joined_date|date:"d M Y"|default:"—" }}</dd>
+
+                    <dt class="col-sm-4 text-muted fw-normal small">Email</dt>
+                    <dd class="col-sm-8 small">
+                        {% if member.email %}
+                            <a href="mailto:{{ member.email }}">{{ member.email }}</a>
+                        {% else %}—{% endif %}
+                    </dd>
+
+                    <dt class="col-sm-4 text-muted fw-normal small">Phone</dt>
+                    <dd class="col-sm-8 small">
+                        {% if member.phone %}
+                            <a href="tel:{{ member.phone }}">{{ member.phone }}</a>
+                        {% else %}—{% endif %}
+                    </dd>
+
+                    <dt class="col-sm-4 text-muted fw-normal small">Licence no.</dt>
+                    <dd class="col-sm-8 small">{{ member.licence_number|default:"—" }}</dd>
+
+                    <dt class="col-sm-4 text-muted fw-normal small">Licence expiry</dt>
+                    <dd class="col-sm-8 small mb-0">
+                        {% if member.licence_expiry %}
+                            {{ member.licence_expiry|date:"d M Y" }}
+                            {% if member.licence_expiry < today %}
+                                <span class="badge bg-danger-subtle text-danger ms-1">Expired</span>
+                            {% elif member.licence_expiry <= thirty_days %}
+                                <span class="badge bg-warning-subtle text-warning ms-1">Expiring soon</span>
+                            {% endif %}
+                        {% else %}—{% endif %}
+                    </dd>
+                </dl>
+            </div>
+        </div>
+
+        {% if member.medical_info %}
+        <div class="card mb-3" style="border-color:#fca5a5!important;border-width:2px!important;">
+            <div class="card-header py-3 d-flex align-items-center gap-2" style="background:#fff5f5;border-bottom-color:#fca5a5;">
+                <i class="bi bi-heart-pulse-fill text-danger"></i>
+                <h6 class="mb-0 text-danger">Medical information</h6>
+                <span class="badge bg-danger ms-auto">Visible to coaches</span>
+            </div>
+            <div class="card-body">
+                <p class="small mb-0" style="white-space:pre-line;">{{ member.medical_info }}</p>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Emergency contacts</h6>
+            </div>
+            <div class="card-body">
+                {% if member.emergency_contact_name or member.emergency_contact_2_name %}
+                <div class="row g-3">
+                    {% if member.emergency_contact_name %}
+                    <div class="col-sm-6">
+                        <p class="text-muted small mb-1">Contact 1</p>
+                        <p class="mb-0 fw-semibold small">{{ member.emergency_contact_name }}</p>
+                        {% if member.emergency_contact_phone %}
+                        <a href="tel:{{ member.emergency_contact_phone }}" class="small">{{ member.emergency_contact_phone }}</a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    {% if member.emergency_contact_2_name %}
+                    <div class="col-sm-6">
+                        <p class="text-muted small mb-1">Contact 2</p>
+                        <p class="mb-0 fw-semibold small">{{ member.emergency_contact_2_name }}</p>
+                        {% if member.emergency_contact_2_phone %}
+                        <a href="tel:{{ member.emergency_contact_2_phone }}" class="small">{{ member.emergency_contact_2_phone }}</a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <p class="text-muted small mb-0">No emergency contacts recorded.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if custom_fields %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Additional info</h6>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    {% for item in custom_fields %}
+                    <dt class="col-sm-4 text-muted fw-normal small">{{ item.field.name }}</dt>
+                    <dd class="col-sm-8 small {% if not forloop.last %}mb-2{% else %}mb-0{% endif %}">
+                        {% if item.is_bool %}
+                            {% if item.value %}✓ Yes{% else %}<span class="text-muted">No</span>{% endif %}
+                        {% else %}
+                            {{ item.value|default:"—" }}
+                        {% endif %}
+                    </dd>
+                    {% endfor %}
+                </dl>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if guardians %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Guardians</h6>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3 small fw-semibold">Name</th>
+                            <th class="small fw-semibold">Relationship</th>
+                            <th class="small fw-semibold">Email</th>
+                            <th class="small fw-semibold">Phone</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for guardian in guardians %}
+                        <tr>
+                            <td class="ps-3 small">{{ guardian.name }}</td>
+                            <td class="small text-muted">{{ guardian.relationship|default:"—" }}</td>
+                            <td class="small">
+                                {% if guardian.email %}<a href="mailto:{{ guardian.email }}">{{ guardian.email }}</a>{% else %}—{% endif %}
+                            </td>
+                            <td class="small">
+                                {% if guardian.phone %}<a href="tel:{{ guardian.phone }}">{{ guardian.phone }}</a>{% else %}—{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <div class="col-lg-4">
+
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    Progression
+                    {% if current_grade %}
+                    <span class="ms-1">
+                        {% if current_grade.stage.colour %}
+                        <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:{{ current_grade.stage.colour }};border:1px solid rgba(0,0,0,0.15);vertical-align:middle;"></span>
+                        {% endif %}
+                        <span class="small fw-semibold text-dark">{{ current_grade.stage.name }}</span>
+                    </span>
+                    {% endif %}
+                </h6>
+                {% if stages %}
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#promote-form">
+                    <i class="bi bi-award me-1"></i> Promote
+                </button>
+                {% endif %}
+            </div>
+
+            {% if stages %}
+            <div class="collapse" id="promote-form">
+                <div class="card-body border-bottom bg-light">
+                    <form method="post" action="{% url 'member_promote' org_slug=org.slug pk=member.pk %}">
+                        {% csrf_token %}
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold">Grade</label>
+                                <select name="stage_id" class="form-select form-select-sm">
+                                    {% for system in systems %}
+                                    <optgroup label="{{ system.name }}">
+                                        {% for stage in system.stages.all %}
+                                        <option value="{{ stage.pk }}">{{ stage.name }}</option>
+                                        {% endfor %}
+                                    </optgroup>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold">Date</label>
+                                <input type="date" name="achieved_date" class="form-control form-control-sm" value="{% now 'Y-m-d' %}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold">Notes</label>
+                                <input type="text" name="notes" class="form-control form-control-sm" placeholder="Optional">
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-sm btn-dark w-100">Save</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if progressions %}
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        {% for prog in progressions %}
+                        <tr>
+                            <td class="ps-3 py-2" style="width:24px;">
+                                {% if prog.stage.colour %}
+                                <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:{{ prog.stage.colour }};border:1px solid rgba(0,0,0,0.1);"></span>
+                                {% endif %}
+                            </td>
+                            <td class="py-2 small fw-semibold">{{ prog.stage.name }}</td>
+                            <td class="py-2 small text-muted">{{ prog.stage.system.name }}</td>
+                            <td class="py-2 small text-muted">{{ prog.achieved_date|date:"d M Y" }}</td>
+                            <td class="py-2 text-end pe-3">
+                                <form method="post" action="{% url 'member_progression_delete' org_slug=org.slug pk=member.pk prog_pk=prog.pk %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Remove this record?')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="card-body">
+                <p class="text-muted small mb-0">
+                    {% if stages %}No promotions recorded.{% else %}<a href="{% url 'progression_settings' org_slug=org.slug %}">Set up grades first.</a>{% endif %}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Classes</h6>
+            </div>
+            {% if enrolments %}
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for enrolment in enrolments %}
+                    <li class="list-group-item py-2 px-3">
+                        <div class="small fw-semibold">{{ enrolment.assigned_class.name }}</div>
+                        <div class="small text-muted">{{ enrolment.assigned_class.schedule_display }}</div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% else %}
+            <div class="card-body">
+                <p class="text-muted small mb-0">Not enrolled in any classes.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <h6 class="mb-0">Billing</h6>
+                    {% if member.monthly_fee %}
+                    <span class="badge bg-secondary-subtle text-secondary">£{{ member.monthly_fee|floatformat:2 }}/mo</span>
+                    {% endif %}
+                    {% if member.subscription_status == 'active' %}
+                    <span class="badge bg-success-subtle text-success">Autopay active</span>
+                    {% elif member.subscription_status == 'cancelling' %}
+                    <span class="badge bg-warning-subtle text-warning">Autopay cancelling</span>
+                    {% elif member.subscription_status == 'past_due' %}
+                    <span class="badge bg-danger-subtle text-danger">Autopay failed</span>
+                    {% elif member.subscription_status == 'cancelled' %}
+                    <span class="badge bg-secondary-subtle text-secondary">Autopay cancelled</span>
+                    {% endif %}
+                </div>
+                <a href="{% url 'invoice_list' org_slug=org.slug %}?q={{ member.name|urlencode }}" class="btn btn-sm btn-outline-secondary">View all</a>
+            </div>
+            {% if invoices %}
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        {% for invoice in invoices %}
+                        <tr>
+                            <td class="ps-3 py-2 small">
+                                <a href="{% url 'invoice_detail' org_slug=org.slug pk=invoice.pk %}" class="text-decoration-none">{{ invoice.period }}</a>
+                            </td>
+                            <td class="small py-2 fw-semibold">£{{ invoice.amount|floatformat:2 }}</td>
+                            <td class="small py-2 text-end pe-3">
+                                {% if invoice.status == 'paid' %}
+                                <span class="badge bg-success-subtle text-success">Paid</span>
+                                {% elif invoice.is_overdue %}
+                                <span class="badge bg-warning-subtle text-warning">Overdue</span>
+                                {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary">Unpaid</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="card-body">
+                <p class="text-muted small mb-0">No invoices yet.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Notes</h6>
+            </div>
+            <div class="card-body border-bottom bg-light py-2 px-3">
+                <form method="post" action="{% url 'member_note_add' org_slug=org.slug pk=member.pk %}" class="d-flex gap-2">
+                    {% csrf_token %}
+                    <input type="text" name="body" class="form-control form-control-sm" placeholder="Add a note…" required>
+                    <button type="submit" class="btn btn-sm btn-dark text-nowrap">Add</button>
+                </form>
+            </div>
+            {% if notes %}
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for note in notes %}
+                    <li class="list-group-item py-2 px-3 d-flex justify-content-between align-items-start gap-3">
+                        <div>
+                            <p class="small mb-0">{{ note.body }}</p>
+                            <p class="text-muted mb-0" style="font-size:0.75rem;">
+                                {{ note.author.get_full_name|default:note.author.username }} · {{ note.created_at|date:"d M Y H:i" }}
+                            </p>
+                        </div>
+                        <form method="post" action="{% url 'member_note_delete' org_slug=org.slug pk=member.pk note_pk=note.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-link text-danger p-0"
+                                    onclick="return confirm('Delete this note?')">
+                                <i class="bi bi-trash" style="font-size:0.8rem;"></i>
+                            </button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% else %}
+            <div class="card-body">
+                <p class="text-muted small mb-0">No notes yet.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        {# ── Signed waivers ── #}
+        {% if waiver_templates %}
+        <div class="card border-0 shadow-sm mb-3 {% if missing_waivers %}border-danger{% endif %}" {% if missing_waivers %}style="border-width:2px!important;"{% endif %}>
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 d-flex align-items-center gap-2">
+                    Waivers
+                    {% if missing_waivers %}
+                    <span class="badge bg-danger" style="font-size:0.65rem;">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>Not signed — cannot train
+                    </span>
+                    {% else %}
+                    <span class="badge bg-success-subtle text-success" style="font-size:0.65rem;">All signed</span>
+                    {% endif %}
+                </h6>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#offlineWaiverForm">
+                    <i class="bi bi-upload me-1"></i> Upload offline
+                </button>
+            </div>
+            {% if missing_waivers %}
+            <div class="collapse" id="offlineWaiverForm">
+                <div class="card-body border-bottom bg-light">
+                    <p class="small text-muted mb-2">Upload a scanned paper copy of a signed waiver.</p>
+                    <form method="post" action="{% url 'signed_waiver_offline' org_slug=org.slug member_pk=member.pk %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="row g-2">
+                            <div class="col-sm-6">
+                                <label class="form-label small fw-semibold">Waiver</label>
+                                <select name="template_id" class="form-select form-select-sm">
+                                    {% for w in missing_waivers %}
+                                    <option value="{{ w.pk }}">{{ w.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label small fw-semibold">Scanned PDF</label>
+                                <input type="file" name="file" class="form-control form-control-sm" accept=".pdf" required>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-sm btn-dark">Save offline signature</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+            {% if signed_waivers %}
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        {% for sw in signed_waivers %}
+                        <tr>
+                            <td class="ps-3 py-2 small fw-semibold">{{ sw.template.name }}</td>
+                            <td class="py-2 small text-muted">
+                                {{ sw.signed_at|date:"d M Y" }}
+                                {% if sw.offline %}<span class="badge bg-secondary-subtle text-secondary ms-1">Paper</span>{% endif %}
+                            </td>
+                            <td class="py-2 text-end pe-3">
+                                <div class="d-flex gap-1 justify-content-end">
+                                    <a href="{% url 'signed_waiver_download' org_slug=org.slug member_pk=member.pk pk=sw.pk %}"
+                                       class="btn btn-sm btn-outline-secondary"><i class="bi bi-download"></i></a>
+                                    <form method="post" action="{% url 'signed_waiver_delete' org_slug=org.slug member_pk=member.pk pk=sw.pk %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                onclick="return confirm('Remove this signed waiver?')"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="card-body">
+                <p class="text-muted small mb-0">No signed waivers on file.</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Documents</h6>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#upload-doc-form">
+                    <i class="bi bi-upload me-1"></i> Upload
+                </button>
+            </div>
+            <div class="collapse" id="upload-doc-form">
+                <div class="card-body border-bottom bg-light">
+                    <form method="post" action="{% url 'document_upload' org_slug=org.slug member_pk=member.pk %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="row g-2">
+                            <div class="col-sm-4">
+                                <label class="form-label small fw-semibold">Name</label>
+                                <input type="text" name="name" class="form-control form-control-sm" placeholder="e.g. Consent Form 2024">
+                            </div>
+                            <div class="col-sm-3">
+                                <label class="form-label small fw-semibold">Category</label>
+                                <select name="category" class="form-select form-select-sm">
+                                    <option value="consent">Consent form</option>
+                                    <option value="medical">Medical</option>
+                                    <option value="waiver">Waiver</option>
+                                    <option value="membership">Membership agreement</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-sm-5">
+                                <label class="form-label small fw-semibold">File</label>
+                                <input type="file" name="file" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-sm btn-dark">Upload</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% if member.documents.all %}
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        {% for doc in member.documents.all %}
+                        <tr>
+                            <td class="ps-3 py-2 small fw-semibold">{{ doc.name }}</td>
+                            <td class="py-2 small text-muted">{{ doc.get_category_display }}</td>
+                            <td class="py-2 small text-muted">{{ doc.uploaded_at|date:"d M Y" }}</td>
+                            <td class="py-2 text-end pe-3">
+                                <div class="d-flex gap-1 justify-content-end">
+                                    <a href="{% url 'document_download' org_slug=org.slug member_pk=member.pk pk=doc.pk %}"
+                                       class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                    <form method="post" action="{% url 'document_delete' org_slug=org.slug member_pk=member.pk pk=doc.pk %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                onclick="return confirm('Delete this document?')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="card-body">
+                <p class="text-muted small mb-0">No documents uploaded yet.</p>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

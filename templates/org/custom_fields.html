@@ -1,0 +1,103 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Custom Fields — {{ org.name }}{% endblock %}
+{% block page_title %}Custom Fields{% endblock %}
+{% block page_subtitle %}Extra fields that appear on every member's profile{% endblock %}
+
+{% block page_actions %}
+<button class="btn btn-dark btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#add-field-form">
+    <i class="bi bi-plus-lg me-1"></i> Add field
+</button>
+{% endblock %}
+
+{% block main_content %}
+
+<div class="collapse mb-4" id="add-field-form">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-3">
+            <h6 class="mb-0">Add custom field</h6>
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add">
+                <div class="row g-3">
+                    <div class="col-sm-5">
+                        <label class="form-label fw-semibold small">Field name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" placeholder="e.g. Medical notes">
+                    </div>
+                    <div class="col-sm-3">
+                        <label class="form-label fw-semibold small">Type</label>
+                        <select name="field_type" class="form-select" id="field-type-select">
+                            {% for value, label in field_types %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-sm-4" id="options-row" style="display:none;">
+                        <label class="form-label fw-semibold small">Options <span class="text-muted fw-normal">(one per line)</span></label>
+                        <textarea name="options" class="form-control form-control-sm" rows="3" placeholder="Option 1&#10;Option 2"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-dark">Add field</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        {% if fields %}
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3 small fw-semibold">Field name</th>
+                    <th class="small fw-semibold">Type</th>
+                    <th class="small fw-semibold">Options</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for field in fields %}
+                <tr>
+                    <td class="ps-3 small fw-semibold">{{ field.name }}</td>
+                    <td class="small text-muted">{{ field.get_field_type_display }}</td>
+                    <td class="small text-muted">
+                        {% if field.options %}{{ field.options|join:", "|truncatechars:60 }}{% else %}—{% endif %}
+                    </td>
+                    <td class="text-end pe-3">
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete">
+                            <input type="hidden" name="field_pk" value="{{ field.pk }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                    onclick="return confirm('Delete field \'{{ field.name }}\'? Existing values will be lost.')">
+                                Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-tags fs-2 d-block mb-2 text-secondary"></i>
+            No custom fields yet. Add one to capture extra info on each member.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const sel = document.getElementById('field-type-select');
+const optRow = document.getElementById('options-row');
+sel.addEventListener('change', () => {
+    optRow.style.display = sel.value === 'select' ? '' : 'none';
+});
+</script>
+{% endblock %}

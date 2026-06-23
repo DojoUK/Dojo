@@ -1,0 +1,41 @@
+{% extends 'org/base.html' %}
+
+{% block title %}My Classes — {{ org.name }}{% endblock %}
+{% block page_title %}My Classes{% endblock %}
+{% block page_subtitle %}Classes you are assigned to coach{% endblock %}
+
+{% block main_content %}
+{% if classes %}
+<div class="row g-3">
+    {% for cls in classes %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h6 class="fw-semibold mb-1">{{ cls.name }}</h6>
+                <p class="small text-muted mb-3">{{ cls.schedule_display }}</p>
+                {% with next_session=cls.sessions.all|first %}
+                {% if next_session %}
+                <p class="small mb-3">
+                    <i class="bi bi-calendar-event me-1 text-muted"></i>
+                    Next: <strong>{{ next_session.date|date:"D d M" }}</strong>
+                </p>
+                {% endif %}
+                {% endwith %}
+                <a href="{% url 'coach_class_detail' org_slug=org.slug pk=cls.pk %}" class="btn btn-dark btn-sm">
+                    View class <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card border-0 shadow-sm">
+    <div class="card-body text-center py-5 text-muted">
+        <i class="bi bi-calendar-x display-6 d-block mb-2"></i>
+        <p class="mb-0">You haven't been assigned to any classes yet.</p>
+        <p class="small mb-0">Ask your club administrator to add you to a class.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Classes — {{ org.name }}{% endblock %}
+{% block page_title %}Classes{% endblock %}
+{% block page_subtitle %}{{ classes|length }} class{{ classes|length|pluralize:"es" }}{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'class_add' org_slug=org.slug %}" class="btn btn-dark btn-sm">
+    <i class="bi bi-plus-lg me-1"></i> Add class
+</a>
+{% endblock %}
+
+{% block main_content %}
+{% if classes %}
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3 small fw-semibold">Name</th>
+                    <th class="small fw-semibold">Schedule</th>
+                    <th class="small fw-semibold">Members</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cls in classes %}
+                <tr>
+                    <td class="ps-3">
+                        <a href="{% url 'class_detail' org_slug=org.slug pk=cls.pk %}" class="fw-semibold text-decoration-none">{{ cls.name }}</a>
+                        {% if cls.description %}
+                        <div class="text-muted small">{{ cls.description|truncatechars:60 }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="small text-muted">{{ cls.schedule_display }}</td>
+                    <td class="small text-muted">{{ cls.enrolments.count }}</td>
+                    <td class="text-end pe-3">
+                        <a href="{% url 'class_detail' org_slug=org.slug pk=cls.pk %}" class="btn btn-sm btn-outline-secondary">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-calendar-week fs-2 d-block mb-2 text-secondary"></i>
+    No classes yet. <a href="{% url 'class_add' org_slug=org.slug %}">Add your first class</a>.
+</div>
+{% endif %}
+{% endblock %}

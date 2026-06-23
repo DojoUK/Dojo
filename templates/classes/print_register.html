@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Register — {{ cls.name }} — {{ session.date|date:"d M Y" }}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; font-size: 13px; color: #000; padding: 20px; }
+        h1 { font-size: 18px; margin-bottom: 2px; }
+        .meta { color: #555; font-size: 12px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { border-bottom: 2px solid #000; padding: 6px 8px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+        td { border-bottom: 1px solid #ddd; padding: 8px; }
+        .tick-box { width: 22px; height: 22px; border: 1.5px solid #333; display: inline-block; }
+        .present { background: #000; }
+        .no-print { margin-bottom: 16px; }
+        @media print {
+            .no-print { display: none !important; }
+            body { padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button onclick="window.print()" style="padding:8px 16px;font-size:14px;cursor:pointer;">
+            Print / Save as PDF
+        </button>
+    </div>
+
+    <h1>{{ cls.name }}</h1>
+    <div class="meta">
+        {{ session.date|date:"l d F Y" }} &mdash; {{ org.name }}
+        {% if session.is_cancelled %} &mdash; <strong>CANCELLED</strong>{% endif %}
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width:40px;">#</th>
+                <th>Name</th>
+                <th style="width:60px; text-align:center;">Present</th>
+                <th style="width:120px;">Signature</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cm in enrolled %}
+            <tr>
+                <td style="color:#999;">{{ forloop.counter }}</td>
+                <td>{{ cm.member.name }}</td>
+                <td style="text-align:center;">
+                    <span class="tick-box {% if cm.member.pk in present_ids %}present{% endif %}"></span>
+                </td>
+                <td></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" style="color:#999; padding:12px 8px;">No members enrolled.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div style="margin-top:32px; color:#555; font-size:11px;">
+        {{ enrolled|length }} enrolled &mdash; printed {{ today|date:"d M Y" }}
+    </div>
+</body>
+</html>

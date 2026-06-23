@@ -1,0 +1,126 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Import members — {{ org.name }}{% endblock %}
+{% block page_title %}Import members{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'member_list' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Back to members
+</a>
+{% endblock %}
+
+{% block main_content %}
+<div class="row">
+    <div class="col-lg-8">
+
+        {% if preview %}
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Preview — {{ preview|length }} member{{ preview|length|pluralize }} to import</h6>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3 small">Name</th>
+                            <th class="small">Date of birth</th>
+                            <th class="small">Email</th>
+                            <th class="small pe-3">Phone</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in preview %}
+                        <tr>
+                            <td class="ps-3 py-2 small fw-semibold">{{ row.name }}</td>
+                            <td class="py-2 small text-muted">{{ row.date_of_birth|date:"d M Y"|default:"—" }}</td>
+                            <td class="py-2 small text-muted">{{ row.email|default:"—" }}</td>
+                            <td class="py-2 small text-muted pe-3">{{ row.phone|default:"—" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% if errors %}
+        <div class="card border-warning border-0 shadow-sm mb-4" style="border-left:4px solid #ffc107 !important;">
+            <div class="card-body py-2 px-3">
+                {% for e in errors %}
+                <p class="small text-warning-emphasis mb-1">{{ e }}</p>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="import">
+            <input type="hidden" name="raw_csv" value="{{ raw_csv }}">
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-dark btn-sm">
+                    <i class="bi bi-check-lg me-1"></i> Confirm import
+                </button>
+                <a href="{% url 'member_import' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm">Start over</a>
+            </div>
+        </form>
+
+        {% else %}
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Upload a CSV</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="preview">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">CSV file</label>
+                        <input type="file" name="csv_file" accept=".csv,.txt" class="form-control">
+                    </div>
+                    <p class="text-muted small mb-3">Or paste CSV data directly:</p>
+                    <div class="mb-3">
+                        <textarea name="raw_csv" class="form-control font-monospace" rows="8"
+                                  placeholder="name,date_of_birth,email,phone&#10;Jane Smith,2010-05-14,jane@example.com,07700900000">{{ raw_csv }}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-dark btn-sm">
+                        <i class="bi bi-eye me-1"></i> Preview
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        {% if errors %}
+        <div class="card border-danger border-0 shadow-sm mb-4" style="border-left:4px solid #dc3545 !important;">
+            <div class="card-body py-2 px-3">
+                {% for e in errors %}
+                <p class="small text-danger mb-1">{{ e }}</p>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% endif %}
+
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Expected format</h6>
+            </div>
+            <div class="card-body small text-muted">
+                <p>Required column: <strong>name</strong></p>
+                <p>Optional columns:</p>
+                <ul class="mb-2">
+                    <li><code>date_of_birth</code> — YYYY-MM-DD or DD/MM/YYYY</li>
+                    <li><code>email</code></li>
+                    <li><code>phone</code></li>
+                    <li><code>joined_date</code> — same date formats</li>
+                </ul>
+                <p class="mb-0">The first row must be headers. Extra columns are ignored.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

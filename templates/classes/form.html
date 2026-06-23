@@ -1,0 +1,157 @@
+{% extends 'org/base.html' %}
+
+{% block title %}{{ title }} — {{ org.name }}{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block page_actions %}
+{% if cls %}
+<a href="{% url 'class_detail' org_slug=org.slug pk=cls.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Back to {{ cls.name }}
+</a>
+{% else %}
+<a href="{% url 'class_list' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Back to classes
+</a>
+{% endif %}
+{% endblock %}
+
+{% block main_content %}
+<div class="row">
+    <div class="col-lg-8">
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h6 class="mb-0">Details</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small">Class name <span class="text-danger">*</span></label>
+                            {{ form.name }}
+                            {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-sm-8">
+                            <label class="form-label fw-semibold small">Description</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}<div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label fw-semibold small">Max capacity</label>
+                            {{ form.max_capacity }}
+                            <div class="form-text">Leave blank for unlimited.</div>
+                            {% if form.max_capacity.errors %}<div class="text-danger small mt-1">{{ form.max_capacity.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Weekly schedule</h6>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="add-slot">
+                        <i class="bi bi-plus-lg me-1"></i> Add time
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2 mb-1 d-none d-sm-flex">
+                        <div class="col-sm-4"><span class="text-muted small">Day</span></div>
+                        <div class="col-sm-3"><span class="text-muted small">Start</span></div>
+                        <div class="col-sm-3"><span class="text-muted small">End</span></div>
+                    </div>
+                    <div id="schedule-slots">
+                        {% for entry in schedule %}
+                        <div class="schedule-slot row g-2 mb-2 align-items-center">
+                            <div class="col-sm-4">
+                                <select name="schedule_day" class="form-select form-select-sm">
+                                    {% for day in days %}
+                                    <option value="{{ forloop.counter0 }}" {% if forloop.counter0 == entry.day %}selected{% endif %}>{{ day }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-sm-3">
+                                <input type="time" name="schedule_time" class="form-control form-control-sm" value="{{ entry.time }}">
+                            </div>
+                            <div class="col-sm-3">
+                                <input type="time" name="schedule_end" class="form-control form-control-sm" value="{{ entry.end|default:'' }}">
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-slot">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted small mb-2" id="no-slots-msg">No times added yet.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-dark">Save class</button>
+                {% if cls %}
+                <a href="{% url 'class_detail' org_slug=org.slug pk=cls.pk %}" class="btn btn-outline-secondary">Cancel</a>
+                {% else %}
+                <a href="{% url 'class_list' org_slug=org.slug %}" class="btn btn-outline-secondary">Cancel</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const days = {{ days_json|safe }};
+
+function dayOptions(selected) {
+    return days.map((d, i) =>
+        `<option value="${i}"${i === selected ? ' selected' : ''}>${d}</option>`
+    ).join('');
+}
+
+function newSlot(day, start, end) {
+    const div = document.createElement('div');
+    div.className = 'schedule-slot row g-2 mb-2 align-items-center';
+    div.innerHTML = `
+        <div class="col-sm-4">
+            <select name="schedule_day" class="form-select form-select-sm">${dayOptions(day ?? 0)}</select>
+        </div>
+        <div class="col-sm-3">
+            <input type="time" name="schedule_time" class="form-control form-control-sm" value="${start ?? ''}">
+        </div>
+        <div class="col-sm-3">
+            <input type="time" name="schedule_end" class="form-control form-control-sm" value="${end ?? ''}">
+        </div>
+        <div class="col-auto">
+            <button type="button" class="btn btn-sm btn-outline-danger remove-slot"><i class="bi bi-trash"></i></button>
+        </div>`;
+    div.querySelector('.remove-slot').addEventListener('click', () => {
+        div.remove();
+        toggleEmpty();
+    });
+    return div;
+}
+
+function toggleEmpty() {
+    const msg = document.getElementById('no-slots-msg');
+    if (!msg) return;
+    msg.style.display = document.querySelectorAll('.schedule-slot').length ? 'none' : '';
+}
+
+document.getElementById('add-slot').addEventListener('click', () => {
+    const msg = document.getElementById('no-slots-msg');
+    if (msg) msg.style.display = 'none';
+    document.getElementById('schedule-slots').appendChild(newSlot());
+});
+
+document.querySelectorAll('.remove-slot').forEach(btn => {
+    btn.addEventListener('click', () => {
+        btn.closest('.schedule-slot').remove();
+        toggleEmpty();
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,230 @@
+{% extends 'org/base.html' %}
+
+{% block title %}{{ title }} — {{ org.name }}{% endblock %}
+
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block page_actions %}
+{% if member %}
+<a href="{% url 'member_detail' org_slug=org.slug pk=member.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Back to {{ member.name }}
+</a>
+{% else %}
+<a href="{% url 'member_list' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Back to members
+</a>
+{% endif %}
+{% endblock %}
+
+{% block main_content %}
+<div class="row">
+    <div class="col-lg-8">
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h6 class="mb-0">Personal details</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small">Full name <span class="text-danger">*</span></label>
+                            {{ form.name }}
+                            {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold small">Date of birth</label>
+                            {{ form.date_of_birth }}
+                            {% if form.date_of_birth.errors %}<div class="text-danger small mt-1">{{ form.date_of_birth.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold small">Joined date</label>
+                            {{ form.joined_date }}
+                            {% if form.joined_date.errors %}<div class="text-danger small mt-1">{{ form.joined_date.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold small">Monthly fee (£)</label>
+                            {{ form.monthly_fee }}
+                            {% if form.monthly_fee.errors %}<div class="text-danger small mt-1">{{ form.monthly_fee.errors.0 }}</div>{% endif %}
+                            <div class="form-text">Used for autopay subscriptions. Leave blank if not applicable.</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold small">Licence number</label>
+                            {{ form.licence_number }}
+                            {% if form.licence_number.errors %}<div class="text-danger small mt-1">{{ form.licence_number.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold small">Licence expiry</label>
+                            {{ form.licence_expiry }}
+                            {% if form.licence_expiry.errors %}<div class="text-danger small mt-1">{{ form.licence_expiry.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold small">Email</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}<div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold small">Phone</label>
+                            {{ form.phone }}
+                            {% if form.phone.errors %}<div class="text-danger small mt-1">{{ form.phone.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small">
+                                <i class="bi bi-heart-pulse text-danger me-1"></i>Medical info
+                            </label>
+                            {{ form.medical_info }}
+                            <div class="form-text">Conditions, allergies, or anything coaches must know. Shown on the attendance register.</div>
+                            {% if form.medical_info.errors %}<div class="text-danger small mt-1">{{ form.medical_info.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h6 class="mb-0">Emergency contacts</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-12"><p class="text-muted small mb-0">Contact 1</p></div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold small">Name</label>
+                            {{ form.emergency_contact_name }}
+                            {% if form.emergency_contact_name.errors %}<div class="text-danger small mt-1">{{ form.emergency_contact_name.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold small">Phone</label>
+                            {{ form.emergency_contact_phone }}
+                            {% if form.emergency_contact_phone.errors %}<div class="text-danger small mt-1">{{ form.emergency_contact_phone.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+                    <div class="row g-3 border-top pt-3">
+                        <div class="col-12"><p class="text-muted small mb-0">Contact 2</p></div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold small">Name</label>
+                            {{ form.emergency_contact_2_name }}
+                            {% if form.emergency_contact_2_name.errors %}<div class="text-danger small mt-1">{{ form.emergency_contact_2_name.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold small">Phone</label>
+                            {{ form.emergency_contact_2_phone }}
+                            {% if form.emergency_contact_2_phone.errors %}<div class="text-danger small mt-1">{{ form.emergency_contact_2_phone.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h6 class="mb-0">Guardians <span class="text-muted fw-normal small">(optional — for junior members)</span></h6>
+                </div>
+                <div class="card-body">
+                    {{ guardian_formset.management_form }}
+                    {% for gform in guardian_formset %}
+                    <div class="guardian-form {% if not forloop.first %}border-top pt-3 mt-3{% endif %}">
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <label class="form-label fw-semibold small">Name</label>
+                                {{ gform.name }}
+                                {% if gform.name.errors %}<div class="text-danger small mt-1">{{ gform.name.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label fw-semibold small">Relationship</label>
+                                {{ gform.relationship }}
+                                {% if gform.relationship.errors %}<div class="text-danger small mt-1">{{ gform.relationship.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label fw-semibold small">Email</label>
+                                {{ gform.email }}
+                                {% if gform.email.errors %}<div class="text-danger small mt-1">{{ gform.email.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label fw-semibold small">Phone</label>
+                                {{ gform.phone }}
+                                {% if gform.phone.errors %}<div class="text-danger small mt-1">{{ gform.phone.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="col-12">
+                                <button type="button" class="btn btn-outline-secondary btn-sm copy-to-ec"
+                                        data-name-src="{{ gform.name.html_name }}"
+                                        data-phone-src="{{ gform.phone.html_name }}">
+                                    <i class="bi bi-arrow-up me-1"></i> Use as emergency contact
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% if custom_fields %}
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h6 class="mb-0">Additional info</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for cf in custom_fields %}
+                        <div class="col-sm-6">
+                            {% if cf.is_bool %}
+                            <div class="form-check mt-2">
+                                {{ cf.html }}
+                                <label class="form-check-label fw-semibold small">{{ cf.field.name }}</label>
+                            </div>
+                            {% else %}
+                            <label class="form-label fw-semibold small">{{ cf.field.name }}</label>
+                            {{ cf.html }}
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="form-check">
+                        {{ form.is_active }}
+                        <label class="form-check-label fw-semibold small">Active member</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-dark">Save member</button>
+                {% if member %}
+                <a href="{% url 'member_detail' org_slug=org.slug pk=member.pk %}" class="btn btn-outline-secondary">Cancel</a>
+                {% else %}
+                <a href="{% url 'member_list' org_slug=org.slug %}" class="btn btn-outline-secondary">Cancel</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.querySelectorAll('.copy-to-ec').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const name = document.querySelector(`[name="${btn.dataset.nameSrc}"]`).value;
+        const phone = document.querySelector(`[name="${btn.dataset.phoneSrc}"]`).value;
+        const ec1Name = document.getElementById('id_emergency_contact_name');
+        const ec1Phone = document.getElementById('id_emergency_contact_phone');
+        const ec2Name = document.getElementById('id_emergency_contact_2_name');
+        const ec2Phone = document.getElementById('id_emergency_contact_2_phone');
+        if (!ec1Name.value) {
+            ec1Name.value = name;
+            ec1Phone.value = phone;
+        } else if (!ec2Name.value) {
+            ec2Name.value = name;
+            ec2Phone.value = phone;
+        } else {
+            ec1Name.value = name;
+            ec1Phone.value = phone;
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,103 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Import Progression — {{ org.name }}{% endblock %}
+{% block page_title %}Import progression history{% endblock %}
+{% block page_subtitle %}Bulk-load historical grades from a CSV file{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'progression_settings' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Back to progression
+</a>
+{% endblock %}
+
+{% block main_content %}
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Upload CSV</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">CSV file <span class="text-danger">*</span></label>
+                        <input type="file" name="csv_file" class="form-control" accept=".csv">
+                        <div class="form-text">UTF-8 encoded CSV with a header row.</div>
+                    </div>
+                    <button type="submit" class="btn btn-dark">Import</button>
+                </form>
+            </div>
+        </div>
+
+        {% if skip_reasons %}
+        <div class="card border-0 shadow-sm border-warning">
+            <div class="card-header bg-warning-subtle border-bottom py-3">
+                <h6 class="mb-0 text-warning-emphasis">Skipped rows</h6>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush small">
+                    {% for reason in skip_reasons %}
+                    <li class="list-group-item">{{ reason }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">CSV format</h6>
+            </div>
+            <div class="card-body small">
+                <p>Required columns (exact header names):</p>
+                <table class="table table-sm table-bordered small mb-3">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Column</th>
+                            <th>Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>member_name</code></td><td>Alice Smith</td></tr>
+                        <tr><td><code>system_name</code></td><td>Mon Grades</td></tr>
+                        <tr><td><code>stage_name</code></td><td>3rd Mon</td></tr>
+                        <tr><td><code>achieved_date</code></td><td>2024-03-15</td></tr>
+                        <tr><td><code>notes</code> <span class="text-muted">(optional)</span></td><td>Spring grading</td></tr>
+                    </tbody>
+                </table>
+                <p class="text-muted mb-0">Member names must match exactly (case-insensitive). System and stage names must match what you've defined in <a href="{% url 'progression_settings' org_slug=org.slug %}">Progression settings</a>. You can import multiple rows per member to capture their full history.</p>
+            </div>
+        </div>
+
+        {% if systems %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Your systems &amp; stages</h6>
+            </div>
+            <div class="card-body p-0">
+                {% for system in systems %}
+                <div class="px-3 pt-3 {% if not forloop.last %}pb-2 border-bottom{% else %}pb-3{% endif %}">
+                    <p class="fw-semibold small mb-1">{{ system.name }}</p>
+                    <ul class="list-unstyled mb-0 ps-2">
+                        {% for stage in system.stages.all %}
+                        <li class="small text-muted">
+                            {% if stage.colour %}
+                            <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:{{ stage.colour }};border:1px solid rgba(0,0,0,0.1);vertical-align:middle;margin-right:4px;"></span>
+                            {% endif %}
+                            {{ stage.name }}
+                        </li>
+                        {% empty %}
+                        <li class="small text-muted fst-italic">No stages yet</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

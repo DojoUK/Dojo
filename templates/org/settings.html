@@ -1,0 +1,256 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Settings — {{ org.name }}{% endblock %}
+{% block page_title %}Organisation settings{% endblock %}
+
+{% block main_content %}
+<div class="row g-4">
+
+    {# ── Left column ── #}
+    <div class="col-lg-6">
+
+        {# General #}
+        <div class="card mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">General</h6>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="general">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Organisation name</label>
+                        <input type="text" name="name" value="{{ org.name }}" class="form-control" required autofocus>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Contact email</label>
+                        <input type="email" name="email" value="{{ org.email }}" class="form-control" placeholder="e.g. secretary@backwelljudo.co.uk">
+                        <div class="form-text">Shown to members on the portal as the contact address.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Phone</label>
+                        <input type="text" name="phone" value="{{ org.phone }}" class="form-control" placeholder="e.g. 07700 900000">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Website</label>
+                        <input type="url" name="website" value="{{ org.website }}" class="form-control" placeholder="https://...">
+                    </div>
+                    <button type="submit" class="btn btn-dark btn-sm">Save changes</button>
+                </form>
+            </div>
+        </div>
+
+        {# More settings #}
+        <div class="card mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">More settings</h6>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{% url 'org_custom_fields' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3">
+                    <div class="fw-semibold small">Custom member fields</div>
+                    <div class="text-muted small">Add extra fields to member profiles.</div>
+                </a>
+                <a href="{% url 'progression_settings' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3">
+                    <div class="fw-semibold small">Progression &amp; grading</div>
+                    <div class="text-muted small">Define belt systems, mon grades, or other progression tracks.</div>
+                </a>
+                <a href="{% url 'org_staff' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3">
+                    <div class="fw-semibold small">Staff &amp; coaches</div>
+                    <div class="text-muted small">Manage who has access and what role they have.</div>
+                </a>
+            </div>
+        </div>
+
+        {# Account #}
+        <div class="card mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Account</h6>
+            </div>
+            <div class="card-body small text-muted">
+                <p><strong>Slug:</strong> <code>{{ org.slug }}</code></p>
+                <p><strong>Plan:</strong> {{ org.subscription_tier|capfirst }}</p>
+                <p class="mb-0"><strong>Created:</strong> {{ org.created_at|date:"d M Y" }}</p>
+            </div>
+        </div>
+
+        {# Email #}
+        <div class="card">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Email</h6>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-3">Send a test email to your account address to verify your email settings are working.</p>
+                <form method="post" action="{% url 'org_test_email' org_slug=org.slug %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-envelope me-1"></i> Send test email
+                    </button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+    {# ── Right column: Theme ── #}
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between">
+                <h6 class="mb-0">Theme</h6>
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="devModeToggle">
+                    <label class="form-check-label small text-muted" for="devModeToggle">Developer mode</label>
+                </div>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" id="themeForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="theme">
+                    <input type="hidden" name="dev_mode" id="devModeInput" value="0">
+
+                    {# Preset swatches #}
+                    <div class="mb-4" id="presetSection">
+                        <label class="form-label small fw-semibold">Preset themes</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            {% for preset in presets %}
+                            <button type="button" class="preset-btn"
+                                    data-sidebar="{{ preset.sidebar }}"
+                                    data-accent="{{ preset.accent }}"
+                                    title="{{ preset.name }}"
+                                    style="width:40px;height:40px;border-radius:10px;border:2px solid transparent;background:{{ preset.sidebar }};cursor:pointer;position:relative;overflow:hidden;transition:border-color .15s;">
+                                <span style="position:absolute;right:0;bottom:0;width:16px;height:40px;background:{{ preset.accent }};"></span>
+                            </button>
+                            {% endfor %}
+                        </div>
+                        <div class="form-text">Click a swatch to preview, then save.</div>
+                    </div>
+
+                    {# Colour pickers #}
+                    <div class="mb-4" id="colourSection">
+                        <label class="form-label small fw-semibold">Custom colours</label>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label small text-muted">Sidebar</label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <input type="color" name="sidebar_color" id="sidebarColor"
+                                           value="{{ org.settings.sidebar_color|default:'#1E3A5F' }}"
+                                           class="form-control form-control-color" style="width:44px;height:38px;border-radius:7px;">
+                                    <input type="text" id="sidebarColorHex"
+                                           value="{{ org.settings.sidebar_color|default:'#1E3A5F' }}"
+                                           class="form-control form-control-sm font-monospace" style="max-width:90px;">
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small text-muted">Accent / buttons</label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <input type="color" name="accent_color" id="accentColor"
+                                           value="{{ org.settings.accent_color|default:'#2563EB' }}"
+                                           class="form-control form-control-color" style="width:44px;height:38px;border-radius:7px;">
+                                    <input type="text" id="accentColorHex"
+                                           value="{{ org.settings.accent_color|default:'#2563EB' }}"
+                                           class="form-control form-control-sm font-monospace" style="max-width:90px;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# Logo #}
+                    <div class="mb-4">
+                        <label class="form-label small fw-semibold">Logo</label>
+                        {% if org.logo %}
+                        <div class="d-flex align-items-center gap-3 mb-2">
+                            <img src="{{ org.logo.url }}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;">
+                            <div>
+                                <div class="small fw-semibold">Current logo</div>
+                                <button type="submit" name="remove_logo" value="1" class="btn btn-link btn-sm text-danger p-0"
+                                        onclick="return confirm('Remove logo?')">Remove</button>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <input type="file" name="logo" class="form-control form-control-sm" accept="image/*">
+                        <div class="form-text">Shown in the sidebar. PNG or SVG works best. Square images recommended.</div>
+                    </div>
+
+                    {# Dev mode: custom CSS #}
+                    <div class="mb-4 d-none" id="customCssSection">
+                        <label class="form-label small fw-semibold">Custom CSS</label>
+                        <textarea name="custom_css" rows="10" class="form-control font-monospace"
+                                  style="font-size:0.8rem;"
+                                  placeholder="/* Override any styles here */&#10;:root { --dojo-accent: #e11d48; }&#10;.dojo-sidebar { background: #1a1a2e; }">{{ org.custom_css }}</textarea>
+                        <div class="form-text">Applied after all default styles. Overrides theme colours.</div>
+                    </div>
+
+                    {# Live preview strip #}
+                    <div class="mb-4 p-3 rounded" id="previewStrip"
+                         style="background:var(--dojo-sidebar);display:flex;align-items:center;gap:12px;">
+                        <span style="color:#fff;font-weight:600;font-size:0.9rem;">{{ org.name }}</span>
+                        <span style="background:rgba(255,255,255,.15);color:#fff;font-size:0.8rem;padding:4px 12px;border-radius:6px;">Dashboard</span>
+                        <button type="button" style="background:var(--dojo-accent);color:#fff;border:none;border-radius:6px;padding:4px 14px;font-size:0.8rem;font-weight:500;margin-left:auto;">Save</button>
+                    </div>
+
+                    <button type="submit" class="btn btn-dark btn-sm">Save theme</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Sync colour pickers <-> hex inputs
+function syncColor(picker, hex) {
+    picker.addEventListener('input', () => {
+        hex.value = picker.value;
+        applyPreview();
+    });
+    hex.addEventListener('change', () => {
+        if (/^#[0-9a-fA-F]{6}$/.test(hex.value)) {
+            picker.value = hex.value;
+            applyPreview();
+        }
+    });
+}
+syncColor(document.getElementById('sidebarColor'), document.getElementById('sidebarColorHex'));
+syncColor(document.getElementById('accentColor'), document.getElementById('accentColorHex'));
+
+// Live preview
+function applyPreview() {
+    const sidebar = document.getElementById('sidebarColor').value;
+    const accent = document.getElementById('accentColor').value;
+    document.documentElement.style.setProperty('--dojo-sidebar', sidebar);
+    document.documentElement.style.setProperty('--dojo-accent', accent);
+}
+
+// Preset swatches
+document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const sidebar = btn.dataset.sidebar;
+        const accent = btn.dataset.accent;
+        document.getElementById('sidebarColor').value = sidebar;
+        document.getElementById('sidebarColorHex').value = sidebar;
+        document.getElementById('accentColor').value = accent;
+        document.getElementById('accentColorHex').value = accent;
+        document.querySelectorAll('.preset-btn').forEach(b => b.style.borderColor = 'transparent');
+        btn.style.borderColor = '#fff';
+        applyPreview();
+    });
+});
+
+// Developer mode toggle
+const devToggle = document.getElementById('devModeToggle');
+const cssSection = document.getElementById('customCssSection');
+const devInput = document.getElementById('devModeInput');
+
+{% if org.custom_css %}
+devToggle.checked = true;
+cssSection.classList.remove('d-none');
+devInput.value = '1';
+{% endif %}
+
+devToggle.addEventListener('change', () => {
+    cssSection.classList.toggle('d-none', !devToggle.checked);
+    devInput.value = devToggle.checked ? '1' : '0';
+});
+</script>
+{% endblock %}

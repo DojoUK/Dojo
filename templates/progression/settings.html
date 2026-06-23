@@ -1,0 +1,201 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Progression — {{ org.name }}{% endblock %}
+{% block page_title %}Progression{% endblock %}
+{% block page_subtitle %}Define the grading systems and stages members can achieve{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'progression_import' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-upload me-1"></i> Import history
+</a>
+{% endblock %}
+
+{% block main_content %}
+
+{% if not systems %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body text-center py-5 text-muted">
+        <i class="bi bi-award display-6 d-block mb-2"></i>
+        <p class="mb-0">No progression systems yet. Create one below — for example "Mon Grades" for juniors or "Kyu Grades" for adults.</p>
+    </div>
+</div>
+{% endif %}
+
+{% for system in systems %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom py-3 d-flex align-items-center gap-3 flex-wrap">
+        <h6 class="mb-0 me-auto">{{ system.name }}</h6>
+
+        <form method="post" action="{% url 'progression_system_apply_default' org_slug=org.slug pk=system.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-secondary"
+                    title="Assign default grade to all active members who don't have one in this system"
+                    onclick="return confirm('Assign the default grade to all active members without a grade in {{ system.name }}?')">
+                <i class="bi bi-people me-1"></i> Apply to existing members
+            </button>
+        </form>
+
+        <form method="post" action="{% url 'progression_system_toggle_auto' org_slug=org.slug pk=system.pk %}" class="d-flex align-items-center gap-2">
+            {% csrf_token %}
+            <span class="small text-muted">Auto-assign to new members</span>
+            <button type="submit" class="btn btn-sm {% if system.assign_to_new_members %}btn-success{% else %}btn-outline-secondary{% endif %}" title="Toggle auto-assign">
+                {% if system.assign_to_new_members %}<i class="bi bi-toggle-on"></i>{% else %}<i class="bi bi-toggle-off"></i>{% endif %}
+            </button>
+        </form>
+
+        <form method="post" action="{% url 'progression_system_delete' org_slug=org.slug pk=system.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-danger"
+                    onclick="return confirm('Delete system \"{{ system.name }}\"? This cannot be undone.')">
+                <i class="bi bi-trash"></i>
+            </button>
+        </form>
+    </div>
+
+    {% if system.assign_to_new_members %}
+    <div class="px-3 pt-2 pb-0">
+        <p class="small text-muted mb-0">
+            <i class="bi bi-info-circle me-1"></i>
+            New members will automatically be assigned the
+            {% with default=system.stages.all %}
+            {% for s in default %}{% if s.is_default %}<strong>{{ s.name }}</strong>{% endif %}{% endfor %}
+            {% endwith %}
+            stage when added.
+            {% if not system.stages.filter %}Set a default stage using the star button below.{% endif %}
+        </p>
+    </div>
+    {% endif %}
+
+    {% if system.stages.all %}
+    <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3 small fw-semibold" style="width:36px;"></th>
+                    <th class="small fw-semibold">Name</th>
+                    <th class="small fw-semibold">Members</th>
+                    <th class="small fw-semibold">Default</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stage in system.stages.all %}
+                <tr>
+                    <td class="ps-3 py-2">
+                        {% if stage.colour %}
+                        <span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:{{ stage.colour }};border:1px solid rgba(0,0,0,0.1);"></span>
+                        {% else %}
+                        <span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:#e5e7eb;border:1px solid rgba(0,0,0,0.1);"></span>
+                        {% endif %}
+                    </td>
+                    <td class="py-2 fw-semibold small">{{ stage.name }}</td>
+                    <td class="py-2 small text-muted">{{ stage.achievements.count }}</td>
+                    <td class="py-2">
+                        {% if stage.is_default %}
+                        <span class="badge bg-success-subtle text-success small">Default</span>
+                        {% else %}
+                        <form method="post" action="{% url 'progression_stage_set_default' org_slug=org.slug system_pk=system.pk pk=stage.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-link text-muted p-0" title="Set as default">
+                                <i class="bi bi-star"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                    <td class="py-2 text-end pe-3">
+                        <div class="d-flex gap-1 justify-content-end">
+                            <button class="btn btn-sm btn-outline-secondary px-2" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#edit-stage-{{ stage.pk }}"
+                                    title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <form method="post" action="{% url 'progression_stage_move' org_slug=org.slug system_pk=system.pk pk=stage.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="direction" value="up">
+                                <button type="submit" class="btn btn-sm btn-outline-secondary px-2">↑</button>
+                            </form>
+                            <form method="post" action="{% url 'progression_stage_move' org_slug=org.slug system_pk=system.pk pk=stage.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="direction" value="down">
+                                <button type="submit" class="btn btn-sm btn-outline-secondary px-2">↓</button>
+                            </form>
+                            <form method="post" action="{% url 'progression_stage_delete' org_slug=org.slug system_pk=system.pk pk=stage.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                        onclick="return confirm('Delete \'{{ stage.name }}\'?')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                <tr class="collapse" id="edit-stage-{{ stage.pk }}">
+                    <td colspan="5" class="bg-light py-2 px-3">
+                        <form method="post" action="{% url 'progression_stage_edit' org_slug=org.slug system_pk=system.pk pk=stage.pk %}" class="row g-2 align-items-end">
+                            {% csrf_token %}
+                            <div class="col-sm-5">
+                                <label class="form-label small fw-semibold mb-1">Name</label>
+                                <input type="text" name="name" class="form-control form-control-sm" value="{{ stage.name }}">
+                            </div>
+                            <div class="col-sm-3">
+                                <label class="form-label small fw-semibold mb-1">Colour</label>
+                                <input type="color" name="colour" class="form-control form-control-color form-control-sm w-100" value="{{ stage.colour|default:'#ffffff' }}">
+                            </div>
+                            <div class="col-sm-4">
+                                <button type="submit" class="btn btn-dark btn-sm w-100">Save changes</button>
+                            </div>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body">
+        <p class="text-muted small mb-0">No stages yet — add one below.</p>
+    </div>
+    {% endif %}
+
+    <div class="card-footer bg-white border-top">
+        <form method="post" action="{% url 'progression_stage_add' org_slug=org.slug system_pk=system.pk %}">
+            {% csrf_token %}
+            <div class="row g-2 align-items-end">
+                <div class="col-sm-5">
+                    <label class="form-label small fw-semibold">Stage name</label>
+                    <input type="text" name="name" class="form-control form-control-sm" placeholder="e.g. Yellow Belt">
+                </div>
+                <div class="col-sm-3">
+                    <label class="form-label small fw-semibold">Colour</label>
+                    <input type="color" name="colour" class="form-control form-control-color form-control-sm w-100" value="#ffffff">
+                </div>
+                <div class="col-sm-4">
+                    <button type="submit" class="btn btn-dark btn-sm w-100">Add stage</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endfor %}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom py-3">
+        <h6 class="mb-0">Add grading system</h6>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{% url 'progression_system_add' org_slug=org.slug %}">
+            {% csrf_token %}
+            <div class="row g-2 align-items-end">
+                <div class="col-sm-8">
+                    <label class="form-label small fw-semibold">System name <span class="text-danger">*</span></label>
+                    <input type="text" name="name" class="form-control" placeholder="e.g. Mon Grades, Kyu Grades, RAD Grades…">
+                </div>
+                <div class="col-sm-4">
+                    <button type="submit" class="btn btn-dark w-100">Create system</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

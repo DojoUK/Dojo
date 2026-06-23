@@ -1,0 +1,106 @@
+{% extends 'org/base.html' %}
+
+{% block title %}{{ cls.name }} — {{ org.name }}{% endblock %}
+{% block page_title %}{{ cls.name }}{% endblock %}
+{% block page_subtitle %}{{ cls.schedule_display }}{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'coach_class_list' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> My classes
+</a>
+{% endblock %}
+
+{% block main_content %}
+<div class="row g-4">
+
+    <div class="col-lg-8">
+
+        {% if upcoming %}
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Upcoming sessions</h6>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-hover mb-0 align-middle">
+                    <tbody>
+                        {% for session in upcoming %}
+                        <tr>
+                            <td class="ps-3 py-3 small fw-semibold">{{ session.date|date:"l d M Y" }}</td>
+                            <td class="py-3 small text-muted">
+                                {% with count=session.attendance.count %}
+                                {% if count %}{{ count }} marked{% endif %}
+                                {% endwith %}
+                            </td>
+                            <td class="py-3 pe-3 text-end">
+                                <a href="{% url 'session_register' org_slug=org.slug pk=cls.pk session_pk=session.pk %}"
+                                   class="btn btn-sm btn-dark">
+                                    <i class="bi bi-check2-square me-1"></i> Take register
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body text-center py-4 text-muted">
+                <p class="mb-0 small">No upcoming sessions. Ask your administrator to generate sessions for this class.</p>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if recent %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Recent sessions</h6>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm table-hover mb-0 align-middle">
+                    <tbody>
+                        {% for session in recent %}
+                        <tr>
+                            <td class="ps-3 py-2 small text-muted">{{ session.date|date:"l d M Y" }}</td>
+                            <td class="py-2 small text-muted">
+                                {% with total=session.attendance.count %}
+                                {% if total %}{{ total }} marked{% endif %}
+                                {% endwith %}
+                            </td>
+                            <td class="py-2 pe-3 text-end">
+                                <a href="{% url 'session_register' org_slug=org.slug pk=cls.pk session_pk=session.pk %}"
+                                   class="btn btn-sm btn-outline-secondary">View</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Members <span class="text-muted fw-normal">({{ enrolled.count }})</span></h6>
+            </div>
+            {% if enrolled %}
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for enrolment in enrolled %}
+                    <li class="list-group-item py-2 px-3 small">{{ enrolment.member.name }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% else %}
+            <div class="card-body">
+                <p class="text-muted small mb-0">No members enrolled yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

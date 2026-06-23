@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ org.name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        body { background: #f8f9fa; }
+        .portal-header { background: #212529; color: #fff; padding: 1.25rem 0; }
+        .portal-header .org-name { font-weight: 600; font-size: 1.1rem; }
+        .portal-header .member-name { font-size: 0.85rem; opacity: 0.6; }
+    </style>
+</head>
+<body>
+
+{% if request.GET.paid %}
+<div style="background:#d1fae5;border-bottom:1px solid #6ee7b7;padding:12px 0;text-align:center;">
+    <span style="color:#065f46;font-weight:600;font-size:14px;">
+        Payment received — thank you!
+    </span>
+</div>
+{% endif %}
+{% if request.GET.subscribed %}
+<div style="background:#d1fae5;border-bottom:1px solid #6ee7b7;padding:12px 0;text-align:center;">
+    <span style="color:#065f46;font-weight:600;font-size:14px;">
+        Autopay set up — you'll be charged £{{ member.monthly_fee|floatformat:2 }} each month.
+    </span>
+</div>
+{% endif %}
+
+<header class="portal-header mb-4">
+    <div class="container">
+        <div class="org-name">{{ org.name }}</div>
+        <div class="member-name">{{ member.name }}</div>
+    </div>
+</header>
+
+<div class="container pb-5" style="max-width: 680px;">
+
+    {% if subscription_enabled %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body d-flex align-items-center justify-content-between gap-3 flex-wrap">
+            <div>
+                {% if member.has_active_subscription %}
+                <p class="fw-semibold mb-0"><i class="bi bi-check-circle-fill text-success me-1"></i> Autopay active</p>
+                <p class="text-muted small mb-0">£{{ member.monthly_fee|floatformat:2 }}/month — card charged automatically each month.</p>
+                {% elif member.subscription_status == 'cancelling' %}
+                <p class="fw-semibold mb-0"><i class="bi bi-clock text-warning me-1"></i> Autopay cancelling</p>
+                <p class="text-muted small mb-0">Your subscription will end at the close of the current billing period.</p>
+                {% elif member.subscription_status == 'past_due' %}
+                <p class="fw-semibold mb-0"><i class="bi bi-exclamation-triangle-fill text-danger me-1"></i> Autopay payment failed</p>
+                <p class="text-muted small mb-0">Your last payment didn't go through. Please update your payment details.</p>
+                {% else %}
+                <p class="fw-semibold mb-0">Set up autopay</p>
+                <p class="text-muted small mb-0">Pay £{{ member.monthly_fee|floatformat:2 }}/month automatically — no more manual invoices.</p>
+                {% endif %}
+            </div>
+            <div class="flex-shrink-0">
+                {% if member.has_active_subscription or member.subscription_status == 'cancelling' %}
+                <div class="d-flex flex-column gap-2">
+                    <form method="post" action="/p/{{ member.token }}/billing-portal/">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-secondary w-100">
+                            Manage payment method
+                        </button>
+                    </form>
+                    {% if not member.subscription_status == 'cancelling' %}
+                    <form method="post" action="/p/{{ member.token }}/cancel-subscription/">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger w-100"
+                                onclick="return confirm('Cancel autopay at the end of this billing period?')">
+                            Cancel autopay
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% else %}
+                <form method="post" action="/p/{{ member.token }}/subscribe/">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-dark btn-sm">
+                        Set up autopay £{{ member.monthly_fee|floatformat:2 }}/month
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if outstanding %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3">
+            <h6 class="mb-0">Outstanding invoices</h6>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-sm mb-0">
+                <tbody>
+                    {% for invoice in outstanding %}
+                    <tr>
+                        <td class="ps-3 py-3 small fw-semibold">{{ invoice.period }}</td>
+                        <td class="py-3 small text-muted">
+                            Due {{ invoice.due_date|date:"d M Y" }}
+                            {% if invoice.is_overdue %}<span class="badge bg-warning-subtle text-warning ms-1">Overdue</span>{% endif %}
+                        </td>
+                        <td class="py-3 fw-bold">£{{ invoice.amount|floatformat:2 }}</td>
+                        <td class="py-3 pe-3 text-end">
+                            {% if stripe_enabled %}
+                            <form method="post" action="/p/{{ member.token }}/pay/{{ invoice.pk }}/">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-dark btn-sm">
+                                    Pay £{{ invoice.amount|floatformat:2 }}
+                                </button>
+                            </form>
+                            {% else %}
+                            <button class="btn btn-dark btn-sm" disabled>Pay</button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if invoice.notes %}
+                    <tr>
+                        <td colspan="4" class="ps-3 pb-2 pt-0 small text-muted fst-italic">{{ invoice.notes }}</td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer bg-white border-top py-2 px-3 d-flex justify-content-between align-items-center">
+            <span class="small text-muted">Total outstanding</span>
+            <span class="fw-bold">£{{ outstanding_total|floatformat:2 }}</span>
+        </div>
+    </div>
+    {% else %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body text-center py-4">
+            <i class="bi bi-check-circle text-success display-6 d-block mb-2"></i>
+            <p class="mb-0 fw-semibold">No outstanding invoices</p>
+            <p class="text-muted small mb-0">You're all up to date.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <p class="small text-muted mb-1">Current grade</p>
+                    {% if current_grade %}
+                    <div class="d-flex align-items-center gap-2">
+                        {% if current_grade.stage.colour %}
+                        <span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:{{ current_grade.stage.colour }};border:1px solid rgba(0,0,0,0.1);flex-shrink:0;"></span>
+                        {% endif %}
+                        <span class="fw-semibold">{{ current_grade.stage.name }}</span>
+                    </div>
+                    <p class="small text-muted mb-0 mt-1">{{ current_grade.stage.system.name }} · Achieved {{ current_grade.achieved_date|date:"d M Y" }}</p>
+                    {% else %}
+                    <p class="fw-semibold mb-0">Not yet graded</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <p class="small text-muted mb-1">Member since</p>
+                    <p class="fw-semibold mb-0">
+                        {% if member.joined_date %}{{ member.joined_date|date:"F Y" }}{% else %}—{% endif %}
+                    </p>
+                    {% if has_guardians %}
+                    <p class="small text-muted mb-0 mt-1"><i class="bi bi-person-heart me-1"></i>Junior member</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if progressions.count > 1 %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3">
+            <h6 class="mb-0">Grade history</h6>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-sm mb-0">
+                <tbody>
+                    {% for prog in progressions %}
+                    <tr>
+                        <td class="ps-3 py-2" style="width:28px;">
+                            {% if prog.stage.colour %}
+                            <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:{{ prog.stage.colour }};border:1px solid rgba(0,0,0,0.1);"></span>
+                            {% endif %}
+                        </td>
+                        <td class="py-2 small fw-semibold">{{ prog.stage.name }}</td>
+                        <td class="py-2 small text-muted">{{ prog.stage.system.name }}</td>
+                        <td class="py-2 small text-muted pe-3">{{ prog.achieved_date|date:"d M Y" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if enrolments %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3">
+            <h6 class="mb-0">Classes</h6>
+        </div>
+        <div class="card-body p-0">
+            <ul class="list-group list-group-flush">
+                {% for enrolment in enrolments %}
+                <li class="list-group-item py-2 px-3">
+                    <div class="small fw-semibold">{{ enrolment.assigned_class.name }}</div>
+                    <div class="small text-muted">{{ enrolment.assigned_class.schedule_display }}</div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if recent_attendance %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3">
+            <h6 class="mb-0">Recent attendance</h6>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-sm mb-0">
+                <tbody>
+                    {% for att in recent_attendance %}
+                    <tr>
+                        <td class="ps-3 py-2 small">{{ att.session.date|date:"d M Y" }}</td>
+                        <td class="py-2 small text-muted pe-3">{{ att.session.assigned_class.name }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if paid %}
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-3">
+            <h6 class="mb-0">Payment history</h6>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-sm mb-0">
+                <tbody>
+                    {% for invoice in paid %}
+                    <tr>
+                        <td class="ps-3 py-2 small">{{ invoice.period }}</td>
+                        <td class="py-2 small fw-semibold">£{{ invoice.amount|floatformat:2 }}</td>
+                        <td class="py-2 small text-end pe-3">
+                            <span class="badge bg-success-subtle text-success">Paid</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <p class="text-center text-muted small mt-4">
+        Questions? Contact {{ org.name }}{% if org.email %} at <a href="mailto:{{ org.email }}">{{ org.email }}</a>{% endif %}.
+    </p>
+
+</div>
+</body>
+</html>
