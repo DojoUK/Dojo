@@ -1,9 +1,17 @@
 {% extends 'org/base.html' %}
 
+<<<<<<< HEAD
 {% block title %}Calendar — {{ org.name }}{% endblock %}
 {% block page_title %}Calendar{% endblock %}
 
 {% block extra_head %}
+=======
+{% block title %}Calendar{% endblock %}
+{% block page_title %}Calendar{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+>>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
 {% endblock %}
 

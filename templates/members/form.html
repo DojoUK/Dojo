@@ -1,6 +1,10 @@
 {% extends 'org/base.html' %}
 
+<<<<<<< HEAD
 {% block title %}{{ title }} — {{ org.name }}{% endblock %}
+=======
+{% block title %}{{ title }}{% endblock %}
+>>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
 
 {% block page_title %}{{ title }}{% endblock %}
 
@@ -50,6 +54,15 @@
                             <div class="form-text">Used for autopay subscriptions. Leave blank if not applicable.</div>
                         </div>
                         <div class="col-sm-6">
+<<<<<<< HEAD
+=======
+                            <label class="form-label fw-semibold small">Billing policy</label>
+                            {{ form.billing_policy }}
+                            {% if form.billing_policy.errors %}<div class="text-danger small mt-1">{{ form.billing_policy.errors.0 }}</div>{% endif %}
+                            <div class="form-text">Override the class policy for this member.</div>
+                        </div>
+                        <div class="col-sm-6">
+>>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
                             <label class="form-label fw-semibold small">Licence number</label>
                             {{ form.licence_number }}
                             {% if form.licence_number.errors %}<div class="text-danger small mt-1">{{ form.licence_number.errors.0 }}</div>{% endif %}

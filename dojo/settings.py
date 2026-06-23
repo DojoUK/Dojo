@@ -53,6 +53,10 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+<<<<<<< HEAD
+=======
+                'dojo.context_processors.dojo_licence',
+>>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
             ],
         },
     },
@@ -87,10 +91,20 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
+<<<<<<< HEAD
+=======
+STATICFILES_DIRS = [BASE_DIR / 'static']
+>>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+<<<<<<< HEAD
+=======
+DOJO_LICENCE_KEY = os.environ.get('DOJO_LICENCE_KEY', '')
+DOJO_LICENCE_HOLDER = os.environ.get('DOJO_LICENCE_HOLDER', '')
+
+>>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL = 'login'

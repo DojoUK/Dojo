@@ -1,6 +1,10 @@
 {% extends 'org/base.html' %}
 
+<<<<<<< HEAD
 {% block title %}{{ cls.name }} — {{ org.name }}{% endblock %}
+=======
+{% block title %}{{ cls.name }}{% endblock %}
+>>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
 {% block page_title %}{{ cls.name }}{% endblock %}
 {% block page_subtitle %}{{ cls.schedule_display }}{% endblock %}
 
@@ -60,6 +64,10 @@
 
             {% if enrolled %}
             <div class="card-body p-0">
+<<<<<<< HEAD
+=======
+                <div class="table-responsive">
+>>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
                 <table class="table table-sm table-hover mb-0">
                     <tbody>
                         {% for member in enrolled %}
@@ -81,6 +89,10 @@
                         {% endfor %}
                     </tbody>
                 </table>
+<<<<<<< HEAD
+=======
+                </div>
+>>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
             </div>
             {% else %}
             <div class="card-body">
@@ -95,6 +107,10 @@
                 <h6 class="mb-0">Waiting list <span class="badge bg-warning-subtle text-warning ms-1">{{ waiting_list|length }}</span></h6>
             </div>
             <div class="card-body p-0">
+<<<<<<< HEAD
+=======
+                <div class="table-responsive">
+>>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
                 <table class="table table-sm mb-0">
                     <tbody>
                         {% for entry in waiting_list %}
@@ -111,6 +127,10 @@
                         {% endfor %}
                     </tbody>
                 </table>
+<<<<<<< HEAD
+=======
+                </div>
+>>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
             </div>
         </div>
         {% endif %}
@@ -140,6 +160,10 @@
 
             {% if sessions %}
             <div class="card-body p-0">
+<<<<<<< HEAD
+=======
+                <div class="table-responsive">
+>>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
                 <table class="table table-sm table-hover mb-0">
                     <tbody>
                         {% for session in sessions %}
@@ -181,6 +205,10 @@
                         {% endfor %}
                     </tbody>
                 </table>
+<<<<<<< HEAD
+=======
+                </div>
+>>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
                 {% if cls.sessions.count > 10 %}
                 <div class="card-footer bg-white border-top text-center">
                     <span class="text-muted small">Showing 10 most recent of {{ cls.sessions.count }}</span>
@@ -222,6 +250,10 @@
 
             {% if coaches %}
             <div class="card-body p-0">
+<<<<<<< HEAD
+=======
+                <div class="table-responsive">
+>>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
                 <table class="table table-sm mb-0">
                     <tbody>
                         {% for coach in coaches %}
@@ -237,6 +269,10 @@
                         {% endfor %}
                     </tbody>
                 </table>
+<<<<<<< HEAD
+=======
+                </div>
+>>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
             </div>
             {% else %}
             <div class="card-body">

@@ -1,6 +1,10 @@
 {% extends 'org/base.html' %}
 
+<<<<<<< HEAD
 {% block title %}Register — {{ session.date|date:"d M Y" }} — {{ org.name }}{% endblock %}
+=======
+{% block title %}Register{% endblock %}
+>>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
 {% block page_title %}Register{% endblock %}
 {% block page_subtitle %}{{ cls.name }} &mdash; {{ session.date|date:"l d M Y" }}{% endblock %}
 
@@ -39,6 +43,10 @@
 
                 {% if enrolled %}
                 <div class="card-body p-0">
+<<<<<<< HEAD
+=======
+                    <div class="table-responsive">
+>>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
                     <table class="table table-hover mb-0 align-middle">
                         <tbody>
                             {% for cm in enrolled %}
@@ -88,6 +96,10 @@
                             {% endfor %}
                         </tbody>
                     </table>
+<<<<<<< HEAD
+=======
+                    </div>
+>>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
                 </div>
                 {% else %}
                 <div class="card-body">

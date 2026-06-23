@@ -37,6 +37,21 @@
         .form-control, .form-select { border-radius: 7px !important; border-color: var(--dojo-border); font-size: 0.875rem; }
         .form-control:focus, .form-select:focus { border-color: var(--dojo-accent); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
         .alert { border-radius: var(--dojo-radius) !important; }
+<<<<<<< HEAD
+=======
+        /* Mobile baseline */
+        @media (max-width: 767px) {
+            .card-header.d-flex { flex-wrap: wrap; gap: 8px !important; }
+            .card-header.d-flex h6 { min-width: 0; }
+            /* dl label/value pairs stack on mobile */
+            dl.row dt, dl.row dd { float: none; width: 100%; max-width: 100%; padding: 0; margin: 0; }
+            dl.row dd { color: #0f172a; padding-bottom: 10px; }
+            dl.row dt { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .05em; padding-top: 6px; }
+            dl.row dt:first-child { padding-top: 0; }
+            /* Stat tiles on small screens */
+            .col-sm-3 { flex: 0 0 50%; max-width: 50%; }
+        }
+>>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
     </style>
     {% block extra_head %}{% endblock %}
 </head>
