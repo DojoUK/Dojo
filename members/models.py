@@ -1,6 +1,7 @@
 import secrets
 from django.contrib.auth.models import User
 from django.db import models
+from django.utils import timezone
 from organisations.models import Organisation
 
 
@@ -32,10 +33,39 @@ class Member(models.Model):
     billing_policy = models.ForeignKey('billing.BillingPolicy', null=True, blank=True, on_delete=models.SET_NULL, related_name='members')
     archived_at = models.DateTimeField(null=True, blank=True)
     retention_notes = models.TextField(blank=True, help_text='Reason for retaining data beyond the standard period')
+    anonymised_at = models.DateTimeField(null=True, blank=True)
 
     @property
     def has_active_subscription(self):
         return self.subscription_status == 'active'
+
+    def anonymise(self):
+        """Scrub personal data in place, keeping the row for financial/attendance FK integrity."""
+        self.name = f'Deleted Member #{self.pk}'
+        self.date_of_birth = None
+        self.email = ''
+        self.phone = ''
+        self.emergency_contact_name = ''
+        self.emergency_contact_phone = ''
+        self.emergency_contact_2_name = ''
+        self.emergency_contact_2_phone = ''
+        self.custom_field_values = {}
+        self.stripe_customer_id = ''
+        self.stripe_subscription_id = ''
+        self.subscription_status = ''
+        self.licence_number = ''
+        self.licence_expiry = None
+        self.medical_info = ''
+        self.token = generate_token()
+        self.is_active = False
+        if not self.archived_at:
+            self.archived_at = timezone.now()
+        self.anonymised_at = timezone.now()
+        self.save()
+        for guardian in self.guardians.all():
+            guardian.delete()
+        for note in self.notes.all():
+            note.delete()
 
     def __str__(self):
         return self.name
@@ -99,6 +129,7 @@ class MemberApplication(models.Model):
     signature_data = models.TextField(blank=True, help_text='Base64-encoded PNG of drawn signature')
     submitted_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    decided_at = models.DateTimeField(null=True, blank=True, help_text='When the application was approved or rejected')
 
     def __str__(self):
         return f"{self.name} — {self.organisation} ({self.get_status_display()})"

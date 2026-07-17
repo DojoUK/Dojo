@@ -311,6 +311,24 @@ class MemberArchiveView(OrgAdminMixin, View):
         return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
 
 
+class EraseMemberView(OrgAdminMixin, View):
+    """Right-to-erasure action: scrubs personal data, keeps the row for financial/attendance FK integrity."""
+    def post(self, request, org_slug, pk):
+        member = get_object_or_404(Member, pk=pk, organisation=self.org)
+        if member.is_active:
+            messages.error(request, 'Archive the member before erasing their data.')
+            return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
+        if member.anonymised_at:
+            messages.info(request, 'This member\'s data has already been erased.')
+            return redirect('former_members', org_slug=self.org.slug)
+        if member.retention_notes:
+            messages.error(request, 'This member has a retention override recorded — clear the retention notes before erasing.')
+            return redirect('former_members', org_slug=self.org.slug)
+        member.anonymise()
+        messages.success(request, 'Member data erased.')
+        return redirect('former_members', org_slug=self.org.slug)
+
+
 class RecordPromotionView(OrgAdminMixin, View):
     def post(self, request, org_slug, pk):
         member = get_object_or_404(Member, pk=pk, organisation=self.org)
@@ -357,6 +375,7 @@ class ApplicationListView(OrgAdminMixin, View):
 
 class ApproveApplicationView(OrgAdminMixin, View):
     def post(self, request, org_slug, pk):
+        from django.utils import timezone
         from .models import MemberApplication
         app = get_object_or_404(MemberApplication, pk=pk, organisation=self.org)
         member = Member.objects.create(
@@ -377,7 +396,8 @@ class ApproveApplicationView(OrgAdminMixin, View):
                 relationship='Guardian',
             )
         app.status = MemberApplication.Status.APPROVED
-        app.save(update_fields=['status'])
+        app.decided_at = timezone.now()
+        app.save(update_fields=['status', 'decided_at'])
 
         # Generate signed waivers from application signature
         if app.signature_data:
@@ -408,10 +428,12 @@ class ApproveApplicationView(OrgAdminMixin, View):
 
 class RejectApplicationView(OrgAdminMixin, View):
     def post(self, request, org_slug, pk):
+        from django.utils import timezone
         from .models import MemberApplication
         app = get_object_or_404(MemberApplication, pk=pk, organisation=self.org)
         app.status = MemberApplication.Status.REJECTED
-        app.save(update_fields=['status'])
+        app.decided_at = timezone.now()
+        app.save(update_fields=['status', 'decided_at'])
         messages.success(request, f"Application from {app.name} rejected.")
         return redirect('application_list', org_slug=self.org.slug)
 
