@@ -1,4 +1,7 @@
+import json
+
 from django.conf import settings
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 
@@ -59,6 +62,78 @@ class PortalView(View):
             'enrolments': enrolments,
             'recent_attendance': recent_attendance,
         })
+
+
+class DownloadDataView(View):
+    """Self-service subject access / portability export (Art. 15/20) — everything held on this member,
+    except internal coach/admin notes, which are excluded here and available on request from the club."""
+    def get(self, request, token):
+        member = get_object_or_404(Member, token=token, is_active=True)
+
+        from classes.models import Attendance
+        from documents.models import Document, SignedWaiver
+        from progression.models import MemberProgression
+
+        data = {
+            'profile': {
+                'name': member.name,
+                'date_of_birth': member.date_of_birth,
+                'email': member.email,
+                'phone': member.phone,
+                'emergency_contact_name': member.emergency_contact_name,
+                'emergency_contact_phone': member.emergency_contact_phone,
+                'emergency_contact_2_name': member.emergency_contact_2_name,
+                'emergency_contact_2_phone': member.emergency_contact_2_phone,
+                'joined_date': member.joined_date,
+                'licence_number': member.licence_number,
+                'licence_expiry': member.licence_expiry,
+                'medical_info': member.medical_info,
+                'monthly_fee': member.monthly_fee,
+                'subscription_status': member.subscription_status,
+            },
+            'guardians': [
+                {'name': g.name, 'email': g.email, 'phone': g.phone, 'relationship': g.relationship}
+                for g in member.guardians.all()
+            ],
+            'progression': [
+                {'stage': p.stage.name, 'achieved_date': p.achieved_date, 'notes': p.notes}
+                for p in MemberProgression.objects.filter(member=member).select_related('stage')
+            ],
+            'attendance': [
+                {'date': a.session.date, 'class': a.session.assigned_class.name, 'present': a.present}
+                for a in Attendance.objects.filter(member=member).select_related('session__assigned_class')
+            ],
+            'invoices': [
+                {
+                    'period': inv.period, 'amount': str(inv.amount), 'discount_amount': str(inv.discount_amount),
+                    'due_date': inv.due_date, 'status': inv.status, 'created_at': inv.created_at,
+                    'payments': [
+                        {'method': p.get_method_display(), 'amount': str(p.amount), 'paid_at': p.paid_at}
+                        for p in inv.payments.all()
+                    ],
+                }
+                for inv in member.invoices.all()
+            ],
+            'documents': [
+                {'name': d.name, 'category': d.get_category_display(), 'uploaded_at': d.uploaded_at}
+                for d in Document.objects.filter(member=member)
+            ],
+            'signed_waivers': [
+                {'template': w.template.name, 'signer_name': w.signer_name, 'signed_at': w.signed_at}
+                for w in SignedWaiver.objects.filter(member=member).select_related('template')
+            ],
+            'note': (
+                'This export covers the personal data Dojo holds on your member record. '
+                'It does not include internal coach/admin notes — contact the club directly if you need those too.'
+            ),
+        }
+
+        response = HttpResponse(
+            json.dumps(data, indent=2, default=str, ensure_ascii=False),
+            content_type='application/json',
+        )
+        response['Content-Disposition'] = f'attachment; filename="{member.name}-data-export.json"'
+        return response
 
 
 class CreateCheckoutView(View):
