@@ -490,6 +490,7 @@ class AnnouncementListView(OrgAdminMixin, View):
             html_body = render_to_string('emails/announcement.html', {
                 'member': member,
                 'org_name': org_name,
+                'org_email': self.org.email,
                 'subject': subject,
                 'body': body,
                 'has_guardians': has_guardians,

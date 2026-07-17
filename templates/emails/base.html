@@ -30,6 +30,7 @@
           <td style="padding:24px 32px;text-align:center;">
             <p style="color:#9ca3af;font-size:12px;margin:0;">
               This email was sent by {{ org_name }}. Please do not reply to this email.
+              {% if org_email %}To stop receiving non-essential emails like this, contact <a href="mailto:{{ org_email }}" style="color:#9ca3af;">{{ org_email }}</a>.{% else %}To stop receiving non-essential emails like this, contact {{ org_name }} directly.{% endif %}
             </p>
           </td>
         </tr>

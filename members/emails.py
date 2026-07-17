@@ -25,6 +25,7 @@ def send_welcome_email(member):
     context = {
         'member': member,
         'org_name': org_name,
+        'org_email': member.organisation.email,
         'portal_url': portal_url,
         'has_guardians': has_guardians,
     }
