@@ -11,16 +11,34 @@ class BillingPolicy(models.Model):
         ANNUAL = 'annual', 'Annual'
         CUSTOM = 'custom', 'Custom / Manual'
 
+    class PricingModel(models.TextChoices):
+        FLAT = 'flat', 'Flat rate'
+        PER_SESSION = 'per_session', 'Per session'
+
     organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='billing_policies')
     name = models.CharField(max_length=255)
     billing_cycle = models.CharField(max_length=20, choices=BillingCycle.choices)
-    amount = models.DecimalField(max_digits=8, decimal_places=2)
+    pricing_model = models.CharField(max_length=20, choices=PricingModel.choices, default=PricingModel.FLAT)
+    # Flat pricing
+    amount = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    # Per-session pricing
+    per_session_rate = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True,
+                                           help_text='Rate per session for the first enrolled class')
+    additional_class_discount = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True,
+                                                    help_text='% off per_session_rate for 2nd+ enrolled classes (e.g. 50 = half price)')
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.name} (£{self.amount}/{self.get_billing_cycle_display()})"
+        if self.pricing_model == self.PricingModel.PER_SESSION:
+            return f"{self.name} (£{self.per_session_rate}/session / {self.get_billing_cycle_display()})"
+        return f"{self.name} (£{self.amount} flat / {self.get_billing_cycle_display()})"
+
+    def display_amount(self):
+        if self.pricing_model == self.PricingModel.PER_SESSION:
+            return f"£{self.per_session_rate}/session"
+        return f"£{self.amount}"
 
     class Meta:
         ordering = ['organisation', 'name']
