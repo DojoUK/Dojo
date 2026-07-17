@@ -31,6 +31,7 @@ def send_invoice_email(invoice, request=None):
     context = {
         'invoice': invoice,
         'org_name': org_name,
+        'org_email': invoice.organisation.email,
         'member': member,
         'portal_url': portal_url,
         'has_guardians': has_guardians,

@@ -208,12 +208,18 @@ class UnenrolMemberView(OrgAdminMixin, View):
         org_name = self.org.name
         subject = f"A spot has opened up — {cls.name} ({org_name})"
         greeting = f"Dear guardian of {member.name}" if has_guardians else f"Hi {member.name}"
+        contact_line = (
+            f"To stop receiving non-essential emails like this, contact {self.org.email}."
+            if self.org.email else
+            f"To stop receiving non-essential emails like this, contact {org_name} directly."
+        )
         body = (
             f"{greeting},\n\n"
             f"Great news! A spot has opened up in {cls.name} at {org_name} "
             f"and {member.name} has been moved off the waiting list and into the class.\n\n"
             f"No action is needed — you're all set.\n\n"
-            f"Thanks,\n{org_name}"
+            f"Thanks,\n{org_name}\n\n"
+            f"{contact_line}"
         )
         try:
             EmailMultiAlternatives(
@@ -445,6 +451,7 @@ class CancelSessionView(OrgAdminMixin, View):
             subject = f'{org_name} — {cls.name} session cancelled ({session.date.strftime("%d %b %Y")})'
             context = {
                 'org_name': org_name,
+                'org_email': self.org.email,
                 'class_name': cls.name,
                 'session': session,
                 'member': member,

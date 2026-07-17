@@ -19,5 +19,8 @@
     <p style="margin-top: 32px; color: #6b7280; font-size: 0.85rem; border-top: 1px solid #e5e7eb; padding-top: 16px;">
         {{ org_name }}
     </p>
+    <p style="color: #9ca3af; font-size: 0.78rem;">
+        {% if org_email %}To stop receiving non-essential emails like this, contact <a href="mailto:{{ org_email }}" style="color:#9ca3af;">{{ org_email }}</a>.{% else %}To stop receiving non-essential emails like this, contact {{ org_name }} directly.{% endif %}
+    </p>
 </body>
 </html>
