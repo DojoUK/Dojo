@@ -97,6 +97,12 @@ docker compose down
 
 ---
 
+## Data & Privacy
+
+Dojo processes member personal data, including medical information and, for staff, DBS/safeguarding numbers. Payment processing runs through **Stripe** (a sub-processor, US-based, GDPR-compliant via Standard Contractual Clauses) — no card details ever touch Dojo directly. See [PRIVACY.md](./PRIVACY.md) for lawful basis, retention periods, and the full processor list.
+
+---
+
 ## Contributing
 
 Dojo is in early development. Contributions, ideas, and feedback are welcome.
