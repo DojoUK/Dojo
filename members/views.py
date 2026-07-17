@@ -591,6 +591,19 @@ class SendWelcomeEmailView(OrgAdminMixin, View):
         return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
 
 
+class RegeneratePortalTokenView(OrgAdminMixin, View):
+    """Invalidates the member's existing portal link and issues a new one — use if a link may have leaked."""
+    def post(self, request, org_slug, pk):
+        from django.utils import timezone
+        from .models import generate_token
+        member = get_object_or_404(Member, pk=pk, organisation=self.org)
+        member.token = generate_token()
+        member.token_created_at = timezone.now()
+        member.save(update_fields=['token', 'token_created_at'])
+        messages.success(request, f"{member.name}'s portal link has been reset. The old link no longer works — send them the new one.")
+        return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
+
+
 class MemberCustomFieldsView(OrgAdminMixin, View):
     def post(self, request, org_slug, pk):
         member = get_object_or_404(Member, pk=pk, organisation=self.org)

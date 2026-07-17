@@ -29,6 +29,15 @@
     </div>
     {% endif %}
 
+    <div class="card mb-4" style="background:#f8fafc;">
+        <div class="card-body py-3">
+            <h6 class="mb-2"><i class="bi bi-shield-lock me-2"></i>How we'll use this information</h6>
+            <p class="small text-muted mb-0">
+                {{ org.name }} collects the details on this form to process your membership application, run your training safely (including any medical information you provide), and — where a guardian is named — to contact them about a junior member. Data is stored for as long as you're an active member and for a limited period afterwards for insurance, safeguarding, and legal record-keeping, then removed or anonymised. It's only visible to {{ org.name }}'s admins and coaches, and to Stripe (payment processing, once you're a paying member) — no one else. You can ask {{ org.name }} to see, correct, or delete what's held about you at any time.
+            </p>
+        </div>
+    </div>
+
     <form method="post" id="signupForm">
         {% csrf_token %}
         <input type="hidden" name="signature_data" id="signatureData">

@@ -1,0 +1,39 @@
+{% extends 'emails/base.html' %}
+
+{% block subject %}Your {{ org_name }} member portal link has been refreshed{% endblock %}
+
+{% block content %}
+{% if has_guardians and not member.email %}
+<p style="color:#374151;font-size:16px;margin:0 0 24px;">Dear guardian of {{ member.name }},</p>
+{% else %}
+<p style="color:#374151;font-size:16px;margin:0 0 24px;">Hi {{ member.name }},</p>
+{% endif %}
+
+<p style="color:#374151;font-size:15px;margin:0 0 24px;">
+  As a routine security measure, we periodically refresh member portal links. Your old link no longer works — please use this new one to view membership details, check invoices, and pay online:
+</p>
+
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+  <tr>
+    <td align="center">
+      <a href="{{ portal_url }}"
+         style="display:inline-block;background:#212529;color:#fff;font-size:15px;font-weight:600;padding:14px 32px;border-radius:6px;text-decoration:none;">
+        Go to member portal
+      </a>
+    </td>
+  </tr>
+</table>
+
+<p style="color:#6b7280;font-size:12px;text-align:center;margin:0 0 24px;">
+  Or copy this link: <a href="{{ portal_url }}" style="color:#6b7280;">{{ portal_url }}</a>
+</p>
+
+<p style="color:#6b7280;font-size:14px;margin:0 0 24px;">
+  If you didn't expect this email, or have any questions, please get in touch.
+</p>
+
+<p style="color:#374151;font-size:15px;margin:24px 0 0;">
+  Thanks,<br>
+  <strong>{{ org_name }}</strong>
+</p>
+{% endblock %}

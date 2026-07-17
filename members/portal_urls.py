@@ -3,6 +3,7 @@ from . import portal_views
 
 urlpatterns = [
     path('', portal_views.PortalView.as_view(), name='member_portal'),
+    path('my-data/', portal_views.DownloadDataView.as_view(), name='portal_download_data'),
     path('pay/<int:invoice_pk>/', portal_views.CreateCheckoutView.as_view(), name='portal_checkout'),
     path('subscribe/', portal_views.CreateSubscriptionView.as_view(), name='portal_subscribe'),
     path('cancel-subscription/', portal_views.CancelSubscriptionView.as_view(), name='portal_cancel_subscription'),
