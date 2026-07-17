@@ -2,10 +2,12 @@ from datetime import date, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.models import User
+from django.contrib.auth.views import PasswordChangeView
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q, Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views import View
 from django.views.generic import ListView, TemplateView
 from auditlog.models import LogEntry
@@ -631,3 +633,52 @@ class FinancialReportView(OrgAdminMixin, View):
             'total_outstanding': total_outstanding,
             'today': today,
         })
+
+
+class AccountView(OrgMixin, View):
+    """Self-service account management — available to any logged-in member (coach or admin), not just org admins."""
+    template_name = 'org/account.html'
+
+    def get(self, request, org_slug):
+        return render(request, self.template_name, {
+            'org': self.org,
+            'org_membership': self.org_membership,
+            'memberships': request.user.organisation_memberships.select_related('organisation').order_by('organisation__name'),
+        })
+
+    def post(self, request, org_slug):
+        user = request.user
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        email = request.POST.get('email', '').strip()
+
+        if not email:
+            messages.error(request, 'Email is required.')
+            return redirect('account_settings', org_slug=self.org.slug)
+
+        user.first_name = first_name
+        user.last_name = last_name
+        user.email = email
+        user.save(update_fields=['first_name', 'last_name', 'email'])
+        messages.success(request, 'Account details updated.')
+        return redirect('account_settings', org_slug=self.org.slug)
+
+
+class AccountPasswordChangeView(OrgMixin, PasswordChangeView):
+    template_name = 'org/account_password.html'
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        for field in form.fields.values():
+            field.widget.attrs['class'] = 'form-control'
+        return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['org'] = self.org
+        context['org_membership'] = self.org_membership
+        return context
+
+    def get_success_url(self):
+        messages.success(self.request, 'Password changed.')
+        return reverse('account_settings', kwargs={'org_slug': self.org.slug})
