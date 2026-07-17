@@ -58,6 +58,7 @@ class Member(models.Model):
         self.licence_expiry = None
         self.medical_info = ''
         self.token = generate_token()
+        self.token_created_at = timezone.now()
         self.is_active = False
         if not self.archived_at:
             self.archived_at = timezone.now()
