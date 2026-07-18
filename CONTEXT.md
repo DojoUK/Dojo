@@ -111,7 +111,7 @@ In SaaS mode, each organisation connects their own Stripe account via Stripe Con
 
 These are the core models. All models below are implemented and migrated **except** Document. See notes on Session — the model exists but needs updating for scheduled sessions.
 
-**Session scheduling design decision (agreed):** Sessions are auto-generated from the class schedule (e.g. every Tuesday and Thursday for Backwell Judo Club). Each session is individually editable and can be cancelled. One-off extra sessions can be added outside the normal schedule. The `Session` model needs `is_cancelled` and `is_extra` boolean fields. The `Class.schedule` field needs to store structured recurrence data (days of week + time), not just free text — implementation TBD.
+**Session scheduling design decision (agreed):** Sessions are auto-generated from the class schedule. Each session is individually editable and can be cancelled. One-off extra sessions can be added outside the normal schedule. The `Session` model needs `is_cancelled` and `is_extra` boolean fields. The `Class.schedule` field needs to store structured recurrence data (days of week + time), not just free text — implementation TBD.
 
 ```
 Organisation
@@ -382,7 +382,4 @@ All templates extend `org/base.html`. Partials in `templates/members/partials/` 
 - The developer is working solo on this as a spare time project
 - They are using PyCharm (JetBrains, licensed) on Linux
 - They are comfortable with Django from prior experience
-- They are using this project partly to improve their TypeScript skills - however the decision was made to use Django for this project for speed and familiarity. TypeScript is not in use here.
-- The developer runs **Backwell Judo Club** with approximately 70 members and 5 coaches/leadership team members. This is the primary real-world use case driving requirements. The club trains on **Tuesdays and Thursdays**.
-- Claude Code is being used in the terminal to assist with development
 - All decisions about stack, architecture, naming, and licencing documented above were made deliberately. Do not second-guess them without being asked.
