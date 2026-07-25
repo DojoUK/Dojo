@@ -270,8 +270,38 @@ class AttendanceRegisterView(ClassCoachMixin, View):
     def _get_session(self, session_pk):
         return get_object_or_404(Session, pk=session_pk, assigned_class=self.assigned_class)
 
-    def get(self, request, org_slug, pk, session_pk):
+    def _unsigned_waiver_ids(self, enrolled):
         from documents.models import SignedWaiver, WaiverTemplate
+        has_required_waivers = WaiverTemplate.objects.filter(
+            organisation=self.org, is_active=True, is_required=True
+        ).exists()
+        if not has_required_waivers:
+            return set()
+        member_ids = [cm.member.pk for cm in enrolled]
+        signed_ids = set(
+            SignedWaiver.objects.filter(
+                member_id__in=member_ids,
+                template__organisation=self.org,
+                template__is_required=True,
+            ).values_list('member_id', flat=True)
+        )
+        return set(member_ids) - signed_ids
+
+    def _render(self, request, session, enrolled, present_ids, coaches, present_coach_ids, notes):
+        return render(request, 'classes/register.html', {
+            'org': self.org,
+            'org_membership': self.org_membership,
+            'cls': self.assigned_class,
+            'session': session,
+            'enrolled': enrolled,
+            'present_ids': present_ids,
+            'coaches': coaches,
+            'present_coach_ids': present_coach_ids,
+            'unsigned_waiver_ids': self._unsigned_waiver_ids(enrolled),
+            'notes': notes,
+        })
+
+    def get(self, request, org_slug, pk, session_pk):
         session = self._get_session(session_pk)
         enrolled = (
             ClassMember.objects.filter(assigned_class=self.assigned_class)
@@ -291,37 +321,19 @@ class AttendanceRegisterView(ClassCoachMixin, View):
             SessionCoach.objects.filter(session=session, present=True)
             .values_list('coach_id', flat=True)
         )
-        # Members missing a required signed waiver
-        has_required_waivers = WaiverTemplate.objects.filter(
-            organisation=self.org, is_active=True, is_required=True
-        ).exists()
-        unsigned_waiver_ids = set()
-        if has_required_waivers:
-            member_ids = [cm.member.pk for cm in enrolled]
-            signed_ids = set(
-                SignedWaiver.objects.filter(
-                    member_id__in=member_ids,
-                    template__organisation=self.org,
-                    template__is_required=True,
-                ).values_list('member_id', flat=True)
-            )
-            unsigned_waiver_ids = set(member_ids) - signed_ids
-        return render(request, 'classes/register.html', {
-            'org': self.org,
-            'org_membership': self.org_membership,
-            'cls': self.assigned_class,
-            'session': session,
-            'enrolled': enrolled,
-            'present_ids': present_ids,
-            'coaches': coaches,
-            'present_coach_ids': present_coach_ids,
-            'unsigned_waiver_ids': unsigned_waiver_ids,
-        })
+        return self._render(request, session, enrolled, present_ids, coaches, present_coach_ids, session.notes)
 
     def post(self, request, org_slug, pk, session_pk):
         session = self._get_session(session_pk)
         enrolled = ClassMember.objects.filter(assigned_class=self.assigned_class).select_related('member')
         present_ids = {int(x) for x in request.POST.getlist('present')}
+        coaches = ClassCoach.objects.filter(assigned_class=self.assigned_class).select_related('user')
+        coach_present_ids = {int(x) for x in request.POST.getlist('coach_present')}
+        notes = request.POST.get('notes', session.notes)
+
+        if coaches.exists() and not coach_present_ids:
+            messages.error(request, 'At least one coach must be marked present to save the register.')
+            return self._render(request, session, enrolled, present_ids, coaches, coach_present_ids, notes)
 
         for cm in enrolled:
             Attendance.objects.update_or_create(
@@ -330,9 +342,6 @@ class AttendanceRegisterView(ClassCoachMixin, View):
                 defaults={'present': cm.member.pk in present_ids},
             )
 
-        coaches = ClassCoach.objects.filter(assigned_class=self.assigned_class).select_related('user')
-        coach_present_ids = {int(x) for x in request.POST.getlist('coach_present')}
-
         for cc in coaches:
             SessionCoach.objects.update_or_create(
                 session=session,
@@ -340,7 +349,7 @@ class AttendanceRegisterView(ClassCoachMixin, View):
                 defaults={'present': cc.user.pk in coach_present_ids},
             )
 
-        session.notes = request.POST.get('notes', session.notes)
+        session.notes = notes
         session.save(update_fields=['notes'])
 
         messages.success(request, f'Register saved for {session.date:%d %b %Y}.')
