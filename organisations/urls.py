@@ -9,6 +9,7 @@ urlpatterns = [
     path('audit/', views.AuditLogView.as_view(), name='org_audit_log'),
     path('staff/', views.StaffListView.as_view(), name='org_staff'),
     path('settings/', views.OrgSettingsView.as_view(), name='org_settings'),
+    path('reseed-demo/', views.ReseedDemoView.as_view(), name='org_reseed_demo'),
     path('settings/test-email/', views.TestEmailView.as_view(), name='org_test_email'),
     path('settings/fields/', views.CustomFieldSettingsView.as_view(), name='org_custom_fields'),
     path('settings/progression/', include('progression.urls')),

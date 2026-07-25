@@ -3,10 +3,10 @@ services:
     image: mysql:8.0
     restart: always
     environment:
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME:-dojo}
+      MYSQL_USER: ${DB_USER:-dojo_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-dojo_password}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-dojo_root_password}
     volumes:
       - mysql_data:/var/lib/mysql
     ports:
@@ -14,19 +14,18 @@ services:
 
   web:
     build: .
-    command: python manage.py runserver 0.0.0.0:8000
+    command: python manage.py runserver 0.0.0.0:8000 --insecure
     volumes:
       - .:/app
     ports:
       - "8000:8000"
     environment:
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-dojo}
+      - DB_USER=${DB_USER:-dojo_user}
+      - DB_PASSWORD=${DB_PASSWORD:-dojo_password}
       - DB_HOST=db
       - DB_PORT=3306
-      - SECRET_KEY=${SECRET_KEY}
-      - DEBUG=${DEBUG}
+      - DEBUG=${DEBUG:-True}
     depends_on:
       - db
 

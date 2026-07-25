@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block title %}Set up Dojo{% endblock %}
+{% block body_class %}{% endblock %}
+
+{% block body %}
+<style>
+    body { background: linear-gradient(135deg, #1E3A5F 0%, #0f2139 100%); min-height: 100vh; }
+</style>
+<div class="min-vh-100 d-flex align-items-center justify-content-center px-3 py-5">
+    <div class="w-100" style="max-width: 480px;">
+
+        <div class="text-center mb-5">
+            {% load static %}
+            <img src="{% static 'img/dojo-wordmark.png' %}" alt="Dojo" style="height:44px;filter:brightness(0) invert(1);opacity:0.9;margin-bottom:12px;">
+            <p style="color:rgba(255,255,255,.45);font-size:0.85rem;margin:0;">Let's set up your organisation</p>
+        </div>
+
+        <div class="card" style="border:none!important;box-shadow:0 20px 60px rgba(0,0,0,.3)!important;">
+            <div class="card-body p-4">
+                <h5 class="fw-semibold mb-4" style="font-size:1rem;">Create your organisation</h5>
+
+                {% if errors %}
+                <div class="alert alert-danger py-2 small mb-3">
+                    <ul class="mb-0 ps-3">
+                        {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-2 mt-1">
+                        <span class="text-uppercase text-muted" style="font-size:0.7rem;letter-spacing:.05em;">Organisation</span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Organisation name</label>
+                        <input type="text" name="org_name" value="{{ org_name|default:'' }}" class="form-control" required autofocus>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Contact email</label>
+                        <input type="email" name="org_email" value="{{ org_email|default:'' }}" class="form-control" placeholder="e.g. secretary@sportclub.co.uk">
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label small fw-semibold">Phone</label>
+                            <input type="text" name="org_phone" value="{{ org_phone|default:'' }}" class="form-control">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label small fw-semibold">Website</label>
+                            <input type="url" name="org_website" value="{{ org_website|default:'' }}" class="form-control" placeholder="https://...">
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="mb-2">
+                        <span class="text-uppercase text-muted" style="font-size:0.7rem;letter-spacing:.05em;">Your admin account</span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Username</label>
+                        <input type="text" name="username" value="{{ username|default:'' }}" class="form-control" autocomplete="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Email</label>
+                        <input type="email" name="admin_email" value="{{ admin_email|default:'' }}" class="form-control" autocomplete="email">
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-4">
+                            <label class="form-label small fw-semibold">Password</label>
+                            <input type="password" name="password" class="form-control" autocomplete="new-password" required>
+                        </div>
+                        <div class="col-6 mb-4">
+                            <label class="form-label small fw-semibold">Confirm password</label>
+                            <input type="password" name="password_confirm" class="form-control" autocomplete="new-password" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-dark w-100 py-2">Create organisation</button>
+                </form>
+            </div>
+        </div>
+
+        {% if demo_mode %}
+        <div class="card mt-3" style="border:none!important;box-shadow:0 20px 60px rgba(0,0,0,.3)!important;">
+            <div class="card-body p-4">
+                <h6 class="fw-semibold mb-2" style="font-size:0.9rem;">
+                    <i class="bi bi-bug-fill me-1"></i> Seed demo data instead
+                </h6>
+                <p class="text-muted small mb-3">Skips the form above and populates this instance with a fictional club (members, classes, invoices) so you can explore Dojo. Logs you in as <code>admin</code> / <code>admin</code>.</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="mode" value="demo">
+                    <button type="submit" class="btn btn-outline-warning w-100 py-2">Seed demo data</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <p class="text-center mt-4" style="color:rgba(255,255,255,.25);font-size:0.72rem;">
+            <a href="https://github.com/DojoUK/Dojo" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">AGPL-3.0 &middot; source available</a>
+        </p>
+
+    </div>
+</div>
+{% endblock %}

@@ -2,14 +2,17 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
-from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
 from django.urls import include, path
+from organisations import views as organisations_views
 
 
-@login_required
 def root_redirect(request):
     from organisations.models import Organisation, OrganisationMember
+    if not Organisation.objects.exists():
+        return redirect('setup')
+    if not request.user.is_authenticated:
+        return redirect('login')
     membership = OrganisationMember.objects.filter(user=request.user).select_related('organisation').first()
     if membership:
         return redirect('org_dashboard', org_slug=membership.organisation.slug)
@@ -23,6 +26,7 @@ def root_redirect(request):
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('setup/', organisations_views.SetupView.as_view(), name='setup'),
     path('login/', auth_views.LoginView.as_view(), name='login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
     path('password-reset/', auth_views.PasswordResetView.as_view(), name='password_reset'),

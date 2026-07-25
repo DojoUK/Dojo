@@ -342,6 +342,22 @@
         </div>
         {% endif %}
 
+        {% if org.settings.demo %}
+        <div class="alert alert-warning d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4" role="alert">
+            <div>
+                <i class="bi bi-bug-fill me-1"></i>
+                <strong>Demo instance</strong> — seeded with dummy data for exploring Dojo. Logged in as <code>admin</code> / <code>admin</code>.
+            </div>
+            <div class="d-flex gap-2">
+                <a href="/admin/" class="btn btn-sm btn-outline-dark" target="_blank">Django admin</a>
+                <form method="post" action="{% url 'org_reseed_demo' org_slug=org.slug %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-dark">Reset demo data</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
         {% block main_content %}{% endblock %}
 
     </div>
