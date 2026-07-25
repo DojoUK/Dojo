@@ -1,5 +1,5 @@
 """
-Seed the database with a fictional demo club: Ironbridge Judo Club.
+Seed the database with a fictional demo club: Mockingham Martial Arts Club.
 Run with: python manage.py seed_demo
 Add --flush to wipe all existing data first.
 """
@@ -13,7 +13,7 @@ from django.utils.text import slugify
 
 
 class Command(BaseCommand):
-    help = 'Seed the database with fictional demo data (Ironbridge Judo Club)'
+    help = 'Seed the database with fictional demo data (Mockingham Martial Arts Club)'
 
     def add_arguments(self, parser):
         parser.add_argument('--flush', action='store_true', help='Delete all existing data first')
@@ -22,7 +22,7 @@ class Command(BaseCommand):
         if options['flush']:
             self._flush()
 
-        self.stdout.write('Seeding Ironbridge Judo Club...')
+        self.stdout.write('Seeding Mockingham Martial Arts Club...')
         org = self._create_org()
         users = self._create_users(org)
         system = self._create_progression(org)
@@ -66,50 +66,23 @@ class Command(BaseCommand):
     def _create_org(self):
         from organisations.models import Organisation
         org, _ = Organisation.objects.get_or_create(
-            slug='ironbridge-judo-club',
+            slug='mockingham-martial-arts',
             defaults={
-                'name': 'Ironbridge Judo Club',
-                'email': 'secretary@ironbridgejudo.co.uk',
-                'phone': '01952 884412',
-                'website': 'https://www.ironbridgejudo.co.uk',
+                'name': 'Mockingham Martial Arts Club',
+                'email': 'secretary@mockingham-ma.example',
+                'phone': '01632 960123',
+                'website': 'https://www.mockingham-ma.example',
                 'settings': {
                     'sidebar_color': '#1E3A5F',
                     'sidebar_color_dark': '#162d4a',
                     'accent_color': '#2563EB',
                     'accent_hover': '#1d4ed8',
+                    'demo': True,
                 },
             }
         )
         self.stdout.write(f'  Org: {org.name}')
         return org
-
-    # ── Users ──────────────────────────────────────────────────────────────────
-
-    def _create_users(self, org):
-        from organisations.models import OrganisationMember
-        users = {}
-
-        def make_user(username, first, last, role, password='demo1234'):
-            u, _ = User.objects.get_or_create(username=username, defaults={
-                'first_name': first, 'last_name': last,
-                'email': f'{username}@ironbridgejudo.co.uk',
-            })
-            u.set_password(password)
-            u.save()
-            OrganisationMember.objects.get_or_create(user=u, organisation=org, defaults={'role': role})
-            return u
-
-        users['karen'] = make_user('karen.shaw', 'Karen', 'Shaw', 'org_admin',
-                                   dbs='DBS-2024-00451', dbs_exp=date(2027, 3, 15),
-                                   coaching='BJA-L2-7823', coaching_exp=date(2026, 9, 30))
-        users['dean'] = make_user('dean.okafor', 'Dean', 'Okafor', 'coach',
-                                  dbs='DBS-2023-88241', dbs_exp=date(2026, 6, 1),
-                                  coaching='BJA-L1-3312', coaching_exp=date(2025, 12, 31))
-        users['priya'] = make_user('priya.nair', 'Priya', 'Nair', 'coach',
-                                   dbs='DBS-2024-11092', dbs_exp=date(2027, 11, 20),
-                                   coaching='BJA-L1-5541', coaching_exp=date(2027, 5, 10))
-        self.stdout.write(f'  Users: {", ".join(users)}')
-        return users
 
     def _update_org_member_credentials(self, org, username, dbs, dbs_exp, coaching, coaching_exp):
         from organisations.models import OrganisationMember
@@ -128,15 +101,15 @@ class Command(BaseCommand):
     def _create_progression(self, org):
         from progression.models import ProgressionSystem, ProgressionStage
         system, _ = ProgressionSystem.objects.get_or_create(
-            organisation=org, name='BJA Judo Grades',
+            organisation=org, name='MAF Grading Syllabus',
             defaults={'assign_to_new_members': True}
         )
         grades = [
-            ('Mon 1', '#ffffff', True, 1),
-            ('Mon 2', '#f9f9a0', False, 2),
-            ('Mon 3', '#f9f9a0', False, 3),
-            ('Mon 4', '#f97316', False, 4),
-            ('Mon 5', '#f97316', False, 5),
+            ('Cadet 1', '#ffffff', True, 1),
+            ('Cadet 2', '#f9f9a0', False, 2),
+            ('Cadet 3', '#f9f9a0', False, 3),
+            ('Cadet 4', '#f97316', False, 4),
+            ('Cadet 5', '#f97316', False, 5),
             ('6th Kyu (White)', '#ffffff', False, 6),
             ('5th Kyu (Yellow)', '#facc15', False, 7),
             ('4th Kyu (Orange)', '#f97316', False, 8),
@@ -159,16 +132,16 @@ class Command(BaseCommand):
     def _create_classes(self, org, users):
         from classes.models import Class, ClassCoach
         data = [
-            ('Junior Judo', [{'day': 0, 'time': '17:30', 'end': '18:30'},
+            ('Junior Class', [{'day': 0, 'time': '17:30', 'end': '18:30'},
                               {'day': 2, 'time': '17:30', 'end': '18:30'}], 30),
-            ('Senior Judo', [{'day': 0, 'time': '19:00', 'end': '20:30'},
+            ('Senior Class', [{'day': 0, 'time': '19:00', 'end': '20:30'},
                               {'day': 3, 'time': '19:00', 'end': '20:30'}], 25),
             ('Competition Squad', [{'day': 5, 'time': '09:00', 'end': '11:00'}], 15),
             ('Beginners', [{'day': 2, 'time': '19:00', 'end': '20:00'}], 20),
         ]
         coaches_map = {
-            'Junior Judo': ['priya'],
-            'Senior Judo': ['karen', 'dean'],
+            'Junior Class': ['priya'],
+            'Senior Class': ['karen', 'dean'],
             'Competition Squad': ['karen', 'dean'],
             'Beginners': ['priya'],
         }
@@ -195,38 +168,38 @@ class Command(BaseCommand):
 
         # Custom field
         cf, _ = CustomField.objects.get_or_create(
-            organisation=org, name='BJA Licence Number',
+            organisation=org, name='MAF Licence Number',
             defaults={'field_type': 'text'}
         )
 
         today = date.today()
         members_data = [
             # (name, dob, email, phone, monthly_fee, grade_name, class_names, guardian, medical, licence, notes)
-            ('Alice Thornton',    date(2010,  3, 14), 'alice.thornton@email.co.uk',   '07700100001', 22, '3rd Kyu (Green)',   ['Junior Judo', 'Competition Squad'], ('Rachel Thornton', 'rachel.t@email.co.uk', '07700200001', 'Mother'), None, 'BJA-2024-11432', None),
-            ('Ben Osei',          date(2009,  7, 22), 'ben.osei@email.co.uk',         '07700100002', 22, '2nd Kyu (Blue)',    ['Junior Judo', 'Competition Squad'], ('Kwame Osei', 'kwame.osei@email.co.uk', '07700200002', 'Father'), None, 'BJA-2023-88321', None),
-            ('Chloe Wraight',     date(2011,  1,  5), 'chloe.w@email.co.uk',          '07700100003', 22, '4th Kyu (Orange)', ['Junior Judo'],                       ('Diane Wraight', 'diane.w@email.co.uk', '07700200003', 'Mother'), 'Asthma — carries blue inhaler. Ensure she takes a break if breathless.', 'BJA-2024-33210', None),
-            ('Daniel Park',       date(2012,  9, 18), 'daniel.park@email.co.uk',      '07700100004', 22, 'Mon 3',            ['Junior Judo'],                       ('Ji-Young Park', 'jiyoung@email.co.uk', '07700200004', 'Mother'), None, None, None),
-            ('Emma Gallagher',    date(2011, 11, 30), 'emma.g@email.co.uk',           '07700100005', 22, 'Mon 4',            ['Junior Judo'],                       ('Steve Gallagher', 'steve.g@email.co.uk', '07700200005', 'Father'), None, None, None),
-            ('Finn Walsh',        date(2010,  5,  9), 'finn.walsh@email.co.uk',       '07700100006', 22, '4th Kyu (Orange)', ['Junior Judo'],                       ('Siobhan Walsh', 'siobhan.w@email.co.uk', '07700200006', 'Mother'), 'Nut allergy (anaphylactic). EpiPen kept in red bag in club office. Do not allow near nut products.', 'BJA-2024-09871', 'Very promising competition prospect — good uchi-mata.'),
-            ('Grace Ndlovu',      date(2013,  2, 25), 'grace.n@email.co.uk',          '07700100007', 22, 'Mon 2',            ['Junior Judo'],                       ('Moses Ndlovu', 'moses.n@email.co.uk', '07700200007', 'Father'), None, None, None),
-            ('Harry Stubbs',      date(2009,  8, 12), 'harry.stubbs@email.co.uk',     '07700100008', 22, '1st Kyu (Brown)',  ['Junior Judo', 'Competition Squad'], ('Janet Stubbs', 'janet.s@email.co.uk', '07700200008', 'Mother'), None, 'BJA-2022-55612', 'Aiming for 1st Dan this year — grading scheduled for October.'),
-            ('Imogen Clarke',     date(2010, 12,  3), 'imogen.c@email.co.uk',         '07700100009', 22, '3rd Kyu (Green)',  ['Junior Judo'],                       ('Tom Clarke', 'tom.c@email.co.uk', '07700200009', 'Father'), 'Type 1 diabetes — manages independently but coaches should be aware. Glucose tablets in her bag.', 'BJA-2023-74412', None),
-            ('Jack Reeves',       date(2011,  6, 17), 'jack.r@email.co.uk',           '07700100010', 22, 'Mon 5',            ['Junior Judo'],                       ('Sandra Reeves', 'sandra.r@email.co.uk', '07700200010', 'Mother'), None, None, None),
-            ('Marcus Webb',       date(1988,  4, 11), 'marcus.webb@email.co.uk',      '07700100011', 35, '1st Dan (Black)',  ['Senior Judo', 'Competition Squad'], None, None, 'BJA-2018-00234', 'Club captain. Helps run senior sessions.'),
-            ('Natasha Burns',     date(1995,  8, 29), 'natasha.burns@email.co.uk',    '07700100012', 35, '1st Kyu (Brown)',  ['Senior Judo', 'Competition Squad'], None, None, 'BJA-2021-44871', None),
-            ('Oliver Jennings',   date(1990,  2,  7), 'oliver.j@email.co.uk',         '07700100013', 35, '2nd Kyu (Blue)',   ['Senior Judo'],                       None, 'Previous knee injury (right ACL, 2022). Avoid heavy newaza load — inform coach.', 'BJA-2020-33122', None),
-            ('Priyanka Shah',     date(1998,  6, 22), 'priyanka.s@email.co.uk',       '07700100014', 35, '3rd Kyu (Green)',  ['Senior Judo'],                       None, None, 'BJA-2023-82341', None),
-            ('Rory McAllister',   date(1985, 10, 14), 'rory.m@email.co.uk',           '07700100015', 35, '1st Dan (Black)',  ['Senior Judo', 'Competition Squad'], None, None, 'BJA-2014-00087', None),
-            ('Sophie Adeyemi',    date(1993,  3, 31), 'sophie.a@email.co.uk',         '07700100016', 35, '2nd Kyu (Blue)',   ['Senior Judo'],                       None, None, 'BJA-2022-61233', None),
-            ('Tom Bridger',       date(2001,  9,  5), 'tom.bridger@email.co.uk',      '07700100017', 35, '1st Kyu (Brown)',  ['Senior Judo', 'Competition Squad'], None, None, 'BJA-2021-58874', None),
-            ('Uma Patel',         date(1997,  7, 18), 'uma.patel@email.co.uk',        '07700100018', 35, '4th Kyu (Orange)', ['Senior Judo'],                       None, None, None, None),
-            ('Victor Holt',       date(1975,  5,  3), 'victor.holt@email.co.uk',      '07700100019', 35, '2nd Dan (Black)',  ['Senior Judo'],                       None, 'High blood pressure — medicated. Should not over-exert. Self-manages but coaches should be aware.', 'BJA-2005-00012', 'Former county champion. Retired from competition, trains for fitness.'),
-            ('Wendy Cross',       date(1989, 12, 20), 'wendy.cross@email.co.uk',      '07700100020', 35, '1st Kyu (Brown)',  ['Senior Judo'],                       None, None, 'BJA-2020-49921', None),
-            ('Yasmin Ford',       date(2000,  4,  8), 'yasmin.ford@email.co.uk',      '07700100021', 30, '5th Kyu (Yellow)', ['Beginners'],                         None, None, None, None),
-            ('Zach Murray',       date(1999, 11, 25), 'zach.murray@email.co.uk',      '07700100022', 30, '6th Kyu (White)',  ['Beginners'],                         None, None, None, None),
-            ('Abby Thornton',     date(2001,  8, 14), 'abby.t@email.co.uk',           '07700100023', 30, '5th Kyu (Yellow)', ['Beginners'],                         None, None, None, None),
-            ('Callum Reid',       date(1996,  3,  9), 'callum.reid@email.co.uk',      '07700100024', 30, '6th Kyu (White)',  ['Beginners'],                         None, None, None, None),
-            ('Diana Fox',         date(2002,  6, 30), 'diana.fox@email.co.uk',        '07700100025', 30, '5th Kyu (Yellow)', ['Beginners', 'Senior Judo'],          None, None, None, None),
+            ('Alice Thornton',    date(2010,  3, 14), 'alice.thornton@example.com',   '07700100001', 22, '3rd Kyu (Green)',   ['Junior Class', 'Competition Squad'], ('Rachel Thornton', 'rachel.t@example.com', '07700200001', 'Mother'), None, 'MAF-2024-11432', None),
+            ('Ben Osei',          date(2009,  7, 22), 'ben.osei@example.com',         '07700100002', 22, '2nd Kyu (Blue)',    ['Junior Class', 'Competition Squad'], ('Kwame Osei', 'kwame.osei@example.com', '07700200002', 'Father'), None, 'MAF-2023-88321', None),
+            ('Chloe Wraight',     date(2011,  1,  5), 'chloe.w@example.com',          '07700100003', 22, '4th Kyu (Orange)', ['Junior Class'],                       ('Diane Wraight', 'diane.w@example.com', '07700200003', 'Mother'), 'Asthma — carries blue inhaler. Ensure she takes a break if breathless.', 'MAF-2024-33210', None),
+            ('Daniel Park',       date(2012,  9, 18), 'daniel.park@example.com',      '07700100004', 22, 'Cadet 3',            ['Junior Class'],                       ('Ji-Young Park', 'jiyoung@example.com', '07700200004', 'Mother'), None, None, None),
+            ('Emma Gallagher',    date(2011, 11, 30), 'emma.g@example.com',           '07700100005', 22, 'Cadet 4',            ['Junior Class'],                       ('Steve Gallagher', 'steve.g@example.com', '07700200005', 'Father'), None, None, None),
+            ('Finn Walsh',        date(2010,  5,  9), 'finn.walsh@example.com',       '07700100006', 22, '4th Kyu (Orange)', ['Junior Class'],                       ('Siobhan Walsh', 'siobhan.w@example.com', '07700200006', 'Mother'), 'Nut allergy (anaphylactic). EpiPen kept in red bag in club office. Do not allow near nut products.', 'MAF-2024-09871', 'Very promising competition prospect — strong throwing technique.'),
+            ('Grace Ndlovu',      date(2013,  2, 25), 'grace.n@example.com',          '07700100007', 22, 'Cadet 2',            ['Junior Class'],                       ('Moses Ndlovu', 'moses.n@example.com', '07700200007', 'Father'), None, None, None),
+            ('Harry Stubbs',      date(2009,  8, 12), 'harry.stubbs@example.com',     '07700100008', 22, '1st Kyu (Brown)',  ['Junior Class', 'Competition Squad'], ('Janet Stubbs', 'janet.s@example.com', '07700200008', 'Mother'), None, 'MAF-2022-55612', 'Aiming for 1st Dan this year — grading scheduled for October.'),
+            ('Imogen Clarke',     date(2010, 12,  3), 'imogen.c@example.com',         '07700100009', 22, '3rd Kyu (Green)',  ['Junior Class'],                       ('Tom Clarke', 'tom.c@example.com', '07700200009', 'Father'), 'Type 1 diabetes — manages independently but coaches should be aware. Glucose tablets in her bag.', 'MAF-2023-74412', None),
+            ('Jack Reeves',       date(2011,  6, 17), 'jack.r@example.com',           '07700100010', 22, 'Cadet 5',            ['Junior Class'],                       ('Sandra Reeves', 'sandra.r@example.com', '07700200010', 'Mother'), None, None, None),
+            ('Marcus Webb',       date(1988,  4, 11), 'marcus.webb@example.com',      '07700100011', 35, '1st Dan (Black)',  ['Senior Class', 'Competition Squad'], None, None, 'MAF-2018-00234', 'Club captain. Helps run senior sessions.'),
+            ('Natasha Burns',     date(1995,  8, 29), 'natasha.burns@example.com',    '07700100012', 35, '1st Kyu (Brown)',  ['Senior Class', 'Competition Squad'], None, None, 'MAF-2021-44871', None),
+            ('Oliver Jennings',   date(1990,  2,  7), 'oliver.j@example.com',         '07700100013', 35, '2nd Kyu (Blue)',   ['Senior Class'],                       None, 'Previous knee injury (right ACL, 2022). Avoid heavy groundwork load — inform coach.', 'MAF-2020-33122', None),
+            ('Priyanka Shah',     date(1998,  6, 22), 'priyanka.s@example.com',       '07700100014', 35, '3rd Kyu (Green)',  ['Senior Class'],                       None, None, 'MAF-2023-82341', None),
+            ('Rory McAllister',   date(1985, 10, 14), 'rory.m@example.com',           '07700100015', 35, '1st Dan (Black)',  ['Senior Class', 'Competition Squad'], None, None, 'MAF-2014-00087', None),
+            ('Sophie Adeyemi',    date(1993,  3, 31), 'sophie.a@example.com',         '07700100016', 35, '2nd Kyu (Blue)',   ['Senior Class'],                       None, None, 'MAF-2022-61233', None),
+            ('Tom Bridger',       date(2001,  9,  5), 'tom.bridger@example.com',      '07700100017', 35, '1st Kyu (Brown)',  ['Senior Class', 'Competition Squad'], None, None, 'MAF-2021-58874', None),
+            ('Uma Patel',         date(1997,  7, 18), 'uma.patel@example.com',        '07700100018', 35, '4th Kyu (Orange)', ['Senior Class'],                       None, None, None, None),
+            ('Victor Holt',       date(1975,  5,  3), 'victor.holt@example.com',      '07700100019', 35, '2nd Dan (Black)',  ['Senior Class'],                       None, 'High blood pressure — medicated. Should not over-exert. Self-manages but coaches should be aware.', 'MAF-2005-00012', 'Former county champion. Retired from competition, trains for fitness.'),
+            ('Wendy Cross',       date(1989, 12, 20), 'wendy.cross@example.com',      '07700100020', 35, '1st Kyu (Brown)',  ['Senior Class'],                       None, None, 'MAF-2020-49921', None),
+            ('Yasmin Ford',       date(2000,  4,  8), 'yasmin.ford@example.com',      '07700100021', 30, '5th Kyu (Yellow)', ['Beginners'],                         None, None, None, None),
+            ('Zach Murray',       date(1999, 11, 25), 'zach.murray@example.com',      '07700100022', 30, '6th Kyu (White)',  ['Beginners'],                         None, None, None, None),
+            ('Abby Thornton',     date(2001,  8, 14), 'abby.t@example.com',           '07700100023', 30, '5th Kyu (Yellow)', ['Beginners'],                         None, None, None, None),
+            ('Callum Reid',       date(1996,  3,  9), 'callum.reid@example.com',      '07700100024', 30, '6th Kyu (White)',  ['Beginners'],                         None, None, None, None),
+            ('Diana Fox',         date(2002,  6, 30), 'diana.fox@example.com',        '07700100025', 30, '5th Kyu (Yellow)', ['Beginners', 'Senior Class'],          None, None, None, None),
         ]
 
         stage_map = {s.name: s for s in system.stages.all()}
@@ -313,12 +286,12 @@ class Command(BaseCommand):
                     notes = ''
                     if is_past and not is_cancelled and random.random() < 0.3:
                         notes = random.choice([
-                            'Good session — focused on uchi-mata combinations.',
-                            'Worked on newaza transitions. Good energy from the group.',
-                            'Competition prep — randori focus.',
+                            'Good session — focused on throwing combinations.',
+                            'Worked on groundwork transitions. Good energy from the group.',
+                            'Competition prep — sparring focus.',
                             'Grading technique review. Several members looking ready.',
                             'New members settling in well. Revised breakfalls.',
-                            'Fitness circuit + randori. High intensity.',
+                            'Fitness circuit + sparring. High intensity.',
                         ])
 
                     session, _ = Session.objects.get_or_create(
@@ -392,13 +365,13 @@ class Command(BaseCommand):
         from members.models import MemberApplication
 
         apps = [
-            ('Liam Fletcher',  date(2012,  8, 5),  'liam.fletcher@email.co.uk',  '07700300001',
-             'Paul Fletcher', 'paul.f@email.co.uk', '07700400001', 'Father', 'pending', ''),
-            ('Mia Winters',    date(1999,  3, 19), 'mia.winters@email.co.uk',    '07700300002',
+            ('Liam Fletcher',  date(2012,  8, 5),  'liam.fletcher@example.com',  '07700300001',
+             'Paul Fletcher', 'paul.f@example.com', '07700400001', 'Father', 'pending', ''),
+            ('Mia Winters',    date(1999,  3, 19), 'mia.winters@example.com',    '07700300002',
              '', '', '', '', 'pending', ''),
-            ('Noah Davies',    date(2011, 11,  2), 'noah.davies@email.co.uk',    '07700300003',
-             'Claire Davies', 'claire.d@email.co.uk', '07700400003', 'Mother', 'approved', ''),
-            ('Olivia Grant',   date(2003,  6, 28), 'olivia.grant@email.co.uk',   '07700300004',
+            ('Noah Davies',    date(2011, 11,  2), 'noah.davies@example.com',    '07700300003',
+             'Claire Davies', 'claire.d@example.com', '07700400003', 'Mother', 'approved', ''),
+            ('Olivia Grant',   date(2003,  6, 28), 'olivia.grant@example.com',   '07700300004',
              '', '', '', '', 'rejected', 'Applicant lives outside our catchment area.'),
         ]
         for (name, dob, email, phone, g_name, g_email, g_phone, g_rel, status, notes) in apps:
@@ -410,7 +383,7 @@ class Command(BaseCommand):
                     'guardian_phone': g_phone,
                     'notes': notes, 'status': status,
                     'address_line1': f'{random.randint(1,120)} Demo Street',
-                    'city': 'Telford', 'postcode': 'TF1 1AA',
+                    'city': 'Mockingham', 'postcode': 'MK1 1AA',
                 }
             )
         self.stdout.write(f'  Applications: {len(apps)} created')
@@ -464,7 +437,7 @@ class Command(BaseCommand):
                       dbs='', dbs_exp=None, coaching='', coaching_exp=None):
             u, _ = User.objects.get_or_create(username=username, defaults={
                 'first_name': first, 'last_name': last,
-                'email': f'{username}@ironbridgejudo.co.uk',
+                'email': f'{username}@mockingham-ma.example',
             })
             u.set_password(password)
             u.save()
@@ -481,12 +454,12 @@ class Command(BaseCommand):
 
         users['karen'] = make_user('karen.shaw', 'Karen', 'Shaw', 'org_admin',
                                    dbs='DBS-2024-00451', dbs_exp=date(2027, 3, 15),
-                                   coaching='BJA-L2-7823', coaching_exp=date(2026, 9, 30))
+                                   coaching='MAF-L2-7823', coaching_exp=date(2026, 9, 30))
         users['dean'] = make_user('dean.okafor', 'Dean', 'Okafor', 'coach',
                                   dbs='DBS-2023-88241', dbs_exp=date(2026, 6, 1),
-                                  coaching='BJA-L1-3312', coaching_exp=date(2025, 12, 31))
+                                  coaching='MAF-L1-3312', coaching_exp=date(2025, 12, 31))
         users['priya'] = make_user('priya.nair', 'Priya', 'Nair', 'coach',
                                    dbs='DBS-2024-11092', dbs_exp=date(2027, 11, 20),
-                                   coaching='BJA-L1-5541', coaching_exp=date(2027, 5, 10))
+                                   coaching='MAF-L1-5541', coaching_exp=date(2027, 5, 10))
         self.stdout.write(f'  Users: {", ".join(users)} (password: demo1234)')
         return users

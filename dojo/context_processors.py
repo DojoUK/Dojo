@@ -9,3 +9,7 @@ def dojo_licence(request):
     else:
         licence = {'type': 'agpl'}
     return {'dojo_licence': licence}
+
+
+def dojo_debug(request):
+    return {'DOJO_DEBUG': settings.DEBUG}

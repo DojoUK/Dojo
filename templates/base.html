@@ -62,6 +62,7 @@
     {% block body %}{% endblock %}
     <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
     <script src="{% static 'vendor/htmx/htmx.min.js' %}"></script>
+    {% if DOJO_DEBUG %}<script src="{% static 'js/dojo-diagnostics.js' %}"></script>{% endif %}
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>

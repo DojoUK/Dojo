@@ -1,9 +1,12 @@
 from datetime import date, timedelta
 
 from django.contrib import messages
+from django.contrib.auth import login
 from django.contrib.auth.models import User
 from django.contrib.auth.views import PasswordChangeView
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import PermissionDenied
+from django.core.management import call_command
 from django.db.models import Q, Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -14,6 +17,100 @@ from auditlog.models import LogEntry
 from dojo.mixins import OrgAdminMixin, OrgMixin
 from .models import Announcement, Organisation, OrganisationMember
 from members.models import CustomField
+
+
+class SetupView(View):
+    """
+    First-run, browser-only bootstrap: creates the organisation and its
+    first admin account. Locks itself out once an organisation exists.
+    """
+    template_name = 'org/setup.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        if Organisation.objects.exists():
+            return redirect('login')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request):
+        return render(request, self.template_name, {
+            'demo_mode': request.GET.get('demo') == '1',
+        })
+
+    def post(self, request):
+        if request.POST.get('mode') == 'demo':
+            return self._seed_demo(request)
+        return self._create_org(request)
+
+    def _seed_demo(self, request):
+        call_command('seed_demo')
+        org = Organisation.objects.get(slug='mockingham-martial-arts')
+        org.settings['demo'] = True
+        org.save(update_fields=['settings'])
+
+        admin = User.objects.get(username='admin')
+        login(request, admin)
+        messages.info(request, "Demo instance seeded — you're logged in as “admin” (password: admin).")
+        return redirect('org_dashboard', org_slug=org.slug)
+
+    def _create_org(self, request):
+        org_name = request.POST.get('org_name', '').strip()
+        username = request.POST.get('username', '').strip()
+        admin_email = request.POST.get('admin_email', '').strip()
+        password = request.POST.get('password', '')
+        password_confirm = request.POST.get('password_confirm', '')
+
+        errors = []
+        if not org_name:
+            errors.append('Organisation name is required.')
+        if not username:
+            errors.append('Username is required.')
+        elif User.objects.filter(username=username).exists():
+            errors.append('That username is already taken.')
+        if not password:
+            errors.append('Password is required.')
+        elif password != password_confirm:
+            errors.append('Passwords do not match.')
+        elif len(password) < 8:
+            errors.append('Password must be at least 8 characters.')
+
+        if errors:
+            return render(request, self.template_name, {
+                'errors': errors,
+                'demo_mode': request.GET.get('demo') == '1',
+                'org_name': org_name,
+                'username': username,
+                'admin_email': admin_email,
+                'org_email': request.POST.get('org_email', '').strip(),
+                'org_phone': request.POST.get('org_phone', '').strip(),
+                'org_website': request.POST.get('org_website', '').strip(),
+            })
+
+        user = User.objects.create_superuser(username=username, email=admin_email, password=password)
+        org = Organisation.objects.create(
+            name=org_name,
+            email=request.POST.get('org_email', '').strip(),
+            phone=request.POST.get('org_phone', '').strip(),
+            website=request.POST.get('org_website', '').strip(),
+        )
+        OrganisationMember.objects.create(user=user, organisation=org, role=OrganisationMember.Role.ORG_ADMIN)
+
+        login(request, user)
+        return redirect('org_dashboard', org_slug=org.slug)
+
+
+class ReseedDemoView(OrgAdminMixin, View):
+    """Re-runs the demo seed for orgs that were bootstrapped via dummy mode."""
+
+    def post(self, request, org_slug):
+        if not self.org.settings.get('demo'):
+            raise PermissionDenied
+        slug = self.org.slug
+        call_command('seed_demo', '--flush')
+        org = Organisation.objects.get(slug=slug)
+        org.settings['demo'] = True
+        org.save(update_fields=['settings'])
+        messages.success(request, 'Demo data has been reset.')
+        return redirect('org_dashboard', org_slug=org.slug)
 
 
 class DashboardView(OrgMixin, TemplateView):
