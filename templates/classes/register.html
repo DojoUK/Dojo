@@ -98,6 +98,26 @@
                 {% endif %}
             </div>
 
+            {% if coaches %}
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h6 class="mb-0">Coaches</h6>
+                </div>
+                <div class="card-body py-2">
+                    {% for cc in coaches %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="coach_present"
+                               value="{{ cc.user.pk }}" id="coach{{ cc.user.pk }}"
+                               {% if cc.user.pk in present_coach_ids %}checked{% endif %}>
+                        <label class="form-check-label" for="coach{{ cc.user.pk }}">
+                            {{ cc.user.get_full_name|default:cc.user.username }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-white border-bottom py-3">
                     <h6 class="mb-0">Session notes <span class="text-muted fw-normal small">(optional)</span></h6>

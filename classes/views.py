@@ -9,7 +9,7 @@ from django.views.generic import DetailView, ListView
 from dojo.mixins import ClassCoachMixin, OrgAdminMixin, OrgMixin
 from members.models import Member
 
-from .models import Attendance, Class, ClassCoach, ClassMember, Session, WaitingList
+from .models import Attendance, Class, ClassCoach, ClassMember, Session, SessionCoach, WaitingList
 
 
 DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -282,6 +282,15 @@ class AttendanceRegisterView(ClassCoachMixin, View):
             Attendance.objects.filter(session=session, present=True)
             .values_list('member_id', flat=True)
         )
+        coaches = (
+            ClassCoach.objects.filter(assigned_class=self.assigned_class)
+            .select_related('user')
+            .order_by('user__first_name', 'user__last_name')
+        )
+        present_coach_ids = set(
+            SessionCoach.objects.filter(session=session, present=True)
+            .values_list('coach_id', flat=True)
+        )
         # Members missing a required signed waiver
         has_required_waivers = WaiverTemplate.objects.filter(
             organisation=self.org, is_active=True, is_required=True
@@ -304,6 +313,8 @@ class AttendanceRegisterView(ClassCoachMixin, View):
             'session': session,
             'enrolled': enrolled,
             'present_ids': present_ids,
+            'coaches': coaches,
+            'present_coach_ids': present_coach_ids,
             'unsigned_waiver_ids': unsigned_waiver_ids,
         })
 
@@ -317,6 +328,16 @@ class AttendanceRegisterView(ClassCoachMixin, View):
                 session=session,
                 member=cm.member,
                 defaults={'present': cm.member.pk in present_ids},
+            )
+
+        coaches = ClassCoach.objects.filter(assigned_class=self.assigned_class).select_related('user')
+        coach_present_ids = {int(x) for x in request.POST.getlist('coach_present')}
+
+        for cc in coaches:
+            SessionCoach.objects.update_or_create(
+                session=session,
+                coach=cc.user,
+                defaults={'present': cc.user.pk in coach_present_ids},
             )
 
         session.notes = request.POST.get('notes', session.notes)
@@ -396,12 +417,22 @@ class PrintRegisterView(ClassCoachMixin, View):
         present_ids = set(
             session.attendance.filter(present=True).values_list('member_id', flat=True)
         )
+        coaches = (
+            ClassCoach.objects.filter(assigned_class=self.assigned_class)
+            .select_related('user')
+            .order_by('user__first_name', 'user__last_name')
+        )
+        present_coach_ids = set(
+            session.session_coaches.filter(present=True).values_list('coach_id', flat=True)
+        )
         return render(request, 'classes/print_register.html', {
             'org': self.org,
             'cls': self.assigned_class,
             'session': session,
             'enrolled': enrolled,
             'present_ids': present_ids,
+            'coaches': coaches,
+            'present_coach_ids': present_coach_ids,
             'today': date.today(),
         })
 
