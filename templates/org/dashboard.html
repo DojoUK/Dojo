@@ -6,6 +6,32 @@
 
 {% block main_content %}
 
+{% if onboarding %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom py-3">
+        <h6 class="mb-0"><i class="bi bi-rocket-takeoff me-2 text-muted"></i>Getting started</h6>
+    </div>
+    <div class="list-group list-group-flush">
+        <a href="{% url 'member_add' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-2 {% if onboarding.has_member %}text-muted{% endif %}">
+            {% if onboarding.has_member %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-circle text-muted"></i>{% endif %}
+            Add your first member
+        </a>
+        <a href="{% url 'class_add' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-2 {% if onboarding.has_class %}text-muted{% endif %}">
+            {% if onboarding.has_class %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-circle text-muted"></i>{% endif %}
+            Create your first class
+        </a>
+        <a href="{% url 'class_list' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-2 {% if onboarding.has_coach %}text-muted{% endif %}">
+            {% if onboarding.has_coach %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-circle text-muted"></i>{% endif %}
+            Assign a coach to a class
+        </a>
+        <a href="{% url 'invoice_create' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-2 {% if onboarding.has_invoice %}text-muted{% endif %}">
+            {% if onboarding.has_invoice %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-circle text-muted"></i>{% endif %}
+            Generate your first invoice
+        </a>
+    </div>
+</div>
+{% endif %}
+
 <div class="row g-3 mb-4">
     <div class="col-sm-6 col-lg-3">
         {% if is_admin %}<a href="{% url 'member_list' org_slug=org.slug %}" class="text-decoration-none">{% endif %}
