@@ -113,6 +113,15 @@ class ReseedDemoView(OrgAdminMixin, View):
         return redirect('org_dashboard', org_slug=org.slug)
 
 
+class DismissOnboardingView(OrgAdminMixin, View):
+    """Permanently hides the getting-started checklist/popup for this org."""
+
+    def post(self, request, org_slug):
+        self.org.settings['onboarding_dismissed'] = True
+        self.org.save(update_fields=['settings'])
+        return redirect('org_dashboard', org_slug=self.org.slug)
+
+
 class DashboardView(OrgMixin, TemplateView):
     template_name = 'org/dashboard.html'
 
@@ -225,7 +234,7 @@ class DashboardView(OrgMixin, TemplateView):
         ).count() if is_admin else 0
 
         onboarding = None
-        if is_admin:
+        if is_admin and not self.org.settings.get('onboarding_dismissed'):
             from classes.models import ClassCoach
             has_member = member_count > 0
             has_class = self.org.classes.exists()
