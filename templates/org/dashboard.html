@@ -4,7 +4,58 @@
 {% block page_title %}Dashboard{% endblock %}
 {% block page_subtitle %}Welcome back, {{ request.user.get_full_name|default:request.user.username }}{% endblock %}
 
+{% block page_actions %}
+{% if onboarding %}
+<button type="button" class="btn btn-sm btn-dark" data-bs-toggle="modal" data-bs-target="#onboardingModal">
+    <i class="bi bi-rocket-takeoff me-1"></i>Getting started
+</button>
+{% endif %}
+{% endblock %}
+
 {% block main_content %}
+
+{% if onboarding %}
+<div class="modal fade" id="onboardingModal" tabindex="-1" aria-labelledby="onboardingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="onboardingModalLabel"><i class="bi bi-rocket-takeoff me-2 text-muted"></i>Getting started</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{% url 'member_add' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-2 {% if onboarding.has_member %}text-muted{% endif %}">
+                    {% if onboarding.has_member %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-circle text-muted"></i>{% endif %}
+                    Add your first member
+                </a>
+                <a href="{% url 'class_add' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-2 {% if onboarding.has_class %}text-muted{% endif %}">
+                    {% if onboarding.has_class %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-circle text-muted"></i>{% endif %}
+                    Create your first class
+                </a>
+                <a href="{% url 'class_list' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-2 {% if onboarding.has_coach %}text-muted{% endif %}">
+                    {% if onboarding.has_coach %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-circle text-muted"></i>{% endif %}
+                    Assign a coach to a class
+                </a>
+                <a href="{% url 'invoice_create' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-2 {% if onboarding.has_invoice %}text-muted{% endif %}">
+                    {% if onboarding.has_invoice %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-circle text-muted"></i>{% endif %}
+                    Generate your first invoice
+                </a>
+            </div>
+            <div class="modal-footer">
+                <form method="post" action="{% url 'org_onboarding_dismiss' org_slug=org.slug %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">Don't remind me again</button>
+                </form>
+                <button type="button" class="btn btn-sm btn-dark" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        new bootstrap.Modal(document.getElementById('onboardingModal')).show();
+    });
+</script>
+{% endif %}
 
 <div class="row g-3 mb-4">
     <div class="col-sm-6 col-lg-3">

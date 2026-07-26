@@ -113,6 +113,15 @@ class ReseedDemoView(OrgAdminMixin, View):
         return redirect('org_dashboard', org_slug=org.slug)
 
 
+class DismissOnboardingView(OrgAdminMixin, View):
+    """Permanently hides the getting-started checklist/popup for this org."""
+
+    def post(self, request, org_slug):
+        self.org.settings['onboarding_dismissed'] = True
+        self.org.save(update_fields=['settings'])
+        return redirect('org_dashboard', org_slug=self.org.slug)
+
+
 class DashboardView(OrgMixin, TemplateView):
     template_name = 'org/dashboard.html'
 
@@ -224,6 +233,21 @@ class DashboardView(OrgMixin, TemplateView):
             Q(dbs_expiry__lt=today) | Q(coaching_licence_expiry__lt=today)
         ).count() if is_admin else 0
 
+        onboarding = None
+        if is_admin and not self.org.settings.get('onboarding_dismissed'):
+            from classes.models import ClassCoach
+            has_member = member_count > 0
+            has_class = self.org.classes.exists()
+            has_coach = ClassCoach.objects.filter(assigned_class__organisation=self.org).exists() if has_class else False
+            has_invoice = Invoice.objects.filter(organisation=self.org).exists()
+            if not (has_member and has_class and has_coach and has_invoice):
+                onboarding = {
+                    'has_member': has_member,
+                    'has_class': has_class,
+                    'has_coach': has_coach,
+                    'has_invoice': has_invoice,
+                }
+
         unsigned_waivers_count = 0
         if is_admin:
             from documents.models import SignedWaiver, WaiverTemplate
@@ -259,6 +283,7 @@ class DashboardView(OrgMixin, TemplateView):
             'staff_expiring': staff_expiring,
             'staff_expired': staff_expired,
             'unsigned_waivers_count': unsigned_waivers_count,
+            'onboarding': onboarding,
         })
         return context
 
