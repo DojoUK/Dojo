@@ -1,14 +1,9 @@
 from django.db import models
-<<<<<<< HEAD
-=======
 from django.utils import timezone
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
 from organisations.models import Organisation
 from members.models import Member
 
 
-<<<<<<< HEAD
-=======
 class BillingPolicy(models.Model):
     class BillingCycle(models.TextChoices):
         MONTHLY = 'monthly', 'Monthly'
@@ -87,7 +82,6 @@ class MemberDiscount(models.Model):
         verbose_name = 'Member discount'
 
 
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
 class Invoice(models.Model):
     class Status(models.TextChoices):
         UNPAID = 'unpaid', 'Unpaid'
@@ -96,13 +90,9 @@ class Invoice(models.Model):
 
     organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='invoices')
     member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='invoices')
-<<<<<<< HEAD
-    amount = models.DecimalField(max_digits=8, decimal_places=2)
-=======
     billing_policy = models.ForeignKey(BillingPolicy, null=True, blank=True, on_delete=models.SET_NULL, related_name='invoices')
     amount = models.DecimalField(max_digits=8, decimal_places=2)
     discount_amount = models.DecimalField(max_digits=8, decimal_places=2, default=0)
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
     period = models.CharField(max_length=50, help_text='e.g. January 2026 or Autumn Term 2025')
     due_date = models.DateField()
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.UNPAID)

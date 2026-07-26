@@ -16,38 +16,26 @@ DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sun
 DAYS_JSON = json.dumps(DAYS)
 
 
-<<<<<<< HEAD
-def _class_form_class():
-    from django import forms
-=======
 def _class_form_class(org=None):
     from django import forms
     from billing.models import BillingPolicy
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
 
     class ClassForm(forms.ModelForm):
         class Meta:
             model = Class
-<<<<<<< HEAD
-            fields = ['name', 'description', 'max_capacity']
-=======
             fields = ['name', 'description', 'max_capacity', 'billing_policy']
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
             widgets = {'description': forms.Textarea(attrs={'rows': 3})}
 
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             for field in self.fields.values():
                 field.widget.attrs['class'] = 'form-control'
-<<<<<<< HEAD
-=======
             if org:
                 self.fields['billing_policy'].queryset = BillingPolicy.objects.filter(
                     organisation=org, is_active=True
                 )
             self.fields['billing_policy'].required = False
             self.fields['billing_policy'].empty_label = '— No policy —'
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
 
     return ClassForm
 
@@ -85,22 +73,14 @@ class ClassListView(OrgAdminMixin, ListView):
 
 class ClassCreateView(OrgAdminMixin, View):
     def get(self, request, org_slug):
-<<<<<<< HEAD
-        form = _class_form_class()()
-=======
         form = _class_form_class(self.org)()
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
         return render(request, 'classes/form.html', {
             'org': self.org, 'org_membership': self.org_membership,
             'form': form, 'title': 'Add class', 'days': DAYS, 'days_json': DAYS_JSON, 'schedule': [],
         })
 
     def post(self, request, org_slug):
-<<<<<<< HEAD
-        FormClass = _class_form_class()
-=======
         FormClass = _class_form_class(self.org)
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
         form = FormClass(request.POST)
         if form.is_valid():
             obj = form.save(commit=False)
@@ -122,11 +102,7 @@ class ClassUpdateView(OrgAdminMixin, View):
 
     def get(self, request, org_slug, pk):
         cls = self.get_class(pk)
-<<<<<<< HEAD
-        form = _class_form_class()(instance=cls)
-=======
         form = _class_form_class(self.org)(instance=cls)
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
         return render(request, 'classes/form.html', {
             'org': self.org, 'org_membership': self.org_membership,
             'form': form, 'title': f'Edit {cls.name}',
@@ -135,11 +111,7 @@ class ClassUpdateView(OrgAdminMixin, View):
 
     def post(self, request, org_slug, pk):
         cls = self.get_class(pk)
-<<<<<<< HEAD
-        FormClass = _class_form_class()
-=======
         FormClass = _class_form_class(self.org)
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
         form = FormClass(request.POST, instance=cls)
         if form.is_valid():
             obj = form.save(commit=False)
@@ -598,8 +570,6 @@ class AttendanceAnalyticsView(OrgAdminMixin, View):
             'today': today,
             'four_weeks_ago': four_weeks_ago,
         })
-<<<<<<< HEAD
-=======
 
 
 class AttendanceExportView(OrgAdminMixin, View):
@@ -655,4 +625,3 @@ class AttendanceExportView(OrgAdminMixin, View):
                 'Yes' if a.present else 'No',
             ])
         return response
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64

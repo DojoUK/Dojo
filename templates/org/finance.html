@@ -1,17 +1,10 @@
 {% extends 'org/base.html' %}
 
-<<<<<<< HEAD
-{% block title %}Finance — {{ org.name }}{% endblock %}
-{% block page_title %}Financial report{% endblock %}
-
-{% block extra_head %}
-=======
 {% block title %}Finance{% endblock %}
 {% block page_title %}Financial report{% endblock %}
 
 {% block extra_head %}
 {{ block.super }}
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 {% endblock %}
 
@@ -49,10 +42,7 @@
         <h6 class="mb-0">Outstanding by member</h6>
     </div>
     <div class="card-body p-0">
-<<<<<<< HEAD
-=======
         <div class="table-responsive">
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
         <table class="table table-sm mb-0">
             <thead class="table-light">
                 <tr>
@@ -73,10 +63,7 @@
                 {% endfor %}
             </tbody>
         </table>
-<<<<<<< HEAD
-=======
         </div>
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
     </div>
 </div>
 {% else %}

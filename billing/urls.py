@@ -13,8 +13,6 @@ urlpatterns = [
     path('<int:pk>/record-payment/', views.RecordPaymentView.as_view(), name='invoice_record_payment'),
     path('<int:pk>/send/', views.SendInvoiceEmailView.as_view(), name='invoice_send_email'),
     path('<int:pk>/remind/', views.SendReminderEmailView.as_view(), name='invoice_send_reminder'),
-<<<<<<< HEAD
-=======
 
     # Billing policies & terms
     path('policies/', views.BillingPolicyListView.as_view(), name='billing_policies'),
@@ -29,5 +27,4 @@ urlpatterns = [
     # Member discounts
     path('member/<int:member_pk>/discount/add/', views.MemberDiscountAddView.as_view(), name='member_discount_add'),
     path('member-discount/<int:pk>/remove/', views.MemberDiscountRemoveView.as_view(), name='member_discount_remove'),
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
 ]

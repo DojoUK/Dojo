@@ -1,9 +1,5 @@
 from django.contrib import admin
-<<<<<<< HEAD
-from .models import Invoice, Payment
-=======
 from .models import Invoice, Payment, BillingPolicy, OrgTerm, PolicyDiscount, MemberDiscount
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
 
 
 class PaymentInline(admin.TabularInline):
@@ -26,8 +22,6 @@ class PaymentAdmin(admin.ModelAdmin):
     list_display = ('invoice', 'amount', 'paid_at')
     search_fields = ('invoice__member__name', 'stripe_payment_id')
     date_hierarchy = 'paid_at'
-<<<<<<< HEAD
-=======
 
 
 class PolicyDiscountInline(admin.TabularInline):
@@ -52,4 +46,3 @@ class OrgTermAdmin(admin.ModelAdmin):
 class MemberDiscountAdmin(admin.ModelAdmin):
     list_display = ('member', 'discount', 'is_active', 'applied_at')
     list_filter = ('is_active',)
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64

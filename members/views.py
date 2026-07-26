@@ -147,14 +147,11 @@ class MemberCreateView(OrgAdminMixin, CreateView):
     template_name = 'members/form.html'
     form_class = MemberForm
 
-<<<<<<< HEAD
-=======
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['org'] = self.org
         return kwargs
 
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = 'Add member'
@@ -223,26 +220,11 @@ class MemberDetailView(OrgAdminMixin, DetailView):
             organisation=self.org
         ).prefetch_related('stages')
         context['current_grade'] = context['progressions'].first()
-<<<<<<< HEAD
-        from .models import CustomField, MemberNote
-        context['notes'] = MemberNote.objects.filter(member=self.object).select_related('author')
-        from .models import CustomField
-        values = self.object.custom_field_values or {}
-        context['custom_fields'] = [
-            {
-                'field': cf,
-                'value': values.get(str(cf.pk), ''),
-                'is_bool': cf.field_type == CustomField.FieldType.BOOLEAN,
-            }
-            for cf in CustomField.objects.filter(organisation=self.org)
-        ]
-=======
         from .models import MemberNote
         context['notes'] = MemberNote.objects.filter(member=self.object).select_related('author')
         context['custom_fields'] = build_custom_field_widgets(
             self.org, initial_values=self.object.custom_field_values
         )
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
         from datetime import date, timedelta
         today = date.today()
         context['today'] = today
@@ -258,8 +240,6 @@ class MemberDetailView(OrgAdminMixin, DetailView):
         context['missing_waivers'] = context['waiver_templates'].filter(
             is_required=True
         ).exclude(pk__in=signed_template_ids)
-<<<<<<< HEAD
-=======
         from billing.models import BillingPolicy, PolicyDiscount, MemberDiscount
         context['member_discounts'] = MemberDiscount.objects.filter(
             member=self.object, is_active=True
@@ -272,7 +252,6 @@ class MemberDetailView(OrgAdminMixin, DetailView):
         ).exclude(
             member_discounts__member=self.object, member_discounts__is_active=True
         ).select_related('policy')
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
         return context
 
 
@@ -283,14 +262,11 @@ class MemberUpdateView(OrgAdminMixin, UpdateView):
     def get_object(self):
         return get_object_or_404(Member, pk=self.kwargs['pk'], organisation=self.org)
 
-<<<<<<< HEAD
-=======
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs['org'] = self.org
         return kwargs
 
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = f'Edit {self.object.name}'
@@ -322,11 +298,6 @@ class MemberUpdateView(OrgAdminMixin, UpdateView):
 
 class MemberArchiveView(OrgAdminMixin, View):
     def post(self, request, org_slug, pk):
-<<<<<<< HEAD
-        member = get_object_or_404(Member, pk=pk, organisation=self.org)
-        member.is_active = not member.is_active
-        member.save(update_fields=['is_active'])
-=======
         from django.utils import timezone
         member = get_object_or_404(Member, pk=pk, organisation=self.org)
         member.is_active = not member.is_active
@@ -335,7 +306,6 @@ class MemberArchiveView(OrgAdminMixin, View):
         else:
             member.archived_at = None
         member.save(update_fields=['is_active', 'archived_at'])
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
         status = 'reactivated' if member.is_active else 'archived'
         messages.success(request, f'{member.name} {status}.')
         return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
@@ -619,8 +589,6 @@ class SendWelcomeEmailView(OrgAdminMixin, View):
         except Exception as e:
             messages.error(request, f'Email failed: {e}')
         return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
-<<<<<<< HEAD
-=======
 
 
 class MemberCustomFieldsView(OrgAdminMixin, View):
@@ -658,4 +626,3 @@ class MemberRetentionNotesView(OrgAdminMixin, View):
         member.save(update_fields=['retention_notes'])
         messages.success(request, 'Retention notes saved.')
         return redirect('former_members', org_slug=self.org.slug)
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64

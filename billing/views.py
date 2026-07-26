@@ -9,11 +9,7 @@ from django.views.generic import DetailView, ListView
 from dojo.mixins import OrgAdminMixin
 from members.models import Member
 
-<<<<<<< HEAD
-from .models import Invoice, Payment
-=======
 from .models import Invoice, Payment, BillingPolicy, OrgTerm, PolicyDiscount, MemberDiscount
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
 
 
 class InvoiceListView(OrgAdminMixin, ListView):
@@ -384,8 +380,6 @@ class SendReminderEmailView(OrgAdminMixin, View):
         except Exception as e:
             messages.error(request, f'Reminder failed: {e}')
         return redirect('invoice_detail', org_slug=self.org.slug, pk=pk)
-<<<<<<< HEAD
-=======
 
 
 # ── Billing Policies ──────────────────────────────────────────────────────────
@@ -555,4 +549,3 @@ class MemberDiscountRemoveView(OrgAdminMixin, View):
         md.delete()
         messages.success(request, f'Discount "{name}" removed.')
         return redirect('member_detail', org_slug=self.org.slug, pk=member_pk)
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64

@@ -27,10 +27,7 @@ class Class(models.Model):
         return ', '.join(parts)
 
     max_capacity = models.PositiveIntegerField(null=True, blank=True)
-<<<<<<< HEAD
-=======
     billing_policy = models.ForeignKey('billing.BillingPolicy', null=True, blank=True, on_delete=models.SET_NULL, related_name='classes')
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
 
     @property
     def enrolled_count(self):

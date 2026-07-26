@@ -27,10 +27,7 @@ def build_custom_field_widgets(org, data=None, initial_values=None):
         rendered.append({
             'field': cf,
             'key': key,
-<<<<<<< HEAD
-=======
             'value': current,
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
             'html': widget.render(key, current if cf.field_type != CustomField.FieldType.BOOLEAN else bool(current)),
             'is_bool': cf.field_type == CustomField.FieldType.BOOLEAN,
             'checked': bool(current),
@@ -60,11 +57,7 @@ class MemberForm(forms.ModelForm):
             'emergency_contact_2_name', 'emergency_contact_2_phone',
             'joined_date', 'is_active', 'monthly_fee',
             'licence_number', 'licence_expiry',
-<<<<<<< HEAD
-            'medical_info',
-=======
             'medical_info', 'billing_policy',
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
         ]
         widgets = {
             'date_of_birth': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
@@ -72,11 +65,7 @@ class MemberForm(forms.ModelForm):
             'licence_expiry': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
         }
 
-<<<<<<< HEAD
-    def __init__(self, *args, **kwargs):
-=======
     def __init__(self, *args, org=None, **kwargs):
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             if isinstance(field.widget, forms.CheckboxInput):
@@ -84,8 +73,6 @@ class MemberForm(forms.ModelForm):
             else:
                 field.widget.attrs['class'] = 'form-control'
         self.fields['name'].widget.attrs['autofocus'] = True
-<<<<<<< HEAD
-=======
         self.fields['billing_policy'].required = False
         self.fields['billing_policy'].empty_label = '— No policy —'
         if org:
@@ -93,7 +80,6 @@ class MemberForm(forms.ModelForm):
             self.fields['billing_policy'].queryset = BillingPolicy.objects.filter(
                 organisation=org, is_active=True
             )
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
 
 
 class GuardianForm(forms.ModelForm):

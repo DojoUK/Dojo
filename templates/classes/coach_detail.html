@@ -1,10 +1,6 @@
 {% extends 'org/base.html' %}
 
-<<<<<<< HEAD
-{% block title %}{{ cls.name }} — {{ org.name }}{% endblock %}
-=======
 {% block title %}{{ cls.name }}{% endblock %}
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
 {% block page_title %}{{ cls.name }}{% endblock %}
 {% block page_subtitle %}{{ cls.schedule_display }}{% endblock %}
 
@@ -25,10 +21,7 @@
                 <h6 class="mb-0">Upcoming sessions</h6>
             </div>
             <div class="card-body p-0">
-<<<<<<< HEAD
-=======
                 <div class="table-responsive">
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
                 <table class="table table-sm table-hover mb-0 align-middle">
                     <tbody>
                         {% for session in upcoming %}
@@ -49,10 +42,7 @@
                         {% endfor %}
                     </tbody>
                 </table>
-<<<<<<< HEAD
-=======
                 </div>
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
             </div>
         </div>
         {% else %}
@@ -69,10 +59,7 @@
                 <h6 class="mb-0">Recent sessions</h6>
             </div>
             <div class="card-body p-0">
-<<<<<<< HEAD
-=======
                 <div class="table-responsive">
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
                 <table class="table table-sm table-hover mb-0 align-middle">
                     <tbody>
                         {% for session in recent %}
@@ -91,10 +78,7 @@
                         {% endfor %}
                     </tbody>
                 </table>
-<<<<<<< HEAD
-=======
                 </div>
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
             </div>
         </div>
         {% endif %}

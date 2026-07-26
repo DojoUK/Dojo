@@ -22,11 +22,7 @@
 /* ── Sidebar ─────────────────────────────────────── */
 .dojo-sidebar {
     width: 240px;
-<<<<<<< HEAD
-    min-height: 100vh;
-=======
     height: 100vh;
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
     background: linear-gradient(180deg, var(--dojo-sidebar) 0%, var(--dojo-sidebar-dark) 100%);
     position: fixed;
     top: 0;
@@ -34,9 +30,6 @@
     display: flex;
     flex-direction: column;
     z-index: 100;
-<<<<<<< HEAD
-    overflow-y: auto;
-=======
     overflow: hidden;
 }
 .dojo-sidebar-nav-scroll {
@@ -44,7 +37,6 @@
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: rgba(255,255,255,.15) transparent;
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
 }
 .dojo-sidebar-brand {
     padding: 20px 20px 16px;
@@ -99,11 +91,7 @@
 }
 .sidebar-nav a i { font-size: 1rem; flex-shrink: 0; width: 18px; text-align: center; }
 .sidebar-footer {
-<<<<<<< HEAD
-    margin-top: auto;
-=======
     flex-shrink: 0;
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
     padding: 16px 20px;
     border-top: 1px solid rgba(255,255,255,.08);
 }
@@ -136,12 +124,8 @@
     z-index: 50;
     gap: 12px;
 }
-<<<<<<< HEAD
-.dojo-topbar h4 { font-size: 1.1rem; font-weight: 700; margin: 0; color: var(--dojo-text); flex: 1; }
-=======
 .dojo-page-title { font-size: 1.1rem; font-weight: 700; margin: 0; color: var(--dojo-text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dojo-topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
 .dojo-content { padding: 28px; flex: 1; }
 
 /* ── Mobile ──────────────────────────────────────── */
@@ -149,12 +133,6 @@
     .dojo-sidebar { transform: translateX(-100%); transition: transform .25s; }
     .dojo-sidebar.open { transform: translateX(0); }
     .dojo-main { margin-left: 0; }
-<<<<<<< HEAD
-    .dojo-topbar { padding: 0 16px; }
-    .dojo-content { padding: 16px; }
-    .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 99; }
-    .sidebar-overlay.open { display: block; }
-=======
     .dojo-topbar {
         height: auto;
         min-height: 56px;
@@ -178,7 +156,6 @@
     /* Catch-all: prevent any card body content overflowing on small screens */
     .card { overflow: hidden; }
     .card-body, .card-header, .card-footer { min-width: 0; }
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
 }
 </style>
 
@@ -199,10 +176,7 @@
         </a>
     </div>
 
-<<<<<<< HEAD
-=======
     <div class="dojo-sidebar-nav-scroll">
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
     <div style="padding: 10px 0 4px;">
         <ul class="sidebar-nav">
             <li>
@@ -233,23 +207,16 @@
             </a>
         </li>
         <li>
-<<<<<<< HEAD
-            <a href="{% url 'invoice_list' org_slug=org.slug %}" class="{% if 'invoice' in url_name or 'billing' in url_name %}active{% endif %}">
-=======
             <a href="{% url 'invoice_list' org_slug=org.slug %}" class="{% if 'invoice' in url_name or url_name == 'billing_export' %}active{% endif %}">
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
                 <i class="bi bi-receipt"></i> Billing
             </a>
         </li>
         <li>
-<<<<<<< HEAD
-=======
             <a href="{% url 'billing_policies' org_slug=org.slug %}" class="{% if 'billing_polic' in url_name or 'billing_discount' in url_name or 'billing_term' in url_name %}active{% endif %}">
                 <i class="bi bi-tags"></i> Billing policies
             </a>
         </li>
         <li>
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
             <a href="{% url 'attendance_analytics' org_slug=org.slug %}" class="{% if 'attendance' in url_name %}active{% endif %}">
                 <i class="bi bi-bar-chart"></i> Attendance
             </a>
@@ -299,14 +266,11 @@
             </a>
         </li>
         <li>
-<<<<<<< HEAD
-=======
             <a href="{% url 'former_members' org_slug=org.slug %}" class="{% if url_name == 'former_members' %}active{% endif %}">
                 <i class="bi bi-person-slash"></i> Former members
             </a>
         </li>
         <li>
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
             <a href="{% url 'org_audit_log' org_slug=org.slug %}" class="{% if url_name == 'org_audit_log' %}active{% endif %}">
                 <i class="bi bi-journal-check"></i> Audit log
             </a>
@@ -330,10 +294,7 @@
     </ul>
 
     {% endif %}
-<<<<<<< HEAD
-=======
     </div><!-- end dojo-sidebar-nav-scroll -->
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
 
     <div class="sidebar-footer">
         <span class="user-name"><i class="bi bi-person-circle me-1"></i>{{ request.user.get_full_name|default:request.user.username }}</span>
@@ -343,8 +304,6 @@
                 <i class="bi bi-box-arrow-right me-1"></i> Log out
             </button>
         </form>
-<<<<<<< HEAD
-=======
         <div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.06);text-align:center;">
             {% load static %}
             <img src="{% static 'img/dojo-wordmark.png' %}" alt="Dojo" style="height:20px;opacity:0.25;filter:brightness(0) invert(1);">
@@ -356,27 +315,17 @@
                 {% endif %}
             </div>
         </div>
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
     </div>
 </aside>
 
 <div class="dojo-main">
     <header class="dojo-topbar">
-<<<<<<< HEAD
-        <button class="btn btn-sm d-md-none me-2 p-1" style="background:none;border:none;color:var(--dojo-muted);" onclick="openSidebar()">
-            <i class="bi bi-list" style="font-size:1.4rem;"></i>
-        </button>
-        <h4>{% block page_title %}{% endblock %}</h4>
-        <p class="text-muted mb-0 small d-none d-sm-block">{% block page_subtitle %}{% endblock %}</p>
-        <div class="ms-auto d-flex align-items-center gap-2">{% block page_actions %}{% endblock %}</div>
-=======
         <button class="btn btn-sm d-md-none me-2 p-1" style="background:none;border:none;color:var(--dojo-muted);flex-shrink:0;" onclick="openSidebar()">
             <i class="bi bi-list" style="font-size:1.4rem;"></i>
         </button>
         <h4 class="dojo-page-title">{% block page_title %}{% endblock %}</h4>
         <p class="text-muted mb-0 small d-none d-sm-block flex-shrink-0">{% block page_subtitle %}{% endblock %}</p>
         <div class="dojo-topbar-actions">{% block page_actions %}{% endblock %}</div>
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
     </header>
 
     <div class="dojo-content">

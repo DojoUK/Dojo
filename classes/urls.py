@@ -16,10 +16,7 @@ urlpatterns = [
     path('<int:pk>/coaches/add/', views.AddCoachView.as_view(), name='class_coach_add'),
     path('<int:pk>/coaches/<int:coach_pk>/remove/', views.RemoveCoachView.as_view(), name='class_coach_remove'),
     path('attendance/', views.AttendanceAnalyticsView.as_view(), name='attendance_analytics'),
-<<<<<<< HEAD
-=======
     path('attendance/export/', views.AttendanceExportView.as_view(), name='attendance_export'),
->>>>>>> 17d20595f1448059e097ec3536053f42e6728d64
     path('my-classes/', views.CoachClassListView.as_view(), name='coach_class_list'),
     path('<int:pk>/my-view/', views.CoachClassDetailView.as_view(), name='coach_class_detail'),
 ]
