@@ -98,12 +98,58 @@
                 {% endif %}
             </div>
 
+            {% if coaches %}
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Coaches
+                        <span class="text-muted fw-normal small ms-1">{{ coaches|length }} assigned</span>
+                    </h6>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="coach-mark-all">Mark all present</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="coach-clear-all">Clear all</button>
+                    </div>
+                </div>
+                <div class="alert alert-danger rounded-0 mb-0 py-2 d-none" id="coach-required-warning">
+                    At least one coach must be marked present to save the register.
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <tbody>
+                            {% for cc in coaches %}
+                            <tr class="cursor-pointer" onclick="toggleCoachCheck(this)">
+                                <td class="ps-3 py-3" style="width:40px;">
+                                    <input class="form-check-input coach-check" type="checkbox"
+                                           name="coach_present" value="{{ cc.user.pk }}"
+                                           id="coach{{ cc.user.pk }}"
+                                           {% if cc.user.pk in present_coach_ids %}checked{% endif %}
+                                           onclick="event.stopPropagation()">
+                                </td>
+                                <td class="py-3">
+                                    <label class="form-check-label fw-semibold mb-0" for="coach{{ cc.user.pk }}" style="cursor:pointer;">
+                                        {{ cc.user.get_full_name|default:cc.user.username }}
+                                    </label>
+                                </td>
+                                <td class="text-end pe-3 py-3">
+                                    <span class="coach-present-badge {% if cc.user.pk in present_coach_ids %}text-success{% else %}text-muted{% endif %} small">
+                                        {% if cc.user.pk in present_coach_ids %}Present{% else %}Absent{% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-white border-bottom py-3">
                     <h6 class="mb-0">Session notes <span class="text-muted fw-normal small">(optional)</span></h6>
                 </div>
                 <div class="card-body">
-                    <textarea name="notes" class="form-control" rows="3" placeholder="Any notes about this session…">{{ session.notes }}</textarea>
+                    <textarea name="notes" class="form-control" rows="3" placeholder="Any notes about this session…">{{ notes|default:session.notes }}</textarea>
                 </div>
             </div>
 
@@ -164,5 +210,64 @@ document.getElementById('clear-all').addEventListener('click', () => {
 });
 
 updateCount();
+
+function updateCoachBadge(row, present) {
+    const badge = row.querySelector('.coach-present-badge');
+    badge.textContent = present ? 'Present' : 'Absent';
+    badge.className = `coach-present-badge small ${present ? 'text-success' : 'text-muted'}`;
+}
+
+function toggleCoachCheck(row) {
+    const cb = row.querySelector('.coach-check');
+    cb.checked = !cb.checked;
+    updateCoachBadge(row, cb.checked);
+    hideCoachWarning();
+}
+
+document.querySelectorAll('.coach-check').forEach(cb => {
+    cb.addEventListener('change', () => {
+        updateCoachBadge(cb.closest('tr'), cb.checked);
+        hideCoachWarning();
+    });
+});
+
+const coachMarkAll = document.getElementById('coach-mark-all');
+if (coachMarkAll) {
+    coachMarkAll.addEventListener('click', () => {
+        document.querySelectorAll('.coach-check').forEach(cb => {
+            cb.checked = true;
+            updateCoachBadge(cb.closest('tr'), true);
+        });
+        hideCoachWarning();
+    });
+}
+
+const coachClearAll = document.getElementById('coach-clear-all');
+if (coachClearAll) {
+    coachClearAll.addEventListener('click', () => {
+        document.querySelectorAll('.coach-check').forEach(cb => {
+            cb.checked = false;
+            updateCoachBadge(cb.closest('tr'), false);
+        });
+    });
+}
+
+function hideCoachWarning() {
+    const warning = document.getElementById('coach-required-warning');
+    if (warning) warning.classList.add('d-none');
+}
+
+document.querySelector('form').addEventListener('submit', (e) => {
+    const coachChecks = document.querySelectorAll('.coach-check');
+    if (coachChecks.length && ![...coachChecks].some(cb => cb.checked)) {
+        e.preventDefault();
+        const warning = document.getElementById('coach-required-warning');
+        if (warning) {
+            warning.classList.remove('d-none');
+            warning.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+});
+
 </script>
 {% endblock %}

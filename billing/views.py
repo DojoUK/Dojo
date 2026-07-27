@@ -239,17 +239,7 @@ class ChaseOverdueView(OrgAdminMixin, View):
 class BulkInvoiceView(OrgAdminMixin, View):
     template_name = 'billing/bulk_invoice.html'
 
-    def _default_period(self):
-        from datetime import date
-        import calendar
-        today = date.today()
-        # Default to next month so you're billing ahead
-        if today.month == 12:
-            return date(today.year + 1, 1, 1).strftime('%B %Y')
-        return date(today.year, today.month + 1, 1).strftime('%B %Y')
-
     def _default_due_date(self):
-        from datetime import date
         import calendar
         today = date.today()
         if today.month == 12:
@@ -258,44 +248,134 @@ class BulkInvoiceView(OrgAdminMixin, View):
         last_day = calendar.monthrange(today.year, today.month + 1)[1]
         return date(today.year, today.month + 1, last_day).isoformat()
 
-    def _member_rows(self, org, period):
-        members = (
-            Member.objects.filter(organisation=org, is_active=True, monthly_fee__isnull=False)
-            .exclude(monthly_fee=0)
-            .order_by('name')
-        )
-        existing_periods = set(
-            Invoice.objects.filter(organisation=org, period=period, member__in=members)
-            .values_list('member_id', flat=True)
-        )
+    def _resolve_period(self, request):
+        """Parse period info from GET/POST: returns (term_obj_or_None, year, month, period_label)."""
+        term_pk = request.POST.get('term_id') or request.GET.get('term_id')
+        year_raw = request.POST.get('year') or request.GET.get('year')
+        month_raw = request.POST.get('month') or request.GET.get('month')
+
+        term = None
+        year = month = None
+        period_label = request.POST.get('period') or request.GET.get('period', '')
+
+        if term_pk:
+            try:
+                from .models import OrgTerm
+                term = OrgTerm.objects.get(pk=term_pk, organisation=self.org)
+                period_label = term.name
+            except OrgTerm.DoesNotExist:
+                pass
+        elif year_raw and month_raw:
+            try:
+                year, month = int(year_raw), int(month_raw)
+                period_label = date(year, month, 1).strftime('%B %Y')
+            except (ValueError, TypeError):
+                pass
+
+        return term, year, month, period_label
+
+    def _member_rows(self, policies, term, year, month, period_label):
+        """Build preview rows for all policy-assigned members."""
+        from .calculator import calculate_invoice_amount
+
         rows = []
-        for m in members:
+        already_invoiced_ids = set()
+        if period_label:
+            already_invoiced_ids = set(
+                Invoice.objects.filter(organisation=self.org, period=period_label)
+                .values_list('member_id', flat=True)
+            )
+
+        for policy in policies:
+            # Members with this policy directly
+            direct = list(Member.objects.filter(
+                organisation=self.org, is_active=True, billing_policy=policy
+            ))
+            # Members whose enrolled class uses this policy (and they have no member-level override)
+            from classes.models import ClassMember
+            class_assigned = list(Member.objects.filter(
+                organisation=self.org, is_active=True,
+                billing_policy__isnull=True,
+                enrolments__assigned_class__billing_policy=policy,
+            ).distinct())
+
+            seen = set()
+            for member in direct + class_assigned:
+                if member.pk in seen:
+                    continue
+                seen.add(member.pk)
+                calc = calculate_invoice_amount(member, policy, term=term, year=year, month=month)
+                rows.append({
+                    'member': member,
+                    'policy': policy,
+                    'gross': calc['gross'],
+                    'discount': calc['discount'],
+                    'amount': calc['net'],
+                    'breakdown': calc['breakdown'],
+                    'discount_lines': calc['discount_lines'],
+                    'has_subscription': member.has_active_subscription,
+                    'already_invoiced': member.pk in already_invoiced_ids,
+                })
+
+        # Legacy: members with monthly_fee and no policy
+        legacy = Member.objects.filter(
+            organisation=self.org, is_active=True,
+            billing_policy__isnull=True,
+            monthly_fee__isnull=False,
+        ).exclude(monthly_fee=0)
+        for member in legacy:
+            if any(r['member'].pk == member.pk for r in rows):
+                continue
             rows.append({
-                'member': m,
-                'amount': m.monthly_fee,
-                'has_subscription': m.has_active_subscription,
-                'already_invoiced': m.pk in existing_periods,
+                'member': member,
+                'policy': None,
+                'gross': member.monthly_fee,
+                'discount': 0,
+                'amount': member.monthly_fee,
+                'breakdown': [{'label': 'Legacy monthly fee', 'amount': member.monthly_fee}],
+                'discount_lines': [],
+                'has_subscription': member.has_active_subscription,
+                'already_invoiced': member.pk in already_invoiced_ids,
             })
+
+        rows.sort(key=lambda r: (r.get('policy') is None, r['member'].name))
         return rows
 
     def get(self, request, org_slug):
-        period = request.GET.get('period', self._default_period())
-        rows = self._member_rows(self.org, period)
+        policies = BillingPolicy.objects.filter(organisation=self.org, is_active=True)
+        terms = OrgTerm.objects.filter(organisation=self.org).order_by('-start_date')
+        term, year, month, period_label = self._resolve_period(request)
+
+        if not period_label:
+            today = date.today()
+            year = today.year
+            month = today.month + 1 if today.month < 12 else 1
+            if month == 1:
+                year += 1
+            period_label = date(year, month, 1).strftime('%B %Y')
+
+        rows = self._member_rows(policies, term, year, month, period_label) if (term or year) else []
         return render(request, self.template_name, {
             'org': self.org,
             'org_membership': self.org_membership,
             'rows': rows,
-            'period': period,
+            'policies': policies,
+            'terms': terms,
+            'period': period_label,
+            'selected_term': term,
+            'selected_year': year,
+            'selected_month': month,
             'due_date': self._default_due_date(),
         })
 
     def post(self, request, org_slug):
-        period = request.POST.get('period', '').strip()
+        term, year, month, period_label = self._resolve_period(request)
         due_date_raw = request.POST.get('due_date', '').strip()
         send_emails = request.POST.get('send_emails') == '1'
         selected_ids = set(request.POST.getlist('member_ids'))
+        amounts = {k[len('amount_'):]: v for k, v in request.POST.items() if k.startswith('amount_')}
 
-        if not period or not due_date_raw or not selected_ids:
+        if not period_label or not due_date_raw or not selected_ids:
             messages.error(request, 'Period, due date, and at least one member are required.')
             return redirect('invoice_bulk', org_slug=self.org.slug)
 
@@ -305,31 +385,69 @@ class BulkInvoiceView(OrgAdminMixin, View):
             messages.error(request, 'Invalid due date.')
             return redirect('invoice_bulk', org_slug=self.org.slug)
 
-        members = Member.objects.filter(
-            pk__in=selected_ids, organisation=self.org,
-            monthly_fee__isnull=False,
-        )
-
-        # Skip members who already have an invoice for this period
         already = set(
-            Invoice.objects.filter(organisation=self.org, period=period, member__in=members)
+            Invoice.objects.filter(organisation=self.org, period=period_label)
+            .filter(member_id__in=[int(i) for i in selected_ids])
             .values_list('member_id', flat=True)
         )
 
+        from .calculator import calculate_invoice_amount
         created_invoices = []
-        for member in members:
-            if member.pk in already:
+        skipped = 0
+
+        for member_id_str in selected_ids:
+            try:
+                member_id = int(member_id_str)
+            except ValueError:
                 continue
+            if member_id in already:
+                skipped += 1
+                continue
+
+            try:
+                member = Member.objects.get(pk=member_id, organisation=self.org, is_active=True)
+            except Member.DoesNotExist:
+                continue
+
+            # Use admin-overridden amount if provided, else calculated
+            override_key = str(member_id)
+            if override_key in amounts:
+                try:
+                    net = float(amounts[override_key])
+                    discount = 0
+                except ValueError:
+                    continue
+            else:
+                policy = member.billing_policy
+                if not policy:
+                    from classes.models import ClassMember
+                    enrolment = ClassMember.objects.filter(
+                        member=member, assigned_class__billing_policy__isnull=False
+                    ).select_related('assigned_class__billing_policy').first()
+                    policy = enrolment.assigned_class.billing_policy if enrolment else None
+
+                if policy:
+                    calc = calculate_invoice_amount(member, policy, term=term, year=year, month=month)
+                    net = float(calc['net'])
+                    discount = float(calc['discount'])
+                else:
+                    net = float(member.monthly_fee or 0)
+                    discount = 0
+
+            if net <= 0:
+                continue
+
             inv = Invoice.objects.create(
                 organisation=self.org,
                 member=member,
-                amount=member.monthly_fee,
-                period=period,
+                billing_policy=member.billing_policy,
+                amount=net,
+                discount_amount=discount,
+                period=period_label,
                 due_date=due_date,
             )
             created_invoices.append(inv)
 
-        skipped = len(already.intersection({int(i) for i in selected_ids}))
         messages.success(
             request,
             f'{len(created_invoices)} invoice{"s" if len(created_invoices) != 1 else ""} created'

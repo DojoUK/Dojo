@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Class, ClassCoach, ClassMember, Session, Attendance
+from .models import Class, ClassCoach, ClassMember, Session, Attendance, SessionCoach
 
 
 class ClassCoachInline(admin.TabularInline):
@@ -17,6 +17,12 @@ class AttendanceInline(admin.TabularInline):
     extra = 0
 
 
+class SessionCoachInline(admin.TabularInline):
+    model = SessionCoach
+    extra = 0
+
+
+
 @admin.register(Class)
 class ClassAdmin(admin.ModelAdmin):
     list_display = ('name', 'organisation', 'schedule_display')
@@ -30,4 +36,4 @@ class SessionAdmin(admin.ModelAdmin):
     list_display = ('assigned_class', 'date', 'is_cancelled', 'is_extra')
     list_filter = ('assigned_class__organisation', 'assigned_class', 'is_cancelled', 'is_extra')
     date_hierarchy = 'date'
-    inlines = [AttendanceInline]
+    inlines = [AttendanceInline, SessionCoachInline]

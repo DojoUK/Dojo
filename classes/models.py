@@ -112,3 +112,17 @@ class Attendance(models.Model):
 
     class Meta:
         unique_together = ('session', 'member')
+
+
+class SessionCoach(models.Model):
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name='session_coaches')
+    coach = models.ForeignKey(User, on_delete=models.CASCADE, related_name='coached_sessions')
+    present = models.BooleanField(default=False)
+
+    def __str__(self):
+        status = 'Present' if self.present else 'Absent'
+        return f"{self.coach.get_full_name() or self.coach.username} — {self.session} — {status}"
+
+    class Meta:
+        unique_together = ('session', 'coach')
+        ordering = ['coach__first_name', 'coach__last_name']

@@ -161,8 +161,9 @@
                             </td>
                             <td class="text-muted small py-2 text-end pe-3">
                                 <div class="d-flex align-items-center justify-content-end gap-2">
-                                    {% with count=session.attendance.count %}
+                                    {% with count=session.attendance.count coach_count=session.session_coaches.count %}
                                     {% if count %}<span>{{ count }} recorded</span>{% endif %}
+                                    {% if coach_count %}<span title="Coaches recorded"><i class="bi bi-person-badge"></i> {{ coach_count }}</span>{% endif %}
                                     {% endwith %}
                                     <form method="post" action="{% url 'session_cancel' org_slug=org.slug pk=cls.pk session_pk=session.pk %}">
                                         {% csrf_token %}

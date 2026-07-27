@@ -106,6 +106,32 @@ class MemberApplication(models.Model):
     class Meta:
         ordering = ['-submitted_at']
 
+class FamilyGroup(models.Model):
+    organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='family_groups')
+    name = models.CharField(max_length=255, help_text='e.g. Smith Family')
+    discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0,
+                                               help_text='% discount applied to every member in this group')
+    members = models.ManyToManyField('Member', through='FamilyGroupMember', related_name='family_groups')
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['organisation', 'name']
+        verbose_name = 'Family group'
+
+
+class FamilyGroupMember(models.Model):
+    family_group = models.ForeignKey(FamilyGroup, on_delete=models.CASCADE, related_name='memberships')
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='family_memberships')
+
+    def __str__(self):
+        return f"{self.member} in {self.family_group}"
+
+    class Meta:
+        unique_together = ('family_group', 'member')
+
+
 
 class MemberNote(models.Model):
     member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='notes')
