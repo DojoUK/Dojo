@@ -103,6 +103,10 @@
     text-overflow: ellipsis;
     margin-bottom: 8px;
     display: block;
+    text-decoration: none;
+}
+.sidebar-footer .user-name:hover {
+    color: rgba(255,255,255,.85);
 }
 
 /* ── Main content ────────────────────────────────── */
@@ -286,18 +290,15 @@
                 <i class="bi bi-calendar-week"></i> My classes
             </a>
         </li>
-        <li>
-            <a href="{% url 'attendance_analytics' org_slug=org.slug %}" class="{% if 'attendance' in url_name %}active{% endif %}">
-                <i class="bi bi-bar-chart"></i> Attendance
-            </a>
-        </li>
     </ul>
 
     {% endif %}
     </div><!-- end dojo-sidebar-nav-scroll -->
 
     <div class="sidebar-footer">
-        <span class="user-name"><i class="bi bi-person-circle me-1"></i>{{ request.user.get_full_name|default:request.user.username }}</span>
+        <a href="{% url 'account_settings' org_slug=org.slug %}" class="user-name" title="My account">
+            <i class="bi bi-person-circle me-1"></i>{{ request.user.get_full_name|default:request.user.username }}
+        </a>
         <form method="post" action="{% url 'logout' %}">
             {% csrf_token %}
             <button type="submit" class="btn btn-sm w-100" style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.15);font-size:0.8rem;">
@@ -338,6 +339,22 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
             {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if org.settings.demo %}
+        <div class="alert alert-warning d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4" role="alert">
+            <div>
+                <i class="bi bi-bug-fill me-1"></i>
+                <strong>Demo instance</strong> — seeded with dummy data for exploring Dojo. Logged in as <code>admin</code> / <code>admin</code>.
+            </div>
+            <div class="d-flex gap-2">
+                <a href="/admin/" class="btn btn-sm btn-outline-dark" target="_blank">Django admin</a>
+                <form method="post" action="{% url 'org_reseed_demo' org_slug=org.slug %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-dark">Reset demo data</button>
+                </form>
+            </div>
         </div>
         {% endif %}
 

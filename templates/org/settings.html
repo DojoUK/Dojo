@@ -24,7 +24,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Contact email</label>
-                        <input type="email" name="email" value="{{ org.email }}" class="form-control" placeholder="e.g. secretary@backwelljudo.co.uk">
+                        <input type="email" name="email" value="{{ org.email }}" class="form-control" placeholder="e.g. secretary@sportclub.co.uk">
                         <div class="form-text">Shown to members on the portal as the contact address.</div>
                     </div>
                     <div class="mb-3">
@@ -68,7 +68,10 @@
             </div>
             <div class="card-body small text-muted">
                 <p><strong>Slug:</strong> <code>{{ org.slug }}</code></p>
-                <p><strong>Plan:</strong> {{ org.subscription_tier|capfirst }}</p>
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Plan</label>
+                    <input type="text" value="Free - Self Hosted" class="form-control form-control-sm" disabled>
+                </div>
                 <p class="mb-0"><strong>Created:</strong> {{ org.created_at|date:"d M Y" }}</p>
             </div>
         </div>

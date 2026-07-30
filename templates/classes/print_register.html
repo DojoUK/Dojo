@@ -58,6 +58,32 @@
         </tbody>
     </table>
 
+    {% if coaches %}
+    <div style="margin-top:24px;">
+        <h2 style="font-size:13px; text-transform:uppercase; letter-spacing:.05em; color:#555; margin-bottom:8px;">Coaches</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th style="width:60px; text-align:center;">Present</th>
+                    <th style="width:120px;">Signature</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cc in coaches %}
+                <tr>
+                    <td>{{ cc.user.get_full_name|default:cc.user.username }}</td>
+                    <td style="text-align:center;">
+                        <span class="tick-box {% if cc.user.pk in present_coach_ids %}present{% endif %}"></span>
+                    </td>
+                    <td></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
     <div style="margin-top:32px; color:#555; font-size:11px;">
         {{ enrolled|length }} enrolled &mdash; printed {{ today|date:"d M Y" }}
     </div>

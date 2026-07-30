@@ -109,124 +109,166 @@ In SaaS mode, each organisation connects their own Stripe account via Stripe Con
 
 ## Database Schema
 
-These are the core models. All models below are implemented and migrated **except** Document. See notes on Session — the model exists but needs updating for scheduled sessions.
+These are the core models, grouped by app. All models below are implemented and migrated.
 
-**Session scheduling design decision (agreed):** Sessions are auto-generated from the class schedule (e.g. every Tuesday and Thursday for Backwell Judo Club). Each session is individually editable and can be cancelled. One-off extra sessions can be added outside the normal schedule. The `Session` model needs `is_cancelled` and `is_extra` boolean fields. The `Class.schedule` field needs to store structured recurrence data (days of week + time), not just free text — implementation TBD.
+**Session scheduling (implemented):** Sessions are auto-generated from the class schedule. Each session is individually editable and can be cancelled (`Session.is_cancelled`). One-off extra sessions can be added outside the normal schedule (`Session.is_extra`). `Class.schedule` is a JSON field storing structured recurrence data (list of `{day, time, end}` entries, day following Python's `weekday()`), rendered via `Class.schedule_display()`.
 
 ```
+--- organisations ---
+
 Organisation
-- id
-- name
-- slug
-- settings (JSON)
+- id, name, slug
+- email, phone, website
+- settings (JSON) — arbitrary org config; theme() reads sidebar_color/accent_color etc. from it
+- logo (image), custom_css
 - subscription_tier
 - created_at
 
 User (Django's built-in auth user)
-- extended with a profile linking to OrganisationMember
 
 OrganisationMember
-- user (FK to User)
-- organisation (FK to Organisation)
+- user (FK to User), organisation (FK to Organisation)
 - role (choices: org_admin, coach)
+- dbs_number, dbs_expiry
+- coaching_licence, coaching_licence_expiry
+
+Announcement
+- organisation (FK to Organisation)
+- subject, body
+- sent_by (FK to User), sent_at
+- recipient_count, recipient_label (recipients: all active members / specific class / custom selection)
+
+--- classes ---
 
 Class
-- id
-- organisation (FK to Organisation)
-- name
-- description
-- schedule
+- id, organisation (FK to Organisation)
+- name, description
+- schedule (JSON, see above)
+- max_capacity
+- billing_policy (FK to BillingPolicy, nullable)
 
 ClassCoach
-- class (FK to Class)
-- user (FK to User)
+- class (FK to Class), user (FK to User)
 - Links coaches to specific classes they are permitted to manage
 
 ClassMember
-- class (FK to Class)
-- member (FK to Member)
+- class (FK to Class), member (FK to Member)
 - Links members to the classes they are enrolled in
 
-Member
-- id
-- organisation (FK to Organisation)
-- name
-- date_of_birth
-- email
-- phone
-- emergency_contact_name
-- emergency_contact_phone
-- is_active
-- token (unique, used for tokenised parent portal links)
-- joined_date
-- custom_field_values (JSON or related table)
-
-Guardian
-- id
-- member (FK to Member)
-- name
-- email
-- phone
-- relationship
-
-CustomField
-- id
-- organisation (FK to Organisation)
-- name
-- field_type (text, date, select, boolean)
-- options (JSON, for select fields)
-- order
-
-ProgressionStage
-- id
-- organisation (FK to Organisation)
-- name
-- order
-
-MemberProgression
-- id
-- member (FK to Member)
-- stage (FK to ProgressionStage)
-- achieved_date
-- notes
+WaitingList
+- class (FK to Class), member (FK to Member), joined_at
 
 Session
-- id
-- class (FK to Class)
-- date
-- notes
+- class (FK to Class), date, notes
+- is_cancelled, is_extra (booleans)
 
 Attendance
-- id
-- session (FK to Session)
-- member (FK to Member)
-- present (boolean)
+- session (FK to Session), member (FK to Member), present (boolean)
+
+--- members ---
+
+Member
+- id, organisation (FK to Organisation)
+- name, date_of_birth, email, phone
+- emergency_contact_name/phone, emergency_contact_2_name/phone
+- is_active
+- token (unique, used for tokenised parent/member portal links), token_created_at (drives auto-rotation of stale links)
+- joined_date
+- custom_field_values (JSON)
+- monthly_fee, billing_policy (FK to BillingPolicy, nullable)
+- stripe_customer_id, stripe_subscription_id, subscription_status
+- licence_number, licence_expiry
+- medical_info
+- archived_at, retention_notes, anonymised_at (GDPR retention/anonymisation; `anonymise()` scrubs PII in place while keeping the row for FK integrity)
+
+Guardian
+- member (FK to Member), name, email, phone, relationship
+
+CustomField
+- organisation (FK to Organisation), name
+- field_type (text, date, select, boolean)
+- options (JSON, for select fields), order
+
+MemberApplication
+- organisation (FK to Organisation)
+- name, date_of_birth, email, phone, address fields, guardian_name/email/phone
+- medical_info, notes
+- signature_data (base64-encoded PNG of drawn signature)
+- submitted_at, status (pending, approved, rejected), decided_at
+
+FamilyGroup / FamilyGroupMember
+- organisation (FK to Organisation), name, discount_percentage
+- members (M2M to Member via FamilyGroupMember) — discount_percentage applies to every member in the group
+
+MemberNote
+- member (FK to Member), author (FK to User), body, created_at
+
+--- progression ---
+
+ProgressionSystem
+- organisation (FK to Organisation), name, order
+- assign_to_new_members (auto-assign the default stage to new members)
+- An organisation can run more than one progression system (e.g. separate belt systems per discipline)
+
+ProgressionStage
+- system (FK to ProgressionSystem), name, colour, order, is_default
+
+MemberProgression
+- member (FK to Member), stage (FK to ProgressionStage), achieved_date, notes
+
+--- billing ---
+
+BillingPolicy
+- organisation (FK to Organisation), name
+- billing_cycle (monthly, termly, annual, custom)
+- pricing_model (flat, per_session)
+- amount (flat pricing) or per_session_rate + additional_class_discount (per-session pricing, with a discount for the 2nd+ enrolled class)
+- description, is_active
+
+OrgTerm
+- organisation (FK to Organisation), name, start_date, end_date
+- Defines termly billing periods
+
+PolicyDiscount
+- policy (FK to BillingPolicy), name
+- discount_type (percentage, fixed), value
+- auto_apply (automatically apply to all new members on this policy)
+
+MemberDiscount
+- member (FK to Member), discount (FK to PolicyDiscount), is_active, applied_at
+- Links a specific discount to a specific member
 
 Invoice
-- id
-- organisation (FK to Organisation)
-- member (FK to Member)
-- amount
-- period (e.g. "January 2026")
+- organisation (FK to Organisation), member (FK to Member)
+- billing_policy (FK to BillingPolicy, nullable)
+- amount, discount_amount
+- period (e.g. "January 2026" or "Autumn Term 2025")
 - due_date
 - status (choices: unpaid, paid, overdue)
+- notes, reminder_sent_at
 - created_at
 
 Payment
-- id
 - invoice (FK to Invoice)
-- stripe_payment_id
-- amount
-- paid_at
+- method (manual, stripe, bacs, cash)
+- stripe_payment_id, amount, paid_at, notes
+
+--- documents ---
 
 Document
-- id
-- organisation (FK to Organisation)
 - member (FK to Member)
-- type (e.g. health_and_safety, medical)
-- signed (boolean)
-- signed_at
-- file_url (points to S3/R2)
+- name, category (consent, medical, waiver, membership, other)
+- file, uploaded_at, uploaded_by (FK to User), notes
+
+WaiverTemplate
+- organisation (FK to Organisation), name, description
+- file, is_required, is_active, created_at
+
+SignedWaiver
+- member (FK to Member, nullable) or application (FK to MemberApplication, nullable) — signed by either an existing member or an applicant
+- template (FK to WaiverTemplate)
+- signed_pdf, signer_name, signed_at, ip_address
+- offline (signed on paper, uploaded manually)
 
 Coach (handled via OrganisationMember and ClassCoach, not a separate model)
 ```
@@ -382,7 +424,4 @@ All templates extend `org/base.html`. Partials in `templates/members/partials/` 
 - The developer is working solo on this as a spare time project
 - They are using PyCharm (JetBrains, licensed) on Linux
 - They are comfortable with Django from prior experience
-- They are using this project partly to improve their TypeScript skills - however the decision was made to use Django for this project for speed and familiarity. TypeScript is not in use here.
-- The developer runs **Backwell Judo Club** with approximately 70 members and 5 coaches/leadership team members. This is the primary real-world use case driving requirements. The club trains on **Tuesdays and Thursdays**.
-- Claude Code is being used in the terminal to assist with development
 - All decisions about stack, architecture, naming, and licencing documented above were made deliberately. Do not second-guess them without being asked.

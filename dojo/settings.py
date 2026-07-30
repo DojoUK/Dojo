@@ -1,16 +1,45 @@
 from pathlib import Path
 import os
+from django.core.management.utils import get_random_secret_key
 from dotenv import load_dotenv
 
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ['SECRET_KEY']
+# No SECRET_KEY needs to be configured by hand: a fresh instance generates its
+# own on first boot and persists it here so it survives container restarts.
+_secret_key_file = BASE_DIR / '.secret_key'
+if _secret_key_file.exists():
+    SECRET_KEY = _secret_key_file.read_text().strip()
+else:
+    SECRET_KEY = get_random_secret_key()
+    _secret_key_file.write_text(SECRET_KEY)
 
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['*']
+# Host restriction is deliberately permissive out of the box. A browser-
+# configurable allow-list is planned as a replacement for setting this via
+# the environment; until then, self-hosters wanting to restrict it can still
+# set ALLOWED_HOSTS explicitly.
+_allowed_hosts = os.environ.get('ALLOWED_HOSTS', '').strip()
+ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts.split(',') if h.strip()] if _allowed_hosts else ['*']
+
+SITE_URL = os.environ.get('SITE_URL', 'http://localhost:8000')
+
+# Secure-cookie/HTTPS-redirect settings are inferred from SITE_URL's scheme
+# rather than DEBUG. Self-hosted instances are frequently served over plain
+# HTTP (no reverse proxy/TLS termination in front) — forcing HTTPS on them
+# regardless would redirect every request to a scheme the server can't
+# actually serve. Set SITE_URL to an https:// address once you have TLS
+# terminated in front of the instance to enable these.
+if SITE_URL.startswith('https://'):
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -54,6 +83,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'dojo.context_processors.dojo_licence',
+                'dojo.context_processors.dojo_debug',
             ],
         },
     },
@@ -117,5 +147,3 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Dojo <noreply@example
 STRIPE_PUBLIC_KEY = os.environ.get('STRIPE_PUBLIC_KEY', '')
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
-
-SITE_URL = os.environ.get('SITE_URL', 'http://localhost:8000')

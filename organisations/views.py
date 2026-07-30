@@ -1,17 +1,125 @@
 from datetime import date, timedelta
 
 from django.contrib import messages
+from django.contrib.auth import login
 from django.contrib.auth.models import User
+from django.contrib.auth.views import PasswordChangeView
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import PermissionDenied
+from django.core.management import call_command
 from django.db.models import Q, Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views import View
 from django.views.generic import ListView, TemplateView
 from auditlog.models import LogEntry
 from dojo.mixins import OrgAdminMixin, OrgMixin
 from .models import Announcement, Organisation, OrganisationMember
 from members.models import CustomField
+
+
+class SetupView(View):
+    """
+    First-run, browser-only bootstrap: creates the organisation and its
+    first admin account. Locks itself out once an organisation exists.
+    """
+    template_name = 'org/setup.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        if Organisation.objects.exists():
+            return redirect('login')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request):
+        return render(request, self.template_name, {
+            'demo_mode': request.GET.get('demo') == '1',
+        })
+
+    def post(self, request):
+        if request.POST.get('mode') == 'demo':
+            return self._seed_demo(request)
+        return self._create_org(request)
+
+    def _seed_demo(self, request):
+        call_command('seed_demo')
+        org = Organisation.objects.get(slug='mockingham-martial-arts')
+        org.settings['demo'] = True
+        org.save(update_fields=['settings'])
+
+        admin = User.objects.get(username='admin')
+        login(request, admin)
+        messages.info(request, "Demo instance seeded — you're logged in as “admin” (password: admin).")
+        return redirect('org_dashboard', org_slug=org.slug)
+
+    def _create_org(self, request):
+        org_name = request.POST.get('org_name', '').strip()
+        username = request.POST.get('username', '').strip()
+        admin_email = request.POST.get('admin_email', '').strip()
+        password = request.POST.get('password', '')
+        password_confirm = request.POST.get('password_confirm', '')
+
+        errors = []
+        if not org_name:
+            errors.append('Organisation name is required.')
+        if not username:
+            errors.append('Username is required.')
+        elif User.objects.filter(username=username).exists():
+            errors.append('That username is already taken.')
+        if not password:
+            errors.append('Password is required.')
+        elif password != password_confirm:
+            errors.append('Passwords do not match.')
+        elif len(password) < 8:
+            errors.append('Password must be at least 8 characters.')
+
+        if errors:
+            return render(request, self.template_name, {
+                'errors': errors,
+                'demo_mode': request.GET.get('demo') == '1',
+                'org_name': org_name,
+                'username': username,
+                'admin_email': admin_email,
+                'org_email': request.POST.get('org_email', '').strip(),
+                'org_phone': request.POST.get('org_phone', '').strip(),
+                'org_website': request.POST.get('org_website', '').strip(),
+            })
+
+        user = User.objects.create_superuser(username=username, email=admin_email, password=password)
+        org = Organisation.objects.create(
+            name=org_name,
+            email=request.POST.get('org_email', '').strip(),
+            phone=request.POST.get('org_phone', '').strip(),
+            website=request.POST.get('org_website', '').strip(),
+        )
+        OrganisationMember.objects.create(user=user, organisation=org, role=OrganisationMember.Role.ORG_ADMIN)
+
+        login(request, user)
+        return redirect('org_dashboard', org_slug=org.slug)
+
+
+class ReseedDemoView(OrgAdminMixin, View):
+    """Re-runs the demo seed for orgs that were bootstrapped via dummy mode."""
+
+    def post(self, request, org_slug):
+        if not self.org.settings.get('demo'):
+            raise PermissionDenied
+        slug = self.org.slug
+        call_command('seed_demo', '--flush')
+        org = Organisation.objects.get(slug=slug)
+        org.settings['demo'] = True
+        org.save(update_fields=['settings'])
+        messages.success(request, 'Demo data has been reset.')
+        return redirect('org_dashboard', org_slug=org.slug)
+
+
+class DismissOnboardingView(OrgAdminMixin, View):
+    """Permanently hides the getting-started checklist/popup for this org."""
+
+    def post(self, request, org_slug):
+        self.org.settings['onboarding_dismissed'] = True
+        self.org.save(update_fields=['settings'])
+        return redirect('org_dashboard', org_slug=self.org.slug)
 
 
 class DashboardView(OrgMixin, TemplateView):
@@ -125,6 +233,21 @@ class DashboardView(OrgMixin, TemplateView):
             Q(dbs_expiry__lt=today) | Q(coaching_licence_expiry__lt=today)
         ).count() if is_admin else 0
 
+        onboarding = None
+        if is_admin and not self.org.settings.get('onboarding_dismissed'):
+            from classes.models import ClassCoach
+            has_member = member_count > 0
+            has_class = self.org.classes.exists()
+            has_coach = ClassCoach.objects.filter(assigned_class__organisation=self.org).exists() if has_class else False
+            has_invoice = Invoice.objects.filter(organisation=self.org).exists()
+            if not (has_member and has_class and has_coach and has_invoice):
+                onboarding = {
+                    'has_member': has_member,
+                    'has_class': has_class,
+                    'has_coach': has_coach,
+                    'has_invoice': has_invoice,
+                }
+
         unsigned_waivers_count = 0
         if is_admin:
             from documents.models import SignedWaiver, WaiverTemplate
@@ -160,6 +283,7 @@ class DashboardView(OrgMixin, TemplateView):
             'staff_expiring': staff_expiring,
             'staff_expired': staff_expired,
             'unsigned_waivers_count': unsigned_waivers_count,
+            'onboarding': onboarding,
         })
         return context
 
@@ -490,6 +614,7 @@ class AnnouncementListView(OrgAdminMixin, View):
             html_body = render_to_string('emails/announcement.html', {
                 'member': member,
                 'org_name': org_name,
+                'org_email': self.org.email,
                 'subject': subject,
                 'body': body,
                 'has_guardians': has_guardians,
@@ -631,3 +756,52 @@ class FinancialReportView(OrgAdminMixin, View):
             'total_outstanding': total_outstanding,
             'today': today,
         })
+
+
+class AccountView(OrgMixin, View):
+    """Self-service account management — available to any logged-in member (coach or admin), not just org admins."""
+    template_name = 'org/account.html'
+
+    def get(self, request, org_slug):
+        return render(request, self.template_name, {
+            'org': self.org,
+            'org_membership': self.org_membership,
+            'memberships': request.user.organisation_memberships.select_related('organisation').order_by('organisation__name'),
+        })
+
+    def post(self, request, org_slug):
+        user = request.user
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        email = request.POST.get('email', '').strip()
+
+        if not email:
+            messages.error(request, 'Email is required.')
+            return redirect('account_settings', org_slug=self.org.slug)
+
+        user.first_name = first_name
+        user.last_name = last_name
+        user.email = email
+        user.save(update_fields=['first_name', 'last_name', 'email'])
+        messages.success(request, 'Account details updated.')
+        return redirect('account_settings', org_slug=self.org.slug)
+
+
+class AccountPasswordChangeView(OrgMixin, PasswordChangeView):
+    template_name = 'org/account_password.html'
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        for field in form.fields.values():
+            field.widget.attrs['class'] = 'form-control'
+        return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['org'] = self.org
+        context['org_membership'] = self.org_membership
+        return context
+
+    def get_success_url(self):
+        messages.success(self.request, 'Password changed.')
+        return reverse('account_settings', kwargs={'org_slug': self.org.slug})

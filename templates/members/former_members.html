@@ -38,6 +38,7 @@
                         {{ member.name }}
                     </a>
                     {% if member.email %}<div class="text-muted small">{{ member.email }}</div>{% endif %}
+                    {% if member.anonymised_at %}<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle mt-1"><i class="bi bi-shield-check me-1"></i>Data erased</span>{% endif %}
                 </td>
                 <td>
                     {% if member.archived_at %}
@@ -60,6 +61,7 @@
                 </td>
                 <td class="text-end">
                     <div class="d-flex gap-2 justify-content-end">
+                        {% if not member.anonymised_at %}
                         <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal"
                                 data-bs-target="#retentionNotesModal{{ member.pk }}" title="Edit retention notes">
                             <i class="bi bi-sticky"></i>
@@ -71,6 +73,16 @@
                                 <i class="bi bi-person-check"></i>
                             </button>
                         </form>
+                        {% if not member.retention_notes %}
+                        <form method="post" action="{% url 'member_erase' org_slug=org.slug pk=member.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Erase personal data (right to erasure)"
+                                    onclick="return confirm('Permanently erase {{ member.name }}\'s personal data? This cannot be undone.')">
+                                <i class="bi bi-shield-x"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                        {% endif %}
                     </div>
                 </td>
             </tr>

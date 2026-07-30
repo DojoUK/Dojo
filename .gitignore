@@ -1,5 +1,6 @@
 # Environment
 .env
+.secret_key
 
 # Python
 __pycache__/
@@ -21,7 +22,6 @@ env/
 # Django
 db.sqlite3
 *.log
-/static/
 /media/
 
 # IDE

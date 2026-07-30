@@ -1,0 +1,88 @@
+{% extends 'org/base.html' %}
+
+{% block title %}My account{% endblock %}
+{% block page_title %}My account{% endblock %}
+{% block page_subtitle %}Manage your own name, email, and password{% endblock %}
+
+{% block main_content %}
+<div class="row g-4">
+
+    {# ── Left column ── #}
+    <div class="col-lg-6">
+
+        {# Your details #}
+        <div class="card mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Your details</h6>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row g-3 mb-3">
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">First name</label>
+                            <input type="text" name="first_name" value="{{ request.user.first_name }}" class="form-control" autofocus>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Last name</label>
+                            <input type="text" name="last_name" value="{{ request.user.last_name }}" class="form-control">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Email</label>
+                        <input type="email" name="email" value="{{ request.user.email }}" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Username</label>
+                        <input type="text" value="{{ request.user.username }}" class="form-control" disabled>
+                        <div class="form-text">Your username can't be changed here — ask an org admin if you need it updated.</div>
+                    </div>
+                    <button type="submit" class="btn btn-dark btn-sm">Save changes</button>
+                </form>
+            </div>
+        </div>
+
+        {# Password #}
+        <div class="card mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Password</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">Change the password you use to sign in to Dojo.</p>
+                <a href="{% url 'account_password_change' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-key me-1"></i> Change password
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+    {# ── Right column ── #}
+    <div class="col-lg-6">
+
+        {# Organisations #}
+        <div class="card mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Your organisations</h6>
+            </div>
+            <div class="list-group list-group-flush">
+                {% for m in memberships %}
+                <div class="list-group-item py-3 d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-semibold small">{{ m.organisation.name }}</div>
+                        <div class="text-muted small">{{ m.get_role_display }}</div>
+                    </div>
+                    {% if m.organisation == org %}
+                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Current</span>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <div class="list-group-item py-3 text-muted small">No organisation memberships found.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

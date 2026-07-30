@@ -7,5 +7,6 @@ class DocumentsConfig(AppConfig):
 
     def ready(self):
         from auditlog.registry import auditlog
-        from .models import Document
+        from .models import Document, SignedWaiver
         auditlog.register(Document)
+        auditlog.register(SignedWaiver)

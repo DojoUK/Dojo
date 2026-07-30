@@ -25,6 +25,14 @@
             <i class="bi bi-envelope me-1"></i> Send welcome
         </button>
     </form>
+    <form method="post" action="{% url 'member_regenerate_portal_token' org_slug=org.slug pk=member.pk %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-secondary btn-sm"
+                title="Invalidate their current portal link and issue a new one"
+                onclick="return confirm('Reset {{ member.name }}\'s portal link? The old link will stop working immediately.')">
+            <i class="bi bi-key me-1"></i> Reset portal link
+        </button>
+    </form>
     <form method="post" action="{% url 'member_archive' org_slug=org.slug pk=member.pk %}" class="d-inline">
         {% csrf_token %}
         {% if member.is_active %}

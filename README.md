@@ -45,32 +45,25 @@ Dojo is sport and activity agnostic. Whether you run a judo club, a dance school
 
 ## Getting Started
 
-Dojo runs in Docker. You'll need [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/) installed.
+Dojo runs in Docker. You'll need [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/) installed. No `.env` file, migration command, or `createsuperuser` step needed — the container generates its own secret key, waits for the database, and migrates itself on first boot.
 
 ```bash
 git clone https://github.com/DojoUK/dojo.git
 cd dojo
 
-# Copy the example env file and fill in your values
-cp .env.example .env
-
 # Start the database and web server
 docker compose up -d
-
-# Run database migrations
-docker compose exec web python manage.py migrate
-
-# Create your admin account
-docker compose exec web python manage.py createsuperuser
 ```
 
-Then open [http://localhost:8000/admin/](http://localhost:8000/admin/) to create your first organisation, then head to [http://localhost:8000/](http://localhost:8000/) to log in.
+Open [http://localhost:8000/](http://localhost:8000/) — with no organisation set up yet, you'll land straight on a setup wizard that creates your organisation and admin account together in one step. (Prefer to poke around with sample data first? Visit `/setup/?demo=1` instead for a one-click demo club.)
 
 **Stopping Dojo:**
 
 ```bash
 docker compose down
 ```
+
+For a real domain, TLS, backups, and env var reference, see the [self-hosting guide](./SELF_HOSTING.md).
 
 ---
 
@@ -94,6 +87,12 @@ docker compose down
 - [ ] DocuSeal integration (not currently planned — canvas signing covers the use case)
 - [ ] S3 / R2 file storage
 - [ ] Hosted SaaS — [dojoapp.co.uk](https://dojoapp.co.uk) (coming soon)
+
+---
+
+## Data & Privacy
+
+Dojo processes member personal data, including medical information and, for staff, DBS/safeguarding numbers. Payment processing runs through **Stripe** (a sub-processor, US-based, GDPR-compliant via Standard Contractual Clauses) — no card details ever touch Dojo directly. See [PRIVACY.md](./PRIVACY.md) for lawful basis, retention periods, and the full processor list.
 
 ---
 
