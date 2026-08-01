@@ -385,6 +385,8 @@ class ApproveApplicationView(OrgAdminMixin, View):
             email=app.email,
             phone=app.phone,
             medical_info=app.medical_info,
+            address_line1=app.address_line1,
+            address_line2=app.address_line2,
         )
         if app.guardian_name:
             from .models import Guardian

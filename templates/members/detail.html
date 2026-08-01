@@ -80,6 +80,13 @@
                         {% else %}—{% endif %}
                     </dd>
 
+                    <dt class="col-sm-4 text-muted fw-normal small">Address</dt>
+                    <dd class="col-sm-8 small">
+                        {% if member.address_line1 %}
+                            {{ member.address_line1 }}{% if member.address_line2 %}<br>{{ member.address_line2 }}{% endif %}
+                        {% else %}—{% endif %}
+                    </dd>
+
                     <dt class="col-sm-4 text-muted fw-normal small">Licence no.</dt>
                     <dd class="col-sm-8 small">{{ member.licence_number|default:"—" }}</dd>
 

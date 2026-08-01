@@ -55,6 +55,7 @@ class MemberForm(forms.ModelForm):
             'name', 'date_of_birth', 'email', 'phone',
             'emergency_contact_name', 'emergency_contact_phone',
             'emergency_contact_2_name', 'emergency_contact_2_phone',
+            'address_line1', 'address_line2',
             'joined_date', 'is_active', 'monthly_fee',
             'licence_number', 'licence_expiry',
             'medical_info', 'billing_policy',
