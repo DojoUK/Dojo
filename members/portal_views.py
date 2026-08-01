@@ -84,6 +84,8 @@ class DownloadDataView(View):
                 'emergency_contact_phone': member.emergency_contact_phone,
                 'emergency_contact_2_name': member.emergency_contact_2_name,
                 'emergency_contact_2_phone': member.emergency_contact_2_phone,
+                'address_line1': member.address_line1,
+                'address_line2': member.address_line2,
                 'joined_date': member.joined_date,
                 'licence_number': member.licence_number,
                 'licence_expiry': member.licence_expiry,

@@ -19,6 +19,8 @@ class Member(models.Model):
     emergency_contact_phone = models.CharField(max_length=20, blank=True)
     emergency_contact_2_name = models.CharField(max_length=255, blank=True)
     emergency_contact_2_phone = models.CharField(max_length=20, blank=True)
+    address_line1 = models.CharField(max_length=255, blank=True)
+    address_line2 = models.CharField(max_length=255, blank=True)
     is_active = models.BooleanField(default=True)
     token = models.CharField(max_length=64, unique=True, default=generate_token)
     token_created_at = models.DateTimeField(default=timezone.now, help_text='When the current portal token was issued — used to auto-rotate stale links')
@@ -50,6 +52,8 @@ class Member(models.Model):
         self.emergency_contact_phone = ''
         self.emergency_contact_2_name = ''
         self.emergency_contact_2_phone = ''
+        self.address_line1 = ''
+        self.address_line2 = ''
         self.custom_field_values = {}
         self.stripe_customer_id = ''
         self.stripe_subscription_id = ''
