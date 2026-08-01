@@ -61,6 +61,11 @@
                     <dt class="col-sm-4 text-muted fw-normal small">Amount</dt>
                     <dd class="col-sm-8 small fw-semibold">£{{ invoice.amount|floatformat:2 }}</dd>
 
+                    {% if invoice.items.all %}
+                    <dt class="col-sm-4 text-muted fw-normal small">Products</dt>
+                    <dd class="col-sm-8 small">{{ invoice.items.count }} item{{ invoice.items.count|pluralize }} — £{{ invoice.items_total|floatformat:2 }}</dd>
+                    {% endif %}
+
                     <dt class="col-sm-4 text-muted fw-normal small">Due date</dt>
                     <dd class="col-sm-8 small">
                         {{ invoice.due_date|date:"d M Y" }}
@@ -88,6 +93,38 @@
                 </dl>
             </div>
         </div>
+
+        {% if invoice.items.all %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Products sold</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3 small fw-semibold">Product</th>
+                            <th class="small fw-semibold">Qty</th>
+                            <th class="small fw-semibold">Unit price</th>
+                            <th class="small fw-semibold">Line total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in invoice.items.all %}
+                        <tr>
+                            <td class="ps-3 small">{{ item.description }}</td>
+                            <td class="small">{{ item.quantity }}</td>
+                            <td class="small">£{{ item.unit_price|floatformat:2 }}</td>
+                            <td class="small fw-semibold">£{{ item.line_total|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
 
         <div class="card border-0 shadow-sm mb-3">
             <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">

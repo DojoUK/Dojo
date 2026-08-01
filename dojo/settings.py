@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'progression',
     'billing',
     'documents',
+    'inventory',
     'django_htmx',
     'auditlog',
 ]

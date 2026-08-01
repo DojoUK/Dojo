@@ -126,8 +126,41 @@ class Invoice(models.Model):
         from datetime import date
         return self.status == self.Status.UNPAID and self.due_date < date.today()
 
+    @property
+    def items_total(self):
+        from decimal import Decimal
+        return sum((item.line_total for item in self.items.all()), Decimal('0'))
+
     class Meta:
         ordering = ['-created_at']
+
+
+class InvoiceItem(models.Model):
+    """A product sold on an invoice (e.g. a gi in a specific size). `unit_price` and `description`
+    are snapshotted at the time of sale so historical invoices don't change if the product's
+    catalogue price or name changes later. Deleting a variant that has been sold is blocked
+    (PROTECT) so past invoices always keep an accurate record of what was sold."""
+
+    invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='items')
+    variant = models.ForeignKey('inventory.ProductVariant', on_delete=models.PROTECT, related_name='invoice_items')
+    description = models.CharField(max_length=255, blank=True, help_text='Snapshot of the product/size at time of sale')
+    quantity = models.PositiveIntegerField(default=1)
+    unit_price = models.DecimalField(max_digits=8, decimal_places=2, help_text='Snapshot of the price at time of sale')
+
+    def __str__(self):
+        return f"{self.quantity} x {self.description or self.variant} — £{self.line_total}"
+
+    @property
+    def line_total(self):
+        return (self.unit_price or 0) * self.quantity
+
+    def save(self, *args, **kwargs):
+        if not self.description and self.variant_id:
+            self.description = f"{self.variant.product.name} — {self.variant.size}"
+        super().save(*args, **kwargs)
+
+    class Meta:
+        ordering = ['pk']
 
 
 class Payment(models.Model):
