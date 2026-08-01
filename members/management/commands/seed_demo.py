@@ -11,6 +11,12 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 from django.utils.text import slugify
 
+ADDRESS_STREETS = [
+    'Elm Street', 'Oak Avenue', 'Station Road', 'Church Lane', 'Mill Road',
+    'Victoria Street', 'Kings Road', 'Park View', 'Meadow Close', 'High Street',
+    'Windsor Drive', 'Orchard Way', 'Bridge Street', 'Hillside Avenue', 'Chapel Street',
+]
+
 
 class Command(BaseCommand):
     help = 'Seed the database with fictional demo data (Mockingham Martial Arts Club)'
@@ -28,8 +34,17 @@ class Command(BaseCommand):
         system = self._create_progression(org)
         classes = self._create_classes(org, users)
         members = self._create_members(org, system, classes)
+        self._create_family_groups(org)
+        self._create_extra_custom_fields(org)
         self._create_sessions_and_attendance(classes, members)
+        self._create_billing_policies(org)
         self._create_invoices(org, members)
+        variants = self._create_inventory(org)
+        self._sell_demo_products(variants)
+        self._create_terms(org)
+        self._create_waiting_list(classes)
+        self._create_former_members(org)
+        self._create_documents_and_waivers(org, members)
         self._create_applications(org)
         self._create_announcements(org, users)
         self._update_admin_user()
@@ -42,16 +57,24 @@ class Command(BaseCommand):
     def _flush(self):
         self.stdout.write('Flushing existing data...')
         from organisations.models import Organisation, OrganisationMember, Announcement
-        from members.models import Member, Guardian, MemberApplication, MemberNote, CustomField
-        from classes.models import Class, Session, Attendance, ClassMember, ClassCoach, WaitingList
-        from billing.models import Invoice, Payment
+        from members.models import (
+            Member, Guardian, MemberApplication, MemberNote, CustomField,
+            FamilyGroup, FamilyGroupMember,
+        )
+        from classes.models import Class, Session, Attendance, ClassMember, ClassCoach, WaitingList, SessionCoach
+        from billing.models import (
+            Invoice, Payment, BillingPolicy, OrgTerm, PolicyDiscount, MemberDiscount, InvoiceItem,
+        )
         from progression.models import ProgressionSystem, ProgressionStage, MemberProgression
         from documents.models import Document, WaiverTemplate, SignedWaiver
+        from inventory.models import Product, ProductVariant, StockMovement
         for model in [
             SignedWaiver, Document, WaiverTemplate,
             MemberProgression, ProgressionStage, ProgressionSystem,
-            Payment, Invoice,
-            Attendance, ClassMember, ClassCoach, WaitingList, Session, Class,
+            StockMovement, InvoiceItem, ProductVariant, Product,
+            Payment, Invoice, MemberDiscount, PolicyDiscount, OrgTerm, BillingPolicy,
+            SessionCoach, Attendance, ClassMember, WaitingList, ClassCoach, Session, Class,
+            FamilyGroupMember, FamilyGroup,
             MemberNote, MemberApplication, Guardian, Member, CustomField,
             Announcement, OrganisationMember, Organisation,
         ]:
@@ -238,6 +261,15 @@ class Command(BaseCommand):
                 m.emergency_contact_phone = f'0770020{str(members_data.index((name, dob, email, phone, fee, grade_name, class_names, guardian_data, medical, licence, note_text))).zfill(4)}'
                 m.save(update_fields=['emergency_contact_name', 'emergency_contact_phone'])
 
+            # Address
+            if not m.address_line1:
+                idx = members_data.index((name, dob, email, phone, fee, grade_name, class_names, guardian_data, medical, licence, note_text))
+                street_number = 1 + (idx * 7) % 180
+                street_name = ADDRESS_STREETS[idx % len(ADDRESS_STREETS)]
+                m.address_line1 = f'{street_number} {street_name}'
+                m.address_line2 = 'Mockingham'
+                m.save(update_fields=['address_line1', 'address_line2'])
+
             # Progression
             stage = stage_map.get(grade_name)
             if stage and not MemberProgression.objects.filter(member=m, stage=stage).exists():
@@ -264,13 +296,14 @@ class Command(BaseCommand):
     # ── Sessions & Attendance ──────────────────────────────────────────────────
 
     def _create_sessions_and_attendance(self, classes, members):
-        from classes.models import Session, Attendance, ClassMember
+        from classes.models import Session, Attendance, ClassMember, ClassCoach, SessionCoach
 
         today = date.today()
         total_sessions = 0
 
         for class_name, cls in classes.items():
             enrolled = list(ClassMember.objects.filter(assigned_class=cls).select_related('member'))
+            coaches = list(ClassCoach.objects.filter(assigned_class=cls).select_related('user'))
             schedule = cls.schedule or []
 
             # Generate 10 weeks of past sessions + 3 weeks upcoming
@@ -306,6 +339,12 @@ class Command(BaseCommand):
                             present = random.random() < 0.78
                             Attendance.objects.get_or_create(
                                 session=session, member=cm.member,
+                                defaults={'present': present}
+                            )
+                        for cc in coaches:
+                            present = random.random() < 0.9
+                            SessionCoach.objects.get_or_create(
+                                session=session, coach=cc.user,
                                 defaults={'present': present}
                             )
 
@@ -358,6 +397,307 @@ class Command(BaseCommand):
                 count += 1
 
         self.stdout.write(f'  Invoices: {count} created')
+
+    # ── Family groups ──────────────────────────────────────────────────────────
+
+    def _create_family_groups(self, org):
+        from members.models import Member, FamilyGroup, FamilyGroupMember
+
+        family, _ = FamilyGroup.objects.get_or_create(
+            organisation=org, name='Thornton Family',
+            defaults={'discount_percentage': 10},
+        )
+        for name in ['Alice Thornton', 'Abby Thornton']:
+            member = Member.objects.filter(organisation=org, name=name).first()
+            if member:
+                FamilyGroupMember.objects.get_or_create(family_group=family, member=member)
+        self.stdout.write(f'  Family groups: {family.name}')
+
+    # ── Extra custom fields ────────────────────────────────────────────────────
+
+    def _create_extra_custom_fields(self, org):
+        from members.models import Member, CustomField
+
+        contact_field, _ = CustomField.objects.get_or_create(
+            organisation=org, name='Preferred Contact Method',
+            defaults={'field_type': CustomField.FieldType.SELECT,
+                      'options': ['Email', 'Phone', 'Text'], 'order': 1},
+        )
+        newsletter_field, _ = CustomField.objects.get_or_create(
+            organisation=org, name='Newsletter Opt-in',
+            defaults={'field_type': CustomField.FieldType.BOOLEAN, 'order': 2},
+        )
+        contact_choices = ['Email', 'Phone', 'Text']
+        for i, member in enumerate(Member.objects.filter(organisation=org).order_by('pk')):
+            values = member.custom_field_values or {}
+            if str(contact_field.pk) not in values:
+                values[str(contact_field.pk)] = contact_choices[i % len(contact_choices)]
+            if str(newsletter_field.pk) not in values:
+                values[str(newsletter_field.pk)] = (i % 3 != 0)
+            member.custom_field_values = values
+            member.save(update_fields=['custom_field_values'])
+        self.stdout.write('  Custom fields: Preferred Contact Method, Newsletter Opt-in')
+
+    # ── Billing policies & discounts ───────────────────────────────────────────
+
+    def _create_billing_policies(self, org):
+        from members.models import Member
+        from billing.models import BillingPolicy, PolicyDiscount, MemberDiscount
+        from classes.models import Class
+
+        junior, _ = BillingPolicy.objects.get_or_create(
+            organisation=org, name='Junior Membership',
+            defaults={'billing_cycle': BillingPolicy.BillingCycle.MONTHLY,
+                      'pricing_model': BillingPolicy.PricingModel.FLAT,
+                      'amount': 22, 'description': 'Standard junior membership, one class per week.'},
+        )
+        senior, _ = BillingPolicy.objects.get_or_create(
+            organisation=org, name='Senior Membership',
+            defaults={'billing_cycle': BillingPolicy.BillingCycle.MONTHLY,
+                      'pricing_model': BillingPolicy.PricingModel.FLAT,
+                      'amount': 35, 'description': 'Standard senior membership, unlimited classes.'},
+        )
+        beginners, _ = BillingPolicy.objects.get_or_create(
+            organisation=org, name='Beginners Course',
+            defaults={'billing_cycle': BillingPolicy.BillingCycle.TERMLY,
+                      'pricing_model': BillingPolicy.PricingModel.FLAT,
+                      'amount': 90, 'description': 'Introductory course, billed per term.'},
+        )
+        pay_as_you_go, _ = BillingPolicy.objects.get_or_create(
+            organisation=org, name='Pay As You Go',
+            defaults={'billing_cycle': BillingPolicy.BillingCycle.MONTHLY,
+                      'pricing_model': BillingPolicy.PricingModel.PER_SESSION,
+                      'per_session_rate': 8, 'additional_class_discount': 50,
+                      'description': 'Competition squad members pay per session attended.'},
+        )
+
+        PolicyDiscount.objects.get_or_create(
+            policy=junior, name='Sibling Discount',
+            defaults={'discount_type': PolicyDiscount.DiscountType.PERCENTAGE, 'value': 10},
+        )
+        PolicyDiscount.objects.get_or_create(
+            policy=senior, name='Loyalty Discount',
+            defaults={'discount_type': PolicyDiscount.DiscountType.PERCENTAGE, 'value': 15},
+        )
+        first_term_discount, _ = PolicyDiscount.objects.get_or_create(
+            policy=beginners, name='First Term Discount',
+            defaults={'discount_type': PolicyDiscount.DiscountType.FIXED, 'value': 10},
+        )
+
+        fee_to_policy = {22: junior, 35: senior, 30: beginners}
+        for member in Member.objects.filter(organisation=org):
+            if member.billing_policy_id is None and member.monthly_fee in fee_to_policy:
+                member.billing_policy = fee_to_policy[member.monthly_fee]
+                member.save(update_fields=['billing_policy'])
+
+        comp_squad = Class.objects.filter(organisation=org, name='Competition Squad').first()
+        if comp_squad and not comp_squad.billing_policy_id:
+            comp_squad.billing_policy = pay_as_you_go
+            comp_squad.save(update_fields=['billing_policy'])
+
+        sibling_discount = PolicyDiscount.objects.filter(policy=junior, name='Sibling Discount').first()
+        loyalty_discount = PolicyDiscount.objects.filter(policy=senior, name='Loyalty Discount').first()
+        for name in ['Alice Thornton', 'Abby Thornton']:
+            member = Member.objects.filter(organisation=org, name=name).first()
+            if member and sibling_discount:
+                MemberDiscount.objects.get_or_create(member=member, discount=sibling_discount)
+        marcus = Member.objects.filter(organisation=org, name='Marcus Webb').first()
+        if marcus and loyalty_discount:
+            MemberDiscount.objects.get_or_create(member=marcus, discount=loyalty_discount)
+        yasmin = Member.objects.filter(organisation=org, name='Yasmin Ford').first()
+        if yasmin and first_term_discount:
+            MemberDiscount.objects.get_or_create(member=yasmin, discount=first_term_discount)
+
+        self.stdout.write('  Billing policies: Junior/Senior Membership, Beginners Course, Pay As You Go')
+        return {'junior': junior, 'senior': senior, 'beginners': beginners, 'pay_as_you_go': pay_as_you_go}
+
+    # ── Terms ──────────────────────────────────────────────────────────────────
+
+    def _create_terms(self, org):
+        from billing.models import OrgTerm
+
+        terms = [
+            ('Spring Term 2026', date(2026, 1, 5), date(2026, 3, 27)),
+            ('Summer Term 2026', date(2026, 4, 13), date(2026, 7, 17)),
+            ('Autumn Term 2026', date(2026, 9, 7), date(2026, 12, 18)),
+        ]
+        for name, start, end in terms:
+            OrgTerm.objects.get_or_create(
+                organisation=org, name=name,
+                defaults={'start_date': start, 'end_date': end},
+            )
+        self.stdout.write(f'  Terms: {len(terms)} created')
+
+    # ── Inventory ──────────────────────────────────────────────────────────────
+
+    def _create_inventory(self, org):
+        from inventory.models import Product, ProductVariant, StockMovement
+
+        catalogue = [
+            ('Adult Gi', Product.Category.GI, [
+                ('3', 45, 5, 2), ('4', 45, 1, 2), ('5', 48, 6, 2),
+            ]),
+            ('Kids Gi', Product.Category.GI, [
+                ('000', 25, 8, 2), ('0', 25, 6, 2), ('1', 28, 4, 2), ('2', 28, 3, 2),
+            ]),
+            ('Club Belt', Product.Category.BELT, [
+                ('White', 8, 15, 3), ('Yellow', 8, 12, 3), ('Orange', 8, 10, 3),
+                ('Green', 9, 8, 3), ('Blue', 9, 6, 2), ('Brown', 10, 4, 2), ('Black', 15, 3, 1),
+            ]),
+            ('Focus Mitts', Product.Category.PROTECTIVE, [
+                ('Pair', 18, 6, 2),
+            ]),
+            ('Club Hoodie', Product.Category.APPAREL, [
+                ('S', 25, 5, 2), ('M', 25, 6, 2), ('L', 25, 4, 2), ('XL', 25, 0, 2),
+            ]),
+            ('Water Bottle', Product.Category.ACCESSORY, [
+                ('Standard', 6, 20, 5),
+            ]),
+        ]
+
+        variants = {}
+        product_count = 0
+        variant_count = 0
+        for product_name, category, sizes in catalogue:
+            product, _ = Product.objects.get_or_create(
+                organisation=org, name=product_name, defaults={'category': category},
+            )
+            product_count += 1
+            for size, price, stock, threshold in sizes:
+                variant, created = ProductVariant.objects.get_or_create(
+                    product=product, size=size,
+                    defaults={'price': price, 'quantity_in_stock': stock, 'low_stock_threshold': threshold},
+                )
+                variant_count += 1
+                variants[(product_name, size)] = variant
+                if created and stock > 0:
+                    StockMovement.objects.create(
+                        variant=variant, quantity_change=stock,
+                        reason=StockMovement.Reason.RESTOCK, notes='Initial stock on seeding',
+                    )
+        self.stdout.write(f'  Inventory: {product_count} products, {variant_count} variants')
+        return variants
+
+    def _sell_demo_products(self, variants):
+        from billing.models import Invoice, InvoiceItem
+        from members.models import Member
+
+        sales = [
+            ('Marcus Webb', ('Adult Gi', '5'), 1),
+            ('Diana Fox', ('Club Belt', 'Yellow'), 1),
+        ]
+        sold = 0
+        for member_name, variant_key, qty in sales:
+            variant = variants.get(variant_key)
+            member = Member.objects.filter(name=member_name).first()
+            if not variant or not member:
+                continue
+            invoice = Invoice.objects.filter(member=member).order_by('-pk').first()
+            if not invoice or InvoiceItem.objects.filter(invoice=invoice, variant=variant).exists():
+                continue
+            InvoiceItem.objects.create(
+                invoice=invoice, variant=variant, quantity=qty, unit_price=variant.price,
+            )
+            invoice.amount = (invoice.amount or 0) + (variant.price * qty)
+            invoice.save(update_fields=['amount'])
+            variant.adjust_stock(-qty, reason='sale', invoice=invoice, notes=f'Sold on invoice #{invoice.pk} (demo seed)')
+            sold += 1
+        self.stdout.write(f'  Product sales: {sold} demo invoice line items')
+
+    # ── Waiting list ───────────────────────────────────────────────────────────
+
+    def _create_waiting_list(self, classes):
+        from members.models import Member
+        from classes.models import WaitingList
+
+        senior = classes.get('Senior Class')
+        if not senior:
+            return
+        count = 0
+        for name in ['Yasmin Ford', 'Callum Reid']:
+            member = Member.objects.filter(name=name).first()
+            if member:
+                _, created = WaitingList.objects.get_or_create(assigned_class=senior, member=member)
+                count += created
+        self.stdout.write(f'  Waiting list: {count} entries added to {senior.name}')
+
+    # ── Former members ─────────────────────────────────────────────────────────
+
+    def _create_former_members(self, org):
+        from members.models import Member
+
+        now = timezone.now()
+        zach = Member.objects.filter(organisation=org, name='Zach Murray').first()
+        if zach and zach.is_active:
+            zach.is_active = False
+            zach.archived_at = now - timedelta(days=4 * 365)
+            zach.save(update_fields=['is_active', 'archived_at'])
+        diana = Member.objects.filter(organisation=org, name='Diana Fox').first()
+        if diana and diana.is_active:
+            diana.is_active = False
+            diana.archived_at = now - timedelta(days=180)
+            diana.retention_notes = 'Outstanding balance dispute — retain until resolved.'
+            diana.save(update_fields=['is_active', 'archived_at', 'retention_notes'])
+        self.stdout.write('  Former members: Zach Murray (flagged), Diana Fox (retention override)')
+
+    # ── Documents & waivers ────────────────────────────────────────────────────
+
+    def _create_documents_and_waivers(self, org, members):
+        from django.core.files.base import ContentFile
+        from documents.models import Document, WaiverTemplate, SignedWaiver
+
+        membership_waiver, _ = WaiverTemplate.objects.get_or_create(
+            organisation=org, name='Membership Waiver & Consent',
+            defaults={
+                'description': 'Standard liability waiver and consent to participate in training.',
+                'file': ContentFile(b'%PDF-1.4\n%Demo membership waiver document.\n', name='membership_waiver.pdf'),
+                'is_required': True,
+            },
+        )
+        WaiverTemplate.objects.get_or_create(
+            organisation=org, name='Photography Consent',
+            defaults={
+                'description': 'Consent to appear in club photos/videos for marketing use.',
+                'file': ContentFile(b'%PDF-1.4\n%Demo photography consent document.\n', name='photography_consent.pdf'),
+                'is_required': False,
+            },
+        )
+
+        unsigned = {'Jack Reeves', 'Yasmin Ford'}
+        signed_count = 0
+        for member in members:
+            if member.name in unsigned:
+                continue
+            if SignedWaiver.objects.filter(member=member, template=membership_waiver).exists():
+                continue
+            guardian = member.guardians.first()
+            SignedWaiver.objects.create(
+                member=member, template=membership_waiver,
+                signed_pdf=ContentFile(b'%PDF-1.4\n%Demo signed waiver.\n', name=f'waiver_{member.pk}.pdf'),
+                signer_name=guardian.name if guardian else member.name,
+                signed_at=timezone.now() - timedelta(days=random.randint(30, 700)),
+                offline=random.random() < 0.2,
+            )
+            signed_count += 1
+        self.stdout.write(f'  Waivers: {signed_count} signed (2 members deliberately left unsigned)')
+
+        finn = next((m for m in members if m.name == 'Finn Walsh'), None)
+        doc_count = 0
+        if finn and not Document.objects.filter(member=finn, category=Document.Category.MEDICAL).exists():
+            Document.objects.create(
+                member=finn, name='Allergy Action Plan', category=Document.Category.MEDICAL,
+                file=ContentFile(b'%PDF-1.4\n%Demo allergy action plan.\n', name='allergy_action_plan.pdf'),
+                notes='Provided by GP — keep with first aid kit.',
+            )
+            doc_count += 1
+        marcus = next((m for m in members if m.name == 'Marcus Webb'), None)
+        if marcus and not Document.objects.filter(member=marcus, category=Document.Category.MEMBERSHIP).exists():
+            Document.objects.create(
+                member=marcus, name='Membership Agreement', category=Document.Category.MEMBERSHIP,
+                file=ContentFile(b'%PDF-1.4\n%Demo membership agreement.\n', name='membership_agreement.pdf'),
+            )
+            doc_count += 1
+        self.stdout.write(f'  Documents: {doc_count} created')
 
     # ── Applications ───────────────────────────────────────────────────────────
 

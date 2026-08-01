@@ -397,15 +397,15 @@
                         {% endif %}
                         {% if org_policies %}
                         <div class="mt-2">
-                            <form method="post" action="{% url 'member_edit' org_slug=org.slug pk=member.pk %}" class="d-flex gap-2 align-items-center">
+                            <form method="post" action="{% url 'member_billing_policy_set' org_slug=org.slug pk=member.pk %}" class="d-flex gap-2 align-items-center">
                                 {% csrf_token %}
-                                <select name="billing_policy" class="form-select form-select-sm" style="width:auto;">
+                                <select name="billing_policy" class="form-select form-select-sm" style="width:auto;min-width:0;flex:1 1 auto;">
                                     <option value="">— No policy —</option>
                                     {% for p in org_policies %}
                                     <option value="{{ p.pk }}" {% if member.billing_policy_id == p.pk %}selected{% endif %}>{{ p.name }}</option>
                                     {% endfor %}
                                 </select>
-                                <button type="submit" class="btn btn-sm btn-outline-secondary">Save</button>
+                                <button type="submit" class="btn btn-sm btn-outline-secondary flex-shrink-0">Save</button>
                             </form>
                         </div>
                         {% endif %}
@@ -430,12 +430,12 @@
                         {% if available_discounts %}
                         <form method="post" action="{% url 'member_discount_add' org_slug=org.slug member_pk=member.pk %}" class="d-flex gap-2 align-items-center">
                             {% csrf_token %}
-                            <select name="discount_id" class="form-select form-select-sm" style="width:auto;">
+                            <select name="discount_id" class="form-select form-select-sm" style="width:auto;min-width:0;flex:1 1 auto;">
                                 {% for d in available_discounts %}
                                 <option value="{{ d.pk }}">[{{ d.policy.name }}] {{ d.name }}</option>
                                 {% endfor %}
                             </select>
-                            <button type="submit" class="btn btn-sm btn-outline-success">Apply</button>
+                            <button type="submit" class="btn btn-sm btn-outline-success flex-shrink-0">Apply</button>
                         </form>
                         {% endif %}
                     </div>
