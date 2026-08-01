@@ -1,0 +1,325 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Inventory{% endblock %}
+{% block page_title %}Inventory{% endblock %}
+{% block page_subtitle %}Products, sizes, and stock levels{% endblock %}
+
+{% block page_actions %}
+<button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addProductModal">
+    <i class="bi bi-plus-lg me-1"></i> New product
+</button>
+{% endblock %}
+
+{% block main_content %}
+
+{% if low_stock_variants %}
+<div class="alert alert-warning d-flex align-items-start gap-2 mb-4">
+    <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+    <div>
+        <strong>{{ low_stock_variants|length }} size{{ low_stock_variants|length|pluralize }} running low on stock:</strong>
+        {% for v in low_stock_variants %}{{ v }} ({{ v.quantity_in_stock }} left){% if not forloop.last %}, {% endif %}{% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-3">
+    {% for product in products %}
+    <div class="col-12">
+        <div class="card" style="border:1px solid var(--dojo-border);">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <h6 class="fw-semibold mb-1">
+                            {{ product.name }}
+                            {% if not product.is_active %}<span class="badge bg-warning text-dark ms-1">Inactive</span>{% endif %}
+                        </h6>
+                        <span class="badge bg-secondary">{{ product.get_category_display }}</span>
+                        <span class="text-muted small ms-2">{{ product.total_in_stock }} total in stock</span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#addVariantModal{{ product.pk }}">
+                            <i class="bi bi-plus-lg me-1"></i> Add size
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#editProductModal{{ product.pk }}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <form method="post" action="{% url 'product_delete' org_slug=org.slug pk=product.pk %}" onsubmit="return confirm('Delete product &quot;{{ product.name }}&quot; and all its sizes?')">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </div>
+                </div>
+
+                {% if product.description %}
+                <p class="text-muted small mb-3">{{ product.description }}</p>
+                {% endif %}
+
+                {% if product.variants.all %}
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="small">Size</th>
+                                <th class="small">SKU</th>
+                                <th class="small">Price</th>
+                                <th class="small">In stock</th>
+                                <th class="small"></th>
+                                <th class="small"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for variant in product.variants.all %}
+                            <tr>
+                                <td class="small fw-medium">
+                                    {{ variant.size }}
+                                    {% if not variant.is_active %}<span class="badge bg-secondary-subtle text-secondary ms-1">Inactive</span>{% endif %}
+                                </td>
+                                <td class="small text-muted">{{ variant.sku|default:"—" }}</td>
+                                <td class="small">£{{ variant.price|floatformat:2 }}</td>
+                                <td class="small">
+                                    {{ variant.quantity_in_stock }}
+                                    {% if variant.is_low_stock %}<span class="badge bg-warning-subtle text-warning ms-1">Low</span>{% endif %}
+                                </td>
+                                <td class="small text-end">
+                                    <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#adjustStockModal{{ variant.pk }}">
+                                        <i class="bi bi-box-seam"></i> Adjust stock
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#editVariantModal{{ variant.pk }}">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                </td>
+                                <td class="small text-end">
+                                    <form method="post" action="{% url 'variant_delete' org_slug=org.slug pk=variant.pk %}" class="d-inline" onsubmit="return confirm('Delete size &quot;{{ variant.size }}&quot;?')">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted small mb-0">No sizes added yet — use "Add size" to set a price and starting stock level.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit product modal -->
+    <div class="modal fade" id="editProductModal{{ product.pk }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" action="{% url 'product_edit' org_slug=org.slug pk=product.pk %}">
+                    {% csrf_token %}
+                    <div class="modal-header"><h5 class="modal-title">Edit — {{ product.name }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Product name</label>
+                            <input type="text" name="name" class="form-control" value="{{ product.name }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Category</label>
+                            <select name="category" class="form-select">
+                                {% for value, label in categories %}
+                                <option value="{{ value }}" {% if product.category == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Description</label>
+                            <textarea name="description" class="form-control" rows="2">{{ product.description }}</textarea>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="is_active" value="1" id="productActive{{ product.pk }}" {% if product.is_active %}checked{% endif %}>
+                            <label class="form-check-label small" for="productActive{{ product.pk }}">Active (visible when creating invoices)</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary btn-sm">Save changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add variant (size) modal -->
+    <div class="modal fade" id="addVariantModal{{ product.pk }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" action="{% url 'variant_create' org_slug=org.slug product_pk=product.pk %}">
+                    {% csrf_token %}
+                    <div class="modal-header"><h5 class="modal-title">Add size — {{ product.name }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body">
+                        <div class="row g-2 mb-3">
+                            <div class="col">
+                                <label class="form-label small fw-semibold">Size</label>
+                                <input type="text" name="size" class="form-control" placeholder="e.g. 3, M, Adult L" required>
+                            </div>
+                            <div class="col">
+                                <label class="form-label small fw-semibold">SKU <span class="text-muted fw-normal">(optional)</span></label>
+                                <input type="text" name="sku" class="form-control">
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col">
+                                <label class="form-label small fw-semibold">Price (£)</label>
+                                <input type="number" name="price" class="form-control" step="0.01" min="0" required>
+                            </div>
+                            <div class="col">
+                                <label class="form-label small fw-semibold">Starting stock</label>
+                                <input type="number" name="quantity_in_stock" class="form-control" min="0" value="0">
+                            </div>
+                            <div class="col">
+                                <label class="form-label small fw-semibold">Low-stock alert at</label>
+                                <input type="number" name="low_stock_threshold" class="form-control" min="0" value="0">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary btn-sm">Add size</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% for variant in product.variants.all %}
+    <!-- Edit variant modal -->
+    <div class="modal fade" id="editVariantModal{{ variant.pk }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" action="{% url 'variant_edit' org_slug=org.slug pk=variant.pk %}">
+                    {% csrf_token %}
+                    <div class="modal-header"><h5 class="modal-title">Edit — {{ product.name }} ({{ variant.size }})</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body">
+                        <div class="row g-2 mb-3">
+                            <div class="col">
+                                <label class="form-label small fw-semibold">Size</label>
+                                <input type="text" name="size" class="form-control" value="{{ variant.size }}" required>
+                            </div>
+                            <div class="col">
+                                <label class="form-label small fw-semibold">SKU</label>
+                                <input type="text" name="sku" class="form-control" value="{{ variant.sku }}">
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col">
+                                <label class="form-label small fw-semibold">Price (£)</label>
+                                <input type="number" name="price" class="form-control" step="0.01" min="0" value="{{ variant.price }}" required>
+                            </div>
+                            <div class="col">
+                                <label class="form-label small fw-semibold">Low-stock alert at</label>
+                                <input type="number" name="low_stock_threshold" class="form-control" min="0" value="{{ variant.low_stock_threshold }}">
+                            </div>
+                        </div>
+                        <p class="text-muted small">
+                            Current stock: <strong>{{ variant.quantity_in_stock }}</strong> — use "Adjust stock" to change this
+                            so it stays logged in the stock history.
+                        </p>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="is_active" value="1" id="variantActive{{ variant.pk }}" {% if variant.is_active %}checked{% endif %}>
+                            <label class="form-check-label small" for="variantActive{{ variant.pk }}">Active (sellable on invoices)</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary btn-sm">Save changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Adjust stock modal -->
+    <div class="modal fade" id="adjustStockModal{{ variant.pk }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" action="{% url 'variant_adjust_stock' org_slug=org.slug pk=variant.pk %}">
+                    {% csrf_token %}
+                    <div class="modal-header"><h5 class="modal-title">Adjust stock — {{ product.name }} ({{ variant.size }})</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                    <div class="modal-body">
+                        <p class="text-muted small">Current stock: <strong>{{ variant.quantity_in_stock }}</strong></p>
+                        <div class="row g-2 mb-3">
+                            <div class="col">
+                                <label class="form-label small fw-semibold">Change (+/-)</label>
+                                <input type="number" name="delta" class="form-control" placeholder="e.g. 10 or -2" required>
+                                <div class="form-text">Positive adds stock, negative removes it.</div>
+                            </div>
+                            <div class="col">
+                                <label class="form-label small fw-semibold">Reason</label>
+                                <select name="reason" class="form-select">
+                                    {% for value, label in reasons %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-1">
+                            <label class="form-label small fw-semibold">Notes <span class="text-muted fw-normal">(optional)</span></label>
+                            <input type="text" name="notes" class="form-control" placeholder="e.g. Delivery from supplier">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary btn-sm">Save adjustment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% empty %}
+    <div class="col-12">
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-box-seam" style="font-size:2.5rem;opacity:.3;"></i>
+            <p class="mt-3">No products yet. Add your first product (e.g. "Adult Gi") to start tracking sizes, prices, and stock.</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Add product modal -->
+<div class="modal fade" id="addProductModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'product_create' org_slug=org.slug %}">
+                {% csrf_token %}
+                <div class="modal-header"><h5 class="modal-title">New product</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Product name</label>
+                        <input type="text" name="name" class="form-control" placeholder="e.g. Adult Gi, White Belt" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Category</label>
+                        <select name="category" class="form-select">
+                            {% for value, label in categories %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Description <span class="text-muted fw-normal">(optional)</span></label>
+                        <textarea name="description" class="form-control" rows="2"></textarea>
+                    </div>
+                    <p class="text-muted small mb-0">After creating the product, add its sizes, prices, and starting stock.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Create product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

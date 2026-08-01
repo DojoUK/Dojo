@@ -221,6 +221,11 @@
             </a>
         </li>
         <li>
+            <a href="{% url 'inventory_list' org_slug=org.slug %}" class="{% if 'inventory' in url_name or 'product' in url_name or 'variant' in url_name %}active{% endif %}">
+                <i class="bi bi-box-seam"></i> Inventory
+            </a>
+        </li>
+        <li>
             <a href="{% url 'attendance_analytics' org_slug=org.slug %}" class="{% if 'attendance' in url_name %}active{% endif %}">
                 <i class="bi bi-bar-chart"></i> Attendance
             </a>

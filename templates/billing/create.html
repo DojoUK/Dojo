@@ -56,11 +56,12 @@
                             <input type="text" name="period" class="form-control" placeholder="e.g. January 2026">
                         </div>
                         <div class="col-sm-6">
-                            <label class="form-label fw-semibold small">Amount (£) <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold small">Base amount (£)</label>
                             <div class="input-group">
                                 <span class="input-group-text">£</span>
-                                <input type="number" name="amount" class="form-control" step="0.01" min="0" placeholder="0.00">
+                                <input type="number" name="amount" id="base-amount" class="form-control" step="0.01" min="0" placeholder="0.00">
                             </div>
+                            <div class="form-text">Membership fee or other flat charge. Leave blank for a products-only invoice.</div>
                         </div>
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold small">Due date <span class="text-danger">*</span></label>
@@ -74,6 +75,33 @@
                 </div>
             </div>
 
+            <div class="card border-0 shadow-sm mb-3" id="products-card">
+                <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Products <span class="text-muted fw-normal small">(optional)</span></h6>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="add-product-row">
+                        <i class="bi bi-plus-lg me-1"></i> Add product
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="text-muted small mb-2" id="no-products-msg" {% if products %}style="display:none;"{% endif %}>
+                        No products in the inventory yet. <a href="{% url 'inventory_list' org_slug=org.slug %}">Add some here</a> to sell them on invoices.
+                    </div>
+                    <div id="product-rows"></div>
+                    <div class="d-flex justify-content-end border-top pt-2 mt-2" id="products-total-row" style="display:none;">
+                        <span class="small text-muted me-2">Products subtotal:</span>
+                        <span class="small fw-semibold" id="products-subtotal">£0.00</span>
+                    </div>
+                    <div class="d-flex justify-content-end mt-1" id="grand-total-row" style="display:none;">
+                        <span class="small text-muted me-2">Invoice total:</span>
+                        <span class="fw-bold" id="grand-total">£0.00</span>
+                    </div>
+                    <p class="text-muted small mb-0 mt-2">
+                        Product line items can only be added when invoicing a specific member — stock is deducted
+                        the moment the invoice is created, and the invoice is rejected if there isn't enough left.
+                    </p>
+                </div>
+            </div>
+
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-dark">Create invoice</button>
                 <a href="{% url 'invoice_list' org_slug=org.slug %}" class="btn btn-outline-secondary">Cancel</a>
@@ -81,16 +109,121 @@
         </form>
     </div>
 </div>
+
+<template id="product-row-template">
+    <div class="row g-2 align-items-start mb-2 product-row">
+        <div class="col-sm-6">
+            <select name="item_variant_id" class="form-select form-select-sm variant-select">
+                <option value="">— select product / size —</option>
+                {% for product in products %}
+                {% for variant in product.variants.all %}
+                {% if variant.is_active %}
+                <option value="{{ variant.pk }}" data-price="{{ variant.price }}" data-stock="{{ variant.quantity_in_stock }}">
+                    {{ product.name }} — {{ variant.size }} (£{{ variant.price }}, {{ variant.quantity_in_stock }} in stock)
+                </option>
+                {% endif %}
+                {% endfor %}
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-sm-3">
+            <input type="number" name="item_quantity" class="form-control form-control-sm item-qty" min="1" value="1">
+            <div class="form-text stock-hint"></div>
+        </div>
+        <div class="col-sm-2">
+            <div class="form-control-plaintext form-control-sm small fw-semibold line-total">£0.00</div>
+        </div>
+        <div class="col-sm-1">
+            <button type="button" class="btn btn-sm btn-outline-danger remove-product-row"><i class="bi bi-x"></i></button>
+        </div>
+    </div>
+</template>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
+function updateTargetUI() {
+    const one = document.getElementById('target-one').checked;
+    document.getElementById('member-select').classList.toggle('d-none', !one);
+    document.getElementById('all-members-info').classList.toggle('d-none', one);
+    document.getElementById('products-card').classList.toggle('d-none', !one);
+    if (!one) {
+        document.getElementById('product-rows').innerHTML = '';
+        updateTotals();
+    }
+}
 document.querySelectorAll('[name="target"]').forEach(radio => {
-    radio.addEventListener('change', () => {
-        const one = document.getElementById('target-one').checked;
-        document.getElementById('member-select').classList.toggle('d-none', !one);
-        document.getElementById('all-members-info').classList.toggle('d-none', one);
+    radio.addEventListener('change', updateTargetUI);
+});
+updateTargetUI();
+
+const rowsContainer = document.getElementById('product-rows');
+const rowTemplate = document.getElementById('product-row-template');
+
+function currency(n) {
+    return '£' + (Math.round(n * 100) / 100).toFixed(2);
+}
+
+function updateTotals() {
+    let productsTotal = 0;
+    rowsContainer.querySelectorAll('.product-row').forEach(row => {
+        const select = row.querySelector('.variant-select');
+        const qtyInput = row.querySelector('.item-qty');
+        const opt = select.options[select.selectedIndex];
+        const price = opt ? parseFloat(opt.dataset.price || '0') : 0;
+        const stock = opt ? parseInt(opt.dataset.stock || '0', 10) : 0;
+        const qty = parseInt(qtyInput.value || '0', 10) || 0;
+        const lineTotal = select.value ? price * qty : 0;
+        row.querySelector('.line-total').textContent = currency(lineTotal);
+
+        const hint = row.querySelector('.stock-hint');
+        if (select.value) {
+            qtyInput.max = stock;
+            if (qty > stock) {
+                hint.textContent = `Only ${stock} in stock`;
+                hint.classList.add('text-danger');
+                hint.classList.remove('text-muted');
+            } else {
+                hint.textContent = `${stock} in stock`;
+                hint.classList.remove('text-danger');
+                hint.classList.add('text-muted');
+            }
+        } else {
+            hint.textContent = '';
+        }
+        productsTotal += lineTotal;
     });
+
+    const baseAmount = parseFloat(document.getElementById('base-amount').value || '0') || 0;
+    const hasRows = rowsContainer.querySelectorAll('.product-row').length > 0;
+    document.getElementById('products-total-row').style.display = hasRows ? '' : 'none';
+    document.getElementById('grand-total-row').style.display = hasRows ? '' : 'none';
+    document.getElementById('products-subtotal').textContent = currency(productsTotal);
+    document.getElementById('grand-total').textContent = currency(productsTotal + baseAmount);
+}
+
+function addProductRow() {
+    const clone = rowTemplate.content.cloneNode(true);
+    const row = clone.querySelector('.product-row');
+    row.querySelector('.variant-select').addEventListener('change', updateTotals);
+    row.querySelector('.item-qty').addEventListener('input', updateTotals);
+    row.querySelector('.remove-product-row').addEventListener('click', () => {
+        row.remove();
+        updateTotals();
+    });
+    rowsContainer.appendChild(clone);
+    updateTotals();
+}
+
+document.getElementById('add-product-row').addEventListener('click', addProductRow);
+document.getElementById('base-amount').addEventListener('input', updateTotals);
+
+document.querySelector('form').addEventListener('submit', (e) => {
+    const overSold = Array.from(rowsContainer.querySelectorAll('.stock-hint.text-danger'));
+    if (overSold.length) {
+        e.preventDefault();
+        alert('One or more products exceed available stock. Reduce the quantity before saving.');
+    }
 });
 </script>
 {% endblock %}

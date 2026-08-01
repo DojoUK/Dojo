@@ -1,6 +1,8 @@
+from decimal import Decimal, InvalidOperation
 from datetime import date, datetime, timezone
 
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
@@ -8,8 +10,17 @@ from django.views.generic import DetailView, ListView
 
 from dojo.mixins import OrgAdminMixin
 from members.models import Member
+from inventory.models import Product, ProductVariant, StockMovement
 
-from .models import Invoice, Payment, BillingPolicy, OrgTerm, PolicyDiscount, MemberDiscount
+from .models import Invoice, InvoiceItem, Payment, BillingPolicy, OrgTerm, PolicyDiscount, MemberDiscount
+
+
+class InsufficientStockError(Exception):
+    """Raised inside an invoice-creation transaction to abort it and roll back any writes
+    made so far when one or more product line items can't be fully stocked."""
+    def __init__(self, errors):
+        self.errors = errors
+        super().__init__('; '.join(errors))
 
 
 class InvoiceListView(OrgAdminMixin, ListView):
@@ -44,19 +55,58 @@ class InvoiceListView(OrgAdminMixin, ListView):
 
 
 class InvoiceCreateView(OrgAdminMixin, View):
-    def get(self, request, org_slug):
+    def _products_context(self):
+        products = (
+            Product.objects.filter(organisation=self.org, is_active=True)
+            .prefetch_related('variants')
+            .order_by('name')
+        )
+        return products
+
+    def _render_form(self, request, **extra):
         members = Member.objects.filter(organisation=self.org, is_active=True).order_by('name')
-        return render(request, 'billing/create.html', {
+        context = {
             'org': self.org,
             'org_membership': self.org_membership,
             'members': members,
             'today': date.today().isoformat(),
             'payment_methods': Payment.Method.choices,
-        })
+            'products': self._products_context(),
+        }
+        context.update(extra)
+        return render(request, 'billing/create.html', context)
+
+    def get(self, request, org_slug):
+        return self._render_form(request)
+
+    def _parse_items(self, request, errors):
+        """Read the product-line-item rows from POST. Returns a list of (ProductVariant, quantity)."""
+        variant_ids = request.POST.getlist('item_variant_id')
+        quantities = request.POST.getlist('item_quantity')
+        item_rows = []
+        for variant_id_raw, quantity_raw in zip(variant_ids, quantities):
+            variant_id_raw = variant_id_raw.strip()
+            quantity_raw = quantity_raw.strip()
+            if not variant_id_raw:
+                continue
+            try:
+                quantity = int(quantity_raw)
+            except ValueError:
+                errors.append('Product quantities must be whole numbers.')
+                continue
+            if quantity <= 0:
+                continue
+            try:
+                variant = ProductVariant.objects.select_related('product').get(
+                    pk=variant_id_raw, product__organisation=self.org,
+                )
+            except ProductVariant.DoesNotExist:
+                errors.append('One of the selected products could not be found.')
+                continue
+            item_rows.append((variant, quantity))
+        return item_rows
 
     def post(self, request, org_slug):
-        members = Member.objects.filter(organisation=self.org, is_active=True).order_by('name')
-
         target = request.POST.get('target', 'one')
         member_ids = request.POST.getlist('member_ids') if target == 'all' else [request.POST.get('member_id')]
         amount = request.POST.get('amount', '').strip()
@@ -65,49 +115,123 @@ class InvoiceCreateView(OrgAdminMixin, View):
         notes = request.POST.get('notes', '').strip()
 
         errors = []
-        if not amount:
-            errors.append('Amount is required.')
+        item_rows = self._parse_items(request, errors)
+
+        if not amount and not item_rows:
+            errors.append('Enter an amount, add at least one product, or both.')
         if not period:
             errors.append('Period is required.')
         if not due_date_raw:
             errors.append('Due date is required.')
         if not member_ids or not any(member_ids):
             errors.append('Select at least one member.')
+        if item_rows and target == 'all':
+            errors.append(
+                'Product line items can only be added when invoicing a single specific member — '
+                'switch to "Specific member" or create separate invoices for product sales.'
+            )
+
+        try:
+            base_amount = Decimal(amount) if amount else Decimal('0')
+            if base_amount < 0:
+                errors.append('Amount can\'t be negative.')
+        except (InvalidOperation, ValueError):
+            errors.append('Invalid amount.')
+            base_amount = Decimal('0')
 
         if errors:
             for e in errors:
                 messages.error(request, e)
-            return render(request, 'billing/create.html', {
-                'org': self.org,
-                'org_membership': self.org_membership,
-                'members': members,
-                'today': date.today().isoformat(),
-                'payment_methods': Payment.Method.choices,
-            })
+            return self._render_form(request)
 
         try:
             due_date = date.fromisoformat(due_date_raw)
         except ValueError:
             messages.error(request, 'Invalid due date.')
-            return redirect('invoice_create', org_slug=self.org.slug)
+            return self._render_form(request)
 
         if target == 'all':
-            selected_members = Member.objects.filter(organisation=self.org, is_active=True)
+            selected_members = list(Member.objects.filter(organisation=self.org, is_active=True))
         else:
-            selected_members = Member.objects.filter(pk__in=[m for m in member_ids if m], organisation=self.org)
-
-        created = 0
-        for member in selected_members:
-            Invoice.objects.create(
-                organisation=self.org,
-                member=member,
-                amount=amount,
-                period=period,
-                due_date=due_date,
-                notes=notes,
+            selected_members = list(
+                Member.objects.filter(pk__in=[m for m in member_ids if m], organisation=self.org)
             )
-            created += 1
 
+        if not selected_members:
+            messages.error(request, 'No matching members found.')
+            return self._render_form(request)
+
+        try:
+            with transaction.atomic():
+                # Lock every distinct variant involved, in a stable order, so two concurrent
+                # invoices can't both read the same stock level and both succeed when only
+                # one has enough stock.
+                variant_ids = sorted({variant.pk for variant, _ in item_rows})
+                locked_variants = {
+                    v.pk: v for v in ProductVariant.objects.select_for_update().filter(pk__in=variant_ids)
+                }
+
+                stock_errors = []
+                for variant, quantity in item_rows:
+                    locked = locked_variants[variant.pk]
+                    if quantity > locked.quantity_in_stock:
+                        stock_errors.append(
+                            f'Not enough stock for {locked.product.name} ({locked.size}): '
+                            f'requested {quantity}, only {locked.quantity_in_stock} available.'
+                        )
+                if stock_errors:
+                    raise InsufficientStockError(stock_errors)
+
+                # Use the freshly-locked price (not the value read before locking) so the
+                # invoice total always matches the sum of its line items exactly.
+                items_total = sum(
+                    (locked_variants[variant.pk].price * quantity for variant, quantity in item_rows),
+                    Decimal('0'),
+                )
+
+                invoice = Invoice.objects.create(
+                    organisation=self.org,
+                    member=selected_members[0],
+                    amount=base_amount + items_total,
+                    period=period,
+                    due_date=due_date,
+                    notes=notes,
+                )
+                for variant, quantity in item_rows:
+                    locked = locked_variants[variant.pk]
+                    InvoiceItem.objects.create(
+                        invoice=invoice,
+                        variant=locked,
+                        quantity=quantity,
+                        unit_price=locked.price,
+                    )
+                    locked.adjust_stock(
+                        -quantity,
+                        reason=StockMovement.Reason.SALE,
+                        invoice=invoice,
+                        notes=f'Sold on invoice #{invoice.pk}',
+                        user=request.user,
+                    )
+                created_invoices = [invoice]
+
+                # Remaining selected members (only reachable when there are no product items,
+                # since 'all' + products is rejected above) each get their own plain invoice.
+                for member in selected_members[1:]:
+                    created_invoices.append(Invoice.objects.create(
+                        organisation=self.org,
+                        member=member,
+                        amount=base_amount,
+                        period=period,
+                        due_date=due_date,
+                        notes=notes,
+                    ))
+        except InsufficientStockError as e:
+            for msg in e.errors:
+                messages.error(request, msg)
+            messages.error(request, 'No invoice was created — fix the stock issue above and try again.')
+            return self._render_form(request)
+
+        created = len(created_invoices)
         messages.success(request, f'{created} invoice{"s" if created != 1 else ""} created.')
         return redirect('invoice_list', org_slug=self.org.slug)
 
