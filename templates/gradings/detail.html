@@ -1,0 +1,105 @@
+{% extends 'org/base.html' %}
+
+{% block title %}{{ grading.name }}{% endblock %}
+{% block page_title %}{{ grading.name }}{% endblock %}
+{% block page_subtitle %}{{ grading.description }}{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'grading_list' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Gradings
+</a>
+{% endblock %}
+
+{% block main_content %}
+<div class="row g-4">
+    <div class="col-lg-8">
+
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Grading sessions</h6>
+                <div class="text-muted small mt-1">Each session has its own judoka roster — name it, add a date, then open it to add who's grading. Multiple sessions can share the same date.</div>
+            </div>
+            <div class="card-body border-bottom bg-light">
+                <form method="post" action="{% url 'grading_session_add' org_slug=org.slug pk=grading.pk %}" class="d-flex gap-2 align-items-center">
+                    {% csrf_token %}
+                    <input type="text" name="name" class="form-control form-control-sm" placeholder="Session name (optional, e.g. Morning)">
+                    <input type="date" name="date" class="form-control form-control-sm" required>
+                    <input type="text" name="notes" class="form-control form-control-sm" placeholder="Notes (optional)">
+                    <button type="submit" class="btn btn-sm btn-dark text-nowrap">Add session</button>
+                </form>
+            </div>
+
+            {% if sessions %}
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <tbody>
+                        {% for session in sessions %}
+                        <tr>
+                            <td class="ps-3 py-3">
+                                <a href="{% url 'grading_session_detail' org_slug=org.slug pk=grading.pk session_pk=session.pk %}" class="text-decoration-none fw-semibold">
+                                    {{ session.display_name }}
+                                </a>
+                                <span class="text-muted small">{{ session.date|date:"D d M Y" }}</span>
+                                {% if session.is_cancelled %}
+                                <span class="badge bg-danger-subtle text-danger ms-1" style="font-size:0.6rem;">Cancelled</span>
+                                {% endif %}
+                                {% if session.notes %}
+                                <div class="text-muted small">{{ session.notes|truncatechars:60 }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="text-muted small py-3 text-end pe-3">
+                                <div class="d-flex align-items-center justify-content-end gap-2">
+                                    {% with count=session.attendance.count %}
+                                    {% if count %}<span>{{ count }} enrolled</span>{% endif %}
+                                    {% endwith %}
+                                    <a href="{% url 'grading_session_detail' org_slug=org.slug pk=grading.pk session_pk=session.pk %}" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:0.7rem;">
+                                        Open
+                                    </a>
+                                    <form method="post" action="{% url 'grading_session_cancel' org_slug=org.slug pk=grading.pk session_pk=session.pk %}">
+                                        {% csrf_token %}
+                                        {% if not session.is_cancelled %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2"
+                                                style="font-size:0.7rem;"
+                                                onclick="return confirm('Cancel this grading session?')">
+                                            Cancel
+                                        </button>
+                                        {% else %}
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary py-0 px-2"
+                                                style="font-size:0.7rem;">
+                                            Reinstate
+                                        </button>
+                                        {% endif %}
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+                {% if grading.sessions.count > 15 %}
+                <div class="card-footer bg-white border-top text-center">
+                    <span class="text-muted small">Showing 15 most recent of {{ grading.sessions.count }}</span>
+                </div>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="card-body">
+                <p class="text-muted small mb-0">No grading sessions yet — add a date above to get started.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if grading.description %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Description</h6>
+            </div>
+            <div class="card-body small">{{ grading.description }}</div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

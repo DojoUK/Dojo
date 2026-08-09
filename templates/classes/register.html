@@ -10,9 +10,15 @@
        target="_blank" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-printer me-1"></i> Print register
     </a>
+    {% if request.user.is_superuser or org_membership and org_membership.role == 'org_admin' %}
     <a href="{% url 'class_detail' org_slug=org.slug pk=cls.pk %}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i> Back to {{ cls.name }}
     </a>
+    {% else %}
+    <a href="{% url 'coach_class_detail' org_slug=org.slug pk=cls.pk %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Back to {{ cls.name }}
+    </a>
+    {% endif %}
 </div>
 {% endblock %}
 
@@ -66,6 +72,16 @@
                                             <i class="bi bi-heart-pulse-fill"></i> Medical info
                                         </button>
                                         {% endif %}
+                                        {% if cm.member.emergency_contact_phone or cm.member.emergency_contact_2_phone %}
+                                        <button type="button"
+                                                class="badge bg-info text-dark border-0 d-flex align-items-center gap-1"
+                                                style="font-size:0.65rem;cursor:pointer;"
+                                                data-bs-toggle="collapse"
+                                                data-bs-target="#emg{{ cm.member.pk }}"
+                                                onclick="event.stopPropagation()">
+                                            <i class="bi bi-telephone-fill"></i> Emergency contact
+                                        </button>
+                                        {% endif %}
                                         {% if cm.member.pk in unsigned_waiver_ids %}
                                         <span class="badge bg-danger d-flex align-items-center gap-1" style="font-size:0.65rem;">
                                             <i class="bi bi-exclamation-triangle-fill"></i> No waiver
@@ -76,6 +92,22 @@
                                     <div class="collapse mt-2" id="med{{ cm.member.pk }}" onclick="event.stopPropagation()">
                                         <div class="p-2 rounded small" style="background:#fef9c3;border:1px solid #fde68a;color:#78350f;white-space:pre-line;">
                                             <i class="bi bi-heart-pulse-fill me-1"></i>{{ cm.member.medical_info }}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    {% if cm.member.emergency_contact_phone or cm.member.emergency_contact_2_phone %}
+                                    <div class="collapse mt-2" id="emg{{ cm.member.pk }}" onclick="event.stopPropagation()">
+                                        <div class="p-2 rounded small" style="background:#e0f2fe;border:1px solid #bae6fd;color:#075985;">
+                                            {% if cm.member.emergency_contact_name or cm.member.emergency_contact_phone %}
+                                            <div>
+                                                <i class="bi bi-telephone-fill me-1"></i>{{ cm.member.emergency_contact_name|default:"Contact 1" }}{% if cm.member.emergency_contact_phone %}: {{ cm.member.emergency_contact_phone }}{% endif %}
+                                            </div>
+                                            {% endif %}
+                                            {% if cm.member.emergency_contact_2_name or cm.member.emergency_contact_2_phone %}
+                                            <div>
+                                                <i class="bi bi-telephone-fill me-1"></i>{{ cm.member.emergency_contact_2_name|default:"Contact 2" }}{% if cm.member.emergency_contact_2_phone %}: {{ cm.member.emergency_contact_2_phone }}{% endif %}
+                                            </div>
+                                            {% endif %}
                                         </div>
                                     </div>
                                     {% endif %}
@@ -97,6 +129,14 @@
                 </div>
                 {% endif %}
             </div>
+
+            {% if coaches_on_holiday %}
+            <div class="alert alert-warning py-2 small mb-3">
+                <i class="bi bi-airplane me-1"></i>
+                On holiday for this date, hidden from the register below:
+                {% for cc in coaches_on_holiday %}{{ cc.user.get_full_name|default:cc.user.username }}{% if not forloop.last %}, {% endif %}{% endfor %}
+            </div>
+            {% endif %}
 
             {% if coaches %}
             <div class="card border-0 shadow-sm mb-3">

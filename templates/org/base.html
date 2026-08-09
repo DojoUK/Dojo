@@ -188,6 +188,11 @@
                     <i class="bi bi-speedometer2"></i> Dashboard
                 </a>
             </li>
+            <li>
+                <a href="{% url 'grading_list' org_slug=org.slug %}" class="{% if 'grading' in url_name %}active{% endif %}">
+                    <i class="bi bi-award"></i> Gradings
+                </a>
+            </li>
         </ul>
     </div>
 
@@ -293,6 +298,11 @@
         <li>
             <a href="{% url 'coach_class_list' org_slug=org.slug %}" class="{% if 'coach_class' in url_name or 'session' in url_name %}active{% endif %}">
                 <i class="bi bi-calendar-week"></i> My classes
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'org_calendar' org_slug=org.slug %}" class="{% if url_name == 'org_calendar' %}active{% endif %}">
+                <i class="bi bi-calendar3"></i> Calendar
             </a>
         </li>
     </ul>

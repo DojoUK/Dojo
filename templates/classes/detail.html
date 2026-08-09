@@ -68,7 +68,8 @@
                             <td class="ps-3 py-2">
                                 <a href="{% url 'member_detail' org_slug=org.slug pk=member.pk %}" class="text-decoration-none fw-semibold">{{ member.name }}</a>
                             </td>
-                            <td class="text-muted small py-2">{{ member.email|default:"" }}</td>
+                            <td class="text-muted small py-2">{{ member.emergency_contact_phone|default:"" }}</td>
+                            <td class="text-muted small py-2">{{ member.emergency_contact_2_phone|default:"" }}</td>
                             <td class="text-end pe-3 py-2">
                                 <form method="post" action="{% url 'class_unenrol' org_slug=org.slug pk=cls.pk member_pk=member.pk %}" class="d-inline">
                                     {% csrf_token %}
@@ -133,10 +134,9 @@
                     {% csrf_token %}
                     <span class="small text-muted text-nowrap">Generate next</span>
                     <select name="weeks" class="form-select form-select-sm" style="width: auto;">
-                        <option value="4">4 weeks</option>
-                        <option value="8" selected>8 weeks</option>
-                        <option value="12">12 weeks</option>
-                        <option value="26">26 weeks</option>
+                        <option value="5">5 weeks</option>
+                        <option value="6" selected>6 weeks</option>
+                        <option value="7">7 weeks</option>
                     </select>
                     <button type="submit" class="btn btn-sm btn-dark text-nowrap">Generate</button>
                 </form>
@@ -161,7 +161,7 @@
                             </td>
                             <td class="text-muted small py-2 text-end pe-3">
                                 <div class="d-flex align-items-center justify-content-end gap-2">
-                                    {% with count=session.attendance.count coach_count=session.session_coaches.count %}
+                                    {% with count=session.present_count coach_count=session.session_coaches.count %}
                                     {% if count %}<span>{{ count }} recorded</span>{% endif %}
                                     {% if coach_count %}<span title="Coaches recorded"><i class="bi bi-person-badge"></i> {{ coach_count }}</span>{% endif %}
                                     {% endwith %}

@@ -1,0 +1,80 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Gradings{% endblock %}
+{% block page_title %}Gradings{% endblock %}
+{% block page_subtitle %}{{ gradings|length }} grading{{ gradings|length|pluralize }}{% endblock %}
+
+{% block page_actions %}
+<button class="btn btn-dark btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#add-grading-form">
+    <i class="bi bi-plus-lg me-1"></i> Add grading
+</button>
+{% endblock %}
+
+{% block main_content %}
+
+<div class="collapse mb-4" id="add-grading-form">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-3">
+            <h6 class="mb-0">Add grading</h6>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <label class="form-label fw-semibold small">Name</label>
+                        <input type="text" name="name" class="form-control" placeholder="e.g. Summer grading 2026" autofocus>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label fw-semibold small">Description (optional)</label>
+                        <input type="text" name="description" class="form-control">
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-dark">Create</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% if gradings %}
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3 small fw-semibold">Name</th>
+                    <th class="small fw-semibold">Description</th>
+                    <th class="small fw-semibold">Sessions</th>
+                    <th class="small fw-semibold">Judoka</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for grading in gradings %}
+                <tr>
+                    <td class="ps-3">
+                        <a href="{% url 'grading_detail' org_slug=org.slug pk=grading.pk %}" class="fw-semibold text-decoration-none">{{ grading.name }}</a>
+                    </td>
+                    <td class="small text-muted">{{ grading.description|default:"—"|truncatechars:60 }}</td>
+                    <td class="small text-muted">{{ grading.sessions_count }}</td>
+                    <td class="small text-muted">{{ grading.judoka_count }}</td>
+                    <td class="text-end pe-3">
+                        <a href="{% url 'grading_detail' org_slug=org.slug pk=grading.pk %}" class="btn btn-sm btn-outline-secondary">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-award fs-2 d-block mb-2 text-secondary"></i>
+    No gradings yet. Use "Add grading" above to set one up.
+</div>
+{% endif %}
+{% endblock %}

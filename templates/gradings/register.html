@@ -1,0 +1,142 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Grading register{% endblock %}
+{% block page_title %}Grading register{% endblock %}
+{% block page_subtitle %}{{ grading.name }} &mdash; {{ session.display_name }} &mdash; {{ session.date|date:"l d M Y" }}{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'grading_session_detail' org_slug=org.slug pk=grading.pk session_pk=session.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Back to session
+</a>
+{% endblock %}
+
+{% block main_content %}
+<div class="row">
+    <div class="col-lg-9">
+
+        {% if session.is_cancelled %}
+        <div class="alert alert-warning">This grading session is marked as cancelled.</div>
+        {% endif %}
+
+        <div class="alert alert-info small">
+            <i class="bi bi-info-circle me-1"></i>
+            Mark who attended, then pick a new belt for anyone who passed. Saving immediately records the promotion
+            against the member's grade history — leave "No change" for judoka who didn't grade up this time.
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Judoka
+                        <span class="text-muted fw-normal small ms-1">{{ rows|length }} in this grading</span>
+                    </h6>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="mark-all">Mark all present</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="clear-all">Clear all</button>
+                    </div>
+                </div>
+
+                {% if rows %}
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3 small fw-semibold" style="width:40px;"></th>
+                                <th class="small fw-semibold">Name</th>
+                                <th class="small fw-semibold">Current grade</th>
+                                <th class="small fw-semibold">New grade</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in rows %}
+                            <tr>
+                                <td class="ps-3 py-3">
+                                    <input class="form-check-input attendance-check" type="checkbox"
+                                           name="present" value="{{ row.member.pk }}"
+                                           id="m{{ row.member.pk }}"
+                                           {% if row.present %}checked{% endif %}>
+                                </td>
+                                <td class="py-3">
+                                    <label class="form-check-label fw-semibold mb-0" for="m{{ row.member.pk }}" style="cursor:pointer;">
+                                        {{ row.member.name }}
+                                    </label>
+                                </td>
+                                <td class="py-3 small text-muted">
+                                    {% if row.current_grade %}{{ row.current_grade.stage.name }}{% else %}—{% endif %}
+                                </td>
+                                <td class="py-3">
+                                    <select name="stage_{{ row.member.pk }}" class="form-select form-select-sm">
+                                        <option value="">No change</option>
+                                        {% for system in systems %}
+                                        <optgroup label="{{ system.name }}">
+                                            {% for stage in system.stages.all %}
+                                            <option value="{{ stage.pk }}" {% if row.selected_stage_id == stage.pk %}selected{% endif %}>{{ stage.name }}</option>
+                                            {% endfor %}
+                                        </optgroup>
+                                        {% endfor %}
+                                    </select>
+                                    {% if row.awarded_stage %}
+                                    <div class="text-success small mt-1"><i class="bi bi-check-circle-fill me-1"></i>Promoted to {{ row.awarded_stage.name }}</div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+                {% else %}
+                <div class="card-body">
+                    <p class="text-muted small mb-0">No judoka enrolled in this session yet — add some from the session page.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h6 class="mb-0">Session notes <span class="text-muted fw-normal small">(optional)</span></h6>
+                </div>
+                <div class="card-body">
+                    <textarea name="notes" class="form-control" rows="3" placeholder="Any notes about this grading…">{{ session.notes }}</textarea>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 align-items-center">
+                <button type="submit" class="btn btn-dark">
+                    <i class="bi bi-check2 me-1"></i> Save grading
+                </button>
+                <span class="text-muted small" id="present-count"></span>
+            </div>
+        </form>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function updateCount() {
+    const total = document.querySelectorAll('.attendance-check').length;
+    const checked = document.querySelectorAll('.attendance-check:checked').length;
+    document.getElementById('present-count').textContent = `${checked} of ${total} present`;
+}
+
+document.querySelectorAll('.attendance-check').forEach(cb => {
+    cb.addEventListener('change', updateCount);
+});
+
+document.getElementById('mark-all').addEventListener('click', () => {
+    document.querySelectorAll('.attendance-check').forEach(cb => { cb.checked = true; });
+    updateCount();
+});
+
+document.getElementById('clear-all').addEventListener('click', () => {
+    document.querySelectorAll('.attendance-check').forEach(cb => { cb.checked = false; });
+    updateCount();
+});
+
+updateCount();
+</script>
+{% endblock %}

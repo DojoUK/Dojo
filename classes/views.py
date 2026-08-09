@@ -16,6 +16,35 @@ DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sun
 DAYS_JSON = json.dumps(DAYS)
 
 
+def _coaches_and_holiday_split(assigned_class, on_date):
+    """
+    Split the coaches assigned to a class into those available for a given
+    session date and those excluded because they're on holiday that date.
+
+    Returns (available_coaches_qs, excluded_coaches_list) — the excluded list
+    holds ClassCoach instances so callers can show who's away and why.
+    """
+    from organisations.models import StaffHoliday
+
+    all_coaches = (
+        ClassCoach.objects.filter(assigned_class=assigned_class)
+        .select_related('user')
+        .order_by('user__first_name', 'user__last_name')
+    )
+    holiday_user_ids = set(
+        StaffHoliday.objects.filter(
+            member__organisation=assigned_class.organisation,
+            start_date__lte=on_date,
+            end_date__gte=on_date,
+        ).values_list('member__user_id', flat=True)
+    )
+    if not holiday_user_ids:
+        return all_coaches, []
+    available = all_coaches.exclude(user_id__in=holiday_user_ids)
+    excluded = [cc for cc in all_coaches if cc.user_id in holiday_user_ids]
+    return available, excluded
+
+
 def _class_form_class(org=None):
     from django import forms
     from billing.models import BillingPolicy
@@ -145,16 +174,31 @@ class ClassDetailView(OrgAdminMixin, DetailView):
             .exclude(pk__in=enrolled_ids)
             .order_by('name')
         )
-        coaches = self.object.coaches.select_related('user')
-        coach_user_ids = coaches.values_list('user_id', flat=True)
-        context['coaches'] = coaches
+        coaches = list(self.object.coaches.select_related('user').order_by(
+            'user__first_name', 'user__last_name', 'user__username'
+        ))
+        coach_user_ids = [c.user_id for c in coaches]
         from organisations.models import OrganisationMember
+        om_by_user_id = {
+            om.user_id: om
+            for om in OrganisationMember.objects.filter(
+                organisation=self.org, user_id__in=coach_user_ids
+            )
+        }
+        for c in coaches:
+            om = om_by_user_id.get(c.user_id)
+            c.emergency_contact_name = om.emergency_contact_name if om else ''
+            c.emergency_contact_phone = om.emergency_contact_phone if om else ''
+        context['coaches'] = coaches
         context['available_coaches'] = (
             OrganisationMember.objects.filter(organisation=self.org)
             .exclude(user_id__in=coach_user_ids)
             .select_related('user')
         )
-        context['sessions'] = self.object.sessions.order_by('-date')[:10]
+        from django.db.models import Count, Q
+        context['sessions'] = self.object.sessions.annotate(
+            present_count=Count('attendance', filter=Q(attendance__present=True))
+        ).order_by('-date')[:10]
         context['days'] = DAYS
         context['waiting_list'] = self.object.waiting_list.select_related('member')
         return context
@@ -287,7 +331,7 @@ class AttendanceRegisterView(ClassCoachMixin, View):
         )
         return set(member_ids) - signed_ids
 
-    def _render(self, request, session, enrolled, present_ids, coaches, present_coach_ids, notes):
+    def _render(self, request, session, enrolled, present_ids, coaches, present_coach_ids, notes, coaches_on_holiday=None):
         return render(request, 'classes/register.html', {
             'org': self.org,
             'org_membership': self.org_membership,
@@ -299,6 +343,7 @@ class AttendanceRegisterView(ClassCoachMixin, View):
             'present_coach_ids': present_coach_ids,
             'unsigned_waiver_ids': self._unsigned_waiver_ids(enrolled),
             'notes': notes,
+            'coaches_on_holiday': coaches_on_holiday or [],
         })
 
     def get(self, request, org_slug, pk, session_pk):
@@ -312,28 +357,24 @@ class AttendanceRegisterView(ClassCoachMixin, View):
             Attendance.objects.filter(session=session, present=True)
             .values_list('member_id', flat=True)
         )
-        coaches = (
-            ClassCoach.objects.filter(assigned_class=self.assigned_class)
-            .select_related('user')
-            .order_by('user__first_name', 'user__last_name')
-        )
+        coaches, coaches_on_holiday = _coaches_and_holiday_split(self.assigned_class, session.date)
         present_coach_ids = set(
             SessionCoach.objects.filter(session=session, present=True)
             .values_list('coach_id', flat=True)
         )
-        return self._render(request, session, enrolled, present_ids, coaches, present_coach_ids, session.notes)
+        return self._render(request, session, enrolled, present_ids, coaches, present_coach_ids, session.notes, coaches_on_holiday)
 
     def post(self, request, org_slug, pk, session_pk):
         session = self._get_session(session_pk)
         enrolled = ClassMember.objects.filter(assigned_class=self.assigned_class).select_related('member')
         present_ids = {int(x) for x in request.POST.getlist('present')}
-        coaches = ClassCoach.objects.filter(assigned_class=self.assigned_class).select_related('user')
+        coaches, coaches_on_holiday = _coaches_and_holiday_split(self.assigned_class, session.date)
         coach_present_ids = {int(x) for x in request.POST.getlist('coach_present')}
         notes = request.POST.get('notes', session.notes)
 
         if coaches.exists() and not coach_present_ids:
             messages.error(request, 'At least one coach must be marked present to save the register.')
-            return self._render(request, session, enrolled, present_ids, coaches, coach_present_ids, notes)
+            return self._render(request, session, enrolled, present_ids, coaches, coach_present_ids, notes, coaches_on_holiday)
 
         for cm in enrolled:
             Attendance.objects.update_or_create(
@@ -426,11 +467,7 @@ class PrintRegisterView(ClassCoachMixin, View):
         present_ids = set(
             session.attendance.filter(present=True).values_list('member_id', flat=True)
         )
-        coaches = (
-            ClassCoach.objects.filter(assigned_class=self.assigned_class)
-            .select_related('user')
-            .order_by('user__first_name', 'user__last_name')
-        )
+        coaches, coaches_on_holiday = _coaches_and_holiday_split(self.assigned_class, session.date)
         present_coach_ids = set(
             session.session_coaches.filter(present=True).values_list('coach_id', flat=True)
         )
