@@ -49,12 +49,36 @@ class OrganisationMember(models.Model):
     dbs_expiry = models.DateField(null=True, blank=True)
     coaching_licence = models.CharField(max_length=100, blank=True)
     coaching_licence_expiry = models.DateField(null=True, blank=True)
+    emergency_contact_name = models.CharField(max_length=255, blank=True)
+    emergency_contact_phone = models.CharField(max_length=30, blank=True)
 
     def __str__(self):
         return f"{self.user.get_full_name() or self.user.username} — {self.organisation} ({self.get_role_display()})"
 
     class Meta:
         unique_together = ('user', 'organisation')
+
+
+class StaffHoliday(models.Model):
+    """
+    A period during which a staff member (coach or admin) is away.
+
+    Used to show holidays on the org calendar and to exclude the coach from
+    the auto-populated coach list on the class register for sessions that
+    fall within the holiday range.
+    """
+    member = models.ForeignKey(OrganisationMember, on_delete=models.CASCADE, related_name='holidays')
+    start_date = models.DateField()
+    end_date = models.DateField()
+    note = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        name = self.member.user.get_full_name() or self.member.user.username
+        return f"{name}: {self.start_date} – {self.end_date}"
+
+    class Meta:
+        ordering = ['-start_date']
 
 
 class Announcement(models.Model):

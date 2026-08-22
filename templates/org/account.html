@@ -18,6 +18,7 @@
             <div class="card-body">
                 <form method="post">
                     {% csrf_token %}
+                    <input type="hidden" name="action" value="update_account">
                     <div class="row g-3 mb-3">
                         <div class="col-sm-6">
                             <label class="form-label small fw-semibold">First name</label>
@@ -81,6 +82,72 @@
                 {% endfor %}
             </div>
         </div>
+
+        {# My holidays #}
+        {% if org_membership %}
+        <div class="card mb-4">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">My holidays</h6>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#add-my-holiday-form">
+                    <i class="bi bi-airplane me-1"></i> Add holiday
+                </button>
+            </div>
+
+            <div class="collapse" id="add-my-holiday-form">
+                <div class="card-body border-bottom bg-light">
+                    <p class="text-muted small mb-3">Days you're away won't show you as available on any class register or the calendar.</p>
+                    <form method="post" class="row g-2 align-items-end">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add_holiday">
+                        <div class="col-sm-4">
+                            <label class="form-label small fw-semibold">Start date</label>
+                            <input type="date" name="start_date" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label small fw-semibold">End date</label>
+                            <input type="date" name="end_date" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label small fw-semibold">Note (optional)</label>
+                            <input type="text" name="note" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-sm btn-dark">Save</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="list-group list-group-flush">
+                {% for holiday in holidays %}
+                <div class="list-group-item py-3 d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-semibold small">{{ holiday.start_date|date:"d M Y" }} – {{ holiday.end_date|date:"d M Y" }}</div>
+                        {% if holiday.note %}<div class="text-muted small">{{ holiday.note }}</div>{% endif %}
+                        {% if holiday.end_date < today %}
+                            <span class="badge bg-secondary-subtle text-secondary mt-1">Past</span>
+                        {% elif holiday.start_date <= today %}
+                            <span class="badge bg-success-subtle text-success mt-1">Current</span>
+                        {% else %}
+                            <span class="badge bg-info-subtle text-info mt-1">Upcoming</span>
+                        {% endif %}
+                    </div>
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="remove_holiday">
+                        <input type="hidden" name="holiday_pk" value="{{ holiday.pk }}">
+                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                onclick="return confirm('Remove this holiday?')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </div>
+                {% empty %}
+                <div class="list-group-item py-3 text-muted small">No holidays recorded yet.</div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
 
     </div>
 

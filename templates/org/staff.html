@@ -66,6 +66,7 @@
                     <th class="small fw-semibold">Role</th>
                     <th class="small fw-semibold">DBS</th>
                     <th class="small fw-semibold">Coaching licence</th>
+                    <th class="small fw-semibold">Emergency contact</th>
                     <th></th>
                 </tr>
             </thead>
@@ -134,6 +135,17 @@
                             <span class="text-muted">—</span>
                         {% endif %}
                     </td>
+                    <td class="py-2 small">
+                        {% if om.emergency_contact_name %}
+                            <div>{{ om.emergency_contact_name }}</div>
+                        {% endif %}
+                        {% if om.emergency_contact_phone %}
+                            <div class="text-muted" style="font-size:0.75rem;">{{ om.emergency_contact_phone }}</div>
+                        {% endif %}
+                        {% if not om.emergency_contact_name and not om.emergency_contact_phone %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
                     <td class="py-2 pe-3 text-end">
                         <div class="d-flex gap-1 justify-content-end">
                             <button class="btn btn-sm btn-outline-secondary" type="button"
@@ -156,7 +168,7 @@
                     </td>
                 </tr>
                 <tr class="collapse" id="quals-{{ om.pk }}">
-                    <td colspan="5" class="bg-light px-3 py-3">
+                    <td colspan="6" class="bg-light px-3 py-3">
                         <form method="post">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="update_qualifications">
@@ -178,6 +190,14 @@
                                     <label class="form-label small fw-semibold">Coaching licence expiry</label>
                                     <input type="date" name="coaching_licence_expiry" value="{{ om.coaching_licence_expiry|date:'Y-m-d' }}" class="form-control form-control-sm">
                                 </div>
+                                <div class="col-sm-3">
+                                    <label class="form-label small fw-semibold">Emergency contact name</label>
+                                    <input type="text" name="emergency_contact_name" value="{{ om.emergency_contact_name }}" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-sm-3">
+                                    <label class="form-label small fw-semibold">Emergency contact phone</label>
+                                    <input type="text" name="emergency_contact_phone" value="{{ om.emergency_contact_phone }}" class="form-control form-control-sm">
+                                </div>
                                 <div class="col-12">
                                     <button type="submit" class="btn btn-sm btn-dark">Save qualifications</button>
                                 </div>
@@ -191,6 +211,96 @@
         </div>
         {% else %}
         <div class="text-center text-muted py-5">No staff members yet.</div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0">Staff holidays</h6>
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#add-holiday-form">
+            <i class="bi bi-airplane me-1"></i> Add holiday
+        </button>
+    </div>
+
+    <div class="collapse" id="add-holiday-form">
+        <div class="card-body border-bottom bg-light">
+            <form method="post" class="row g-2 align-items-end">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="add_holiday">
+                <div class="col-sm-3">
+                    <label class="form-label small fw-semibold">Staff member</label>
+                    <select name="member_pk" class="form-select form-select-sm">
+                        {% for om in staff %}
+                        <option value="{{ om.pk }}">{{ om.user.get_full_name|default:om.user.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-sm-2">
+                    <label class="form-label small fw-semibold">Start date</label>
+                    <input type="date" name="start_date" class="form-control form-control-sm" required>
+                </div>
+                <div class="col-sm-2">
+                    <label class="form-label small fw-semibold">End date</label>
+                    <input type="date" name="end_date" class="form-control form-control-sm" required>
+                </div>
+                <div class="col-sm-3">
+                    <label class="form-label small fw-semibold">Note (optional)</label>
+                    <input type="text" name="note" class="form-control form-control-sm">
+                </div>
+                <div class="col-sm-2">
+                    <button type="submit" class="btn btn-sm btn-dark w-100">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card-body p-0">
+        {% if holidays %}
+        <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3 small fw-semibold">Staff member</th>
+                    <th class="small fw-semibold">Dates</th>
+                    <th class="small fw-semibold">Note</th>
+                    <th class="small fw-semibold"></th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for holiday in holidays %}
+                <tr>
+                    <td class="ps-3 py-2 small fw-semibold">{{ holiday.member.user.get_full_name|default:holiday.member.user.username }}</td>
+                    <td class="py-2 small">{{ holiday.start_date|date:"d M Y" }} – {{ holiday.end_date|date:"d M Y" }}</td>
+                    <td class="py-2 small text-muted">{{ holiday.note|default:"—" }}</td>
+                    <td class="py-2 small">
+                        {% if holiday.end_date < today %}
+                            <span class="badge bg-secondary-subtle text-secondary">Past</span>
+                        {% elif holiday.start_date <= today %}
+                            <span class="badge bg-success-subtle text-success">Current</span>
+                        {% else %}
+                            <span class="badge bg-info-subtle text-info">Upcoming</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-2 pe-3 text-end">
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="remove_holiday">
+                            <input type="hidden" name="holiday_pk" value="{{ holiday.pk }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                    onclick="return confirm('Remove this holiday?')">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4 small">No holidays recorded yet.</div>
         {% endif %}
     </div>
 </div>
