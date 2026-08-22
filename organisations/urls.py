@@ -5,6 +5,7 @@ urlpatterns = [
     path('', views.DashboardView.as_view(), name='org_dashboard'),
     path('members/', include('members.urls')),
     path('classes/', include('classes.urls')),
+    path('assessments/', include('progression.assessment_urls')),
     path('billing/', include('billing.urls')),
     path('inventory/', include('inventory.urls')),
     path('audit/', views.AuditLogView.as_view(), name='org_audit_log'),
