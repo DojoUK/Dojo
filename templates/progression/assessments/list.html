@@ -1,0 +1,80 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Assessments{% endblock %}
+{% block page_title %}Assessments{% endblock %}
+{% block page_subtitle %}{{ assessments|length }} assessment{{ assessments|length|pluralize }}{% endblock %}
+
+{% block page_actions %}
+<button class="btn btn-dark btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#add-assessment-form">
+    <i class="bi bi-plus-lg me-1"></i> Add assessment
+</button>
+{% endblock %}
+
+{% block main_content %}
+
+<div class="collapse mb-4" id="add-assessment-form">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-3">
+            <h6 class="mb-0">Add assessment</h6>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <label class="form-label fw-semibold small">Name</label>
+                        <input type="text" name="name" class="form-control" placeholder="e.g. Summer grading 2026, Exam day" autofocus>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label fw-semibold small">Description (optional)</label>
+                        <input type="text" name="description" class="form-control">
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-dark">Create</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% if assessments %}
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3 small fw-semibold">Name</th>
+                    <th class="small fw-semibold">Description</th>
+                    <th class="small fw-semibold">Sessions</th>
+                    <th class="small fw-semibold">Members</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for assessment in assessments %}
+                <tr>
+                    <td class="ps-3">
+                        <a href="{% url 'assessment_detail' org_slug=org.slug pk=assessment.pk %}" class="fw-semibold text-decoration-none">{{ assessment.name }}</a>
+                    </td>
+                    <td class="small text-muted">{{ assessment.description|default:"—"|truncatechars:60 }}</td>
+                    <td class="small text-muted">{{ assessment.sessions_count }}</td>
+                    <td class="small text-muted">{{ assessment.members_count }}</td>
+                    <td class="text-end pe-3">
+                        <a href="{% url 'assessment_detail' org_slug=org.slug pk=assessment.pk %}" class="btn btn-sm btn-outline-secondary">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-award fs-2 d-block mb-2 text-secondary"></i>
+    No assessments yet. Use "Add assessment" above to set one up — a grading, exam day, belt test, or any event where members are awarded a new stage.
+</div>
+{% endif %}
+{% endblock %}

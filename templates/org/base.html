@@ -206,8 +206,13 @@
             </a>
         </li>
         <li>
-            <a href="{% url 'class_list' org_slug=org.slug %}" class="{% if 'class' in url_name or 'session' in url_name or 'coach_class' in url_name %}active{% endif %}">
+            <a href="{% url 'class_list' org_slug=org.slug %}" class="{% if 'assessment' not in url_name and 'class' in url_name or 'session' in url_name and 'assessment' not in url_name %}active{% endif %}">
                 <i class="bi bi-calendar-week"></i> Classes
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'assessment_list' org_slug=org.slug %}" class="{% if 'assessment' in url_name %}active{% endif %}">
+                <i class="bi bi-award"></i> Assessments
             </a>
         </li>
         <li>
@@ -291,8 +296,13 @@
     <div class="sidebar-section-label">My classes</div>
     <ul class="sidebar-nav">
         <li>
-            <a href="{% url 'coach_class_list' org_slug=org.slug %}" class="{% if 'coach_class' in url_name or 'session' in url_name %}active{% endif %}">
+            <a href="{% url 'coach_class_list' org_slug=org.slug %}" class="{% if 'assessment' not in url_name and 'coach_class' in url_name or 'session' in url_name and 'assessment' not in url_name %}active{% endif %}">
                 <i class="bi bi-calendar-week"></i> My classes
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'assessment_list' org_slug=org.slug %}" class="{% if 'assessment' in url_name %}active{% endif %}">
+                <i class="bi bi-award"></i> Assessments
             </a>
         </li>
     </ul>
