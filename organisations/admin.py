@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Organisation, OrganisationMember
+from .models import Organisation, OrganisationMember, StaffHoliday
 
 
 @admin.register(Organisation)
@@ -15,3 +15,10 @@ class OrganisationMemberAdmin(admin.ModelAdmin):
     list_display = ('user', 'organisation', 'role')
     list_filter = ('role', 'organisation')
     search_fields = ('user__username', 'user__first_name', 'user__last_name', 'organisation__name')
+
+
+@admin.register(StaffHoliday)
+class StaffHolidayAdmin(admin.ModelAdmin):
+    list_display = ('member', 'start_date', 'end_date', 'note')
+    list_filter = ('member__organisation',)
+    search_fields = ('member__user__username', 'member__user__first_name', 'member__user__last_name')

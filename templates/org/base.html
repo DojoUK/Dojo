@@ -295,6 +295,11 @@
                 <i class="bi bi-calendar-week"></i> My classes
             </a>
         </li>
+        <li>
+            <a href="{% url 'org_calendar' org_slug=org.slug %}" class="{% if url_name == 'org_calendar' %}active{% endif %}">
+                <i class="bi bi-calendar3"></i> Calendar
+            </a>
+        </li>
     </ul>
 
     {% endif %}

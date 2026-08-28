@@ -15,7 +15,7 @@ from django.views import View
 from django.views.generic import ListView, TemplateView
 from auditlog.models import LogEntry
 from dojo.mixins import OrgAdminMixin, OrgMixin
-from .models import Announcement, Organisation, OrganisationMember
+from .models import Announcement, Organisation, OrganisationMember, StaffHoliday
 from members.models import CustomField
 
 
@@ -347,6 +347,11 @@ class StaffListView(OrgAdminMixin, View):
             .order_by('user__first_name', 'user__username')
         )
         today = date.today()
+        holidays = (
+            StaffHoliday.objects.filter(member__organisation=self.org)
+            .select_related('member__user')
+            .order_by('-end_date')
+        )
         return render(request, 'org/staff.html', {
             'org': self.org,
             'org_membership': self.org_membership,
@@ -354,6 +359,7 @@ class StaffListView(OrgAdminMixin, View):
             'roles': OrganisationMember.Role.choices,
             'today': today,
             'thirty_days': today + timedelta(days=30),
+            'holidays': holidays,
         })
 
     def post(self, request, org_slug):
@@ -413,8 +419,47 @@ class StaffListView(OrgAdminMixin, View):
             cl_exp = request.POST.get('coaching_licence_expiry', '').strip()
             om.dbs_expiry = dbs_exp or None
             om.coaching_licence_expiry = cl_exp or None
-            om.save(update_fields=['dbs_number', 'dbs_expiry', 'coaching_licence', 'coaching_licence_expiry'])
+            om.emergency_contact_name = request.POST.get('emergency_contact_name', '').strip()
+            om.emergency_contact_phone = request.POST.get('emergency_contact_phone', '').strip()
+            om.save(update_fields=[
+                'dbs_number', 'dbs_expiry', 'coaching_licence', 'coaching_licence_expiry',
+                'emergency_contact_name', 'emergency_contact_phone',
+            ])
             messages.success(request, 'Qualifications updated.')
+
+        elif action == 'add_holiday':
+            member_pk = request.POST.get('member_pk')
+            om = get_object_or_404(OrganisationMember, pk=member_pk, organisation=self.org)
+            start_raw = request.POST.get('start_date', '').strip()
+            end_raw = request.POST.get('end_date', '').strip()
+            note = request.POST.get('note', '').strip()
+
+            if not start_raw or not end_raw:
+                messages.error(request, 'Start and end date are required.')
+                return redirect('org_staff', org_slug=self.org.slug)
+
+            try:
+                start_date = date.fromisoformat(start_raw)
+                end_date = date.fromisoformat(end_raw)
+            except ValueError:
+                messages.error(request, 'Invalid date.')
+                return redirect('org_staff', org_slug=self.org.slug)
+
+            if end_date < start_date:
+                messages.error(request, 'End date must be on or after the start date.')
+                return redirect('org_staff', org_slug=self.org.slug)
+
+            StaffHoliday.objects.create(
+                member=om, start_date=start_date, end_date=end_date, note=note,
+            )
+            name = om.user.get_full_name() or om.user.username
+            messages.success(request, f'Holiday added for {name} ({start_date:%d %b %Y} – {end_date:%d %b %Y}).')
+
+        elif action == 'remove_holiday':
+            holiday_pk = request.POST.get('holiday_pk')
+            holiday = get_object_or_404(StaffHoliday, pk=holiday_pk, member__organisation=self.org)
+            holiday.delete()
+            messages.success(request, 'Holiday removed.')
 
         return redirect('org_staff', org_slug=self.org.slug)
 
@@ -645,7 +690,8 @@ class AnnouncementListView(OrgAdminMixin, View):
         return redirect('org_announcements', org_slug=self.org.slug)
 
 
-class CalendarView(OrgAdminMixin, View):
+class CalendarView(OrgMixin, View):
+    """Any org member (coach or admin) can view the calendar."""
     def get(self, request, org_slug):
         return render(request, 'org/calendar.html', {
             'org': self.org,
@@ -690,6 +736,29 @@ class CalendarEventsView(OrgMixin, View):
                 }),
                 'color': color,
             })
+
+        from datetime import timedelta as _timedelta
+
+        holiday_qs = StaffHoliday.objects.filter(
+            member__organisation=self.org
+        ).select_related('member__user')
+        if start:
+            holiday_qs = holiday_qs.filter(end_date__gte=start[:10])
+        if end:
+            holiday_qs = holiday_qs.filter(start_date__lte=end[:10])
+
+        for holiday in holiday_qs:
+            name = holiday.member.user.get_full_name() or holiday.member.user.username
+            events.append({
+                'id': f'holiday-{holiday.pk}',
+                'title': f'{name} — holiday',
+                'start': holiday.start_date.isoformat(),
+                # FullCalendar all-day events treat `end` as exclusive, so add a day.
+                'end': (holiday.end_date + _timedelta(days=1)).isoformat(),
+                'color': '#6c757d',
+                'display': 'block',
+            })
+
         return JsonResponse(events, safe=False)
 
 
@@ -763,13 +832,62 @@ class AccountView(OrgMixin, View):
     template_name = 'org/account.html'
 
     def get(self, request, org_slug):
+        holidays = (
+            self.org_membership.holidays.all() if self.org_membership else StaffHoliday.objects.none()
+        )
         return render(request, self.template_name, {
             'org': self.org,
             'org_membership': self.org_membership,
             'memberships': request.user.organisation_memberships.select_related('organisation').order_by('organisation__name'),
+            'holidays': holidays,
+            'today': date.today(),
         })
 
     def post(self, request, org_slug):
+        action = request.POST.get('action', 'update_account')
+
+        if action == 'add_holiday':
+            if not self.org_membership:
+                messages.error(request, "You're not a staff member of this organisation.")
+                return redirect('account_settings', org_slug=self.org.slug)
+
+            start_raw = request.POST.get('start_date', '').strip()
+            end_raw = request.POST.get('end_date', '').strip()
+            note = request.POST.get('note', '').strip()
+
+            if not start_raw or not end_raw:
+                messages.error(request, 'Start and end date are required.')
+                return redirect('account_settings', org_slug=self.org.slug)
+
+            try:
+                start_date = date.fromisoformat(start_raw)
+                end_date = date.fromisoformat(end_raw)
+            except ValueError:
+                messages.error(request, 'Invalid date.')
+                return redirect('account_settings', org_slug=self.org.slug)
+
+            if end_date < start_date:
+                messages.error(request, 'End date must be on or after the start date.')
+                return redirect('account_settings', org_slug=self.org.slug)
+
+            StaffHoliday.objects.create(
+                member=self.org_membership, start_date=start_date, end_date=end_date, note=note,
+            )
+            messages.success(request, f'Holiday added ({start_date:%d %b %Y} – {end_date:%d %b %Y}).')
+            return redirect('account_settings', org_slug=self.org.slug)
+
+        elif action == 'remove_holiday':
+            if not self.org_membership:
+                messages.error(request, "You're not a staff member of this organisation.")
+                return redirect('account_settings', org_slug=self.org.slug)
+
+            holiday_pk = request.POST.get('holiday_pk')
+            # Scoped to the logged-in user's own membership — a coach can only remove their own holidays.
+            holiday = get_object_or_404(StaffHoliday, pk=holiday_pk, member=self.org_membership)
+            holiday.delete()
+            messages.success(request, 'Holiday removed.')
+            return redirect('account_settings', org_slug=self.org.slug)
+
         user = request.user
         first_name = request.POST.get('first_name', '').strip()
         last_name = request.POST.get('last_name', '').strip()
