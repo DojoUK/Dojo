@@ -118,6 +118,11 @@ class Invoice(models.Model):
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.UNPAID)
     notes = models.TextField(blank=True)
     reminder_sent_at = models.DateTimeField(null=True, blank=True)
+    stripe_invoice_id = models.CharField(
+        max_length=255, blank=True, default='', db_index=True,
+        help_text="Stripe invoice this row mirrors, for subscription payments. "
+                  "Used to make webhook redelivery a no-op.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
