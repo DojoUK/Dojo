@@ -22,6 +22,9 @@ class MemberListView(OrgAdminMixin, ListView):
             qs = qs.filter(is_active=False)
         elif show == 'all':
             pass
+        elif show == 'leaving':
+            from .models import MemberLeavingRequest
+            qs = qs.filter(leaving_requests__status=MemberLeavingRequest.Status.PENDING).distinct()
         else:
             qs = qs.filter(is_active=True)
         from datetime import date, timedelta
@@ -52,6 +55,10 @@ class MemberListView(OrgAdminMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['q'] = self.request.GET.get('q', '')
         context['show'] = self.request.GET.get('show', 'active')
+        from .models import MemberLeavingRequest
+        context['leaving_count'] = MemberLeavingRequest.objects.filter(
+            member__organisation=self.org, status=MemberLeavingRequest.Status.PENDING
+        ).count()
         context['bulk_email_members'] = self.request.session.pop('bulk_email_members', None)
         context['bulk_invoice_members'] = self.request.session.pop('bulk_invoice_members', None)
         if context['bulk_email_members']:
@@ -230,6 +237,33 @@ class MemberDetailView(OrgAdminMixin, DetailView):
             organisation=self.org
         ).prefetch_related('stages')
         context['current_grade'] = context['progressions'].first()
+
+        from progression.models import MemberSyllabusProgress
+        current_by_system = {}
+        for prog in context['progressions']:
+            current_by_system.setdefault(prog.stage.system_id, prog)
+        syllabus_cards = []
+        for prog in current_by_system.values():
+            section = prog.stage.syllabus_section
+            if not section:
+                continue
+            items = list(section.items.all())
+            done_ids = set(
+                MemberSyllabusProgress.objects.filter(
+                    member=self.object, item__in=items, completed=True
+                ).values_list('item_id', flat=True)
+            )
+            syllabus_cards.append({
+                'stage': prog.stage,
+                'section': section,
+                'items': [{'item': i, 'done': i.pk in done_ids} for i in items],
+            })
+        context['syllabus_cards'] = syllabus_cards
+
+        from .models import MemberLeavingRequest
+        context['leaving_request'] = self.object.leaving_requests.filter(
+            status=MemberLeavingRequest.Status.PENDING
+        ).first()
         from .models import MemberNote
         context['notes'] = MemberNote.objects.filter(member=self.object).select_related('author')
         context['custom_fields'] = build_custom_field_widgets(
@@ -321,6 +355,31 @@ class MemberArchiveView(OrgAdminMixin, View):
         return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
 
 
+class ResolveLeavingRequestView(OrgAdminMixin, View):
+    """Staff action on a member's self-reported "stop training" request from the portal — either archive them or dismiss the request."""
+    def post(self, request, org_slug, pk, request_pk):
+        from django.utils import timezone
+        from .models import MemberLeavingRequest
+        member = get_object_or_404(Member, pk=pk, organisation=self.org)
+        leaving_request = get_object_or_404(MemberLeavingRequest, pk=request_pk, member=member)
+        resolution = request.POST.get('resolution')
+
+        if resolution == 'archive':
+            member.is_active = False
+            member.archived_at = timezone.now()
+            member.save(update_fields=['is_active', 'archived_at'])
+            leaving_request.status = MemberLeavingRequest.Status.ACTIONED
+            messages.success(request, f'{member.name} archived.')
+        else:
+            leaving_request.status = MemberLeavingRequest.Status.DISMISSED
+            messages.success(request, 'Leaving request dismissed.')
+
+        leaving_request.resolved_at = timezone.now()
+        leaving_request.resolved_by = request.user
+        leaving_request.save(update_fields=['status', 'resolved_at', 'resolved_by'])
+        return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
+
+
 class EraseMemberView(OrgAdminMixin, View):
     """Right-to-erasure action: scrubs personal data, keeps the row for financial/attendance FK integrity."""
     def post(self, request, org_slug, pk):
@@ -364,6 +423,22 @@ class DeleteProgressionView(OrgAdminMixin, View):
         prog = get_object_or_404(MemberProgression, pk=prog_pk, member=member)
         prog.delete()
         messages.success(request, 'Progression record removed.')
+        return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
+
+
+class ToggleMemberSyllabusItemView(OrgAdminMixin, View):
+    """Staff ticks/unticks a syllabus checklist item as covered for this member."""
+    def post(self, request, org_slug, pk, item_pk):
+        from django.utils import timezone
+        from progression.models import MemberSyllabusProgress, SyllabusItem
+
+        member = get_object_or_404(Member, pk=pk, organisation=self.org)
+        item = get_object_or_404(SyllabusItem, pk=item_pk, section__organisation=self.org)
+        progress, _ = MemberSyllabusProgress.objects.get_or_create(member=member, item=item)
+        progress.completed = not progress.completed
+        progress.completed_at = timezone.now() if progress.completed else None
+        progress.completed_by = request.user if progress.completed else None
+        progress.save(update_fields=['completed', 'completed_at', 'completed_by'])
         return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
 
 

@@ -47,6 +47,12 @@
                    class="btn {% if show == 'inactive' %}btn-dark{% else %}btn-outline-secondary{% endif %}">Inactive</a>
                 <a href="?show=all{% if q %}&q={{ q }}{% endif %}"
                    class="btn {% if show == 'all' %}btn-dark{% else %}btn-outline-secondary{% endif %}">All</a>
+                {% if leaving_count %}
+                <a href="?show=leaving{% if q %}&q={{ q }}{% endif %}"
+                   class="btn {% if show == 'leaving' %}btn-dark{% else %}btn-outline-warning{% endif %}">
+                    Leaving <span class="badge bg-warning-subtle text-warning border border-warning-subtle ms-1">{{ leaving_count }}</span>
+                </a>
+                {% endif %}
             </div>
 
             {# Bulk action bar — shown when rows are checked #}

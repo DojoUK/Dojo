@@ -257,6 +257,20 @@ class ClassDetailView(OrgAdminMixin, DetailView):
             m.photo_consent = bool(
                 photo_consent_field and m.custom_field_values.get(str(photo_consent_field.pk))
             )
+        from progression.models import MemberProgression, ProgressionSystem
+        backwell_system = ProgressionSystem.objects.filter(
+            organisation=self.org, name__iexact='Backwell Grading',
+        ).first()
+        latest_progression_by_member = {}
+        if backwell_system:
+            for mp in (
+                MemberProgression.objects.filter(member_id__in=enrolled_ids, stage__system=backwell_system)
+                .select_related('stage')
+                .order_by('member_id', '-achieved_date')
+            ):
+                latest_progression_by_member.setdefault(mp.member_id, mp)
+        for m in enrolled:
+            m.latest_progression = latest_progression_by_member.get(m.pk)
         context['enrolled'] = enrolled
         context['available'] = (
             Member.objects.filter(organisation=self.org, is_active=True)

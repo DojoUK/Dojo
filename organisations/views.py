@@ -827,6 +827,33 @@ class CalendarEventsView(OrgMixin, View):
         return JsonResponse(events, safe=False)
 
 
+def _linear_forecast(values, periods_ahead):
+    """
+    Least-squares straight-line trend fitted over `values` (chronological,
+    one point per month), extrapolated `periods_ahead` further months.
+    No external dependencies (numpy etc.) — just the standard slope/intercept
+    formula over an evenly-spaced x-axis of 0..len(values)-1.
+
+    Falls back to flat-lining the average when there isn't enough history
+    (0 or 1 months) to fit a trend from, and never forecasts below zero —
+    a negative revenue/expense projection isn't meaningful here.
+    """
+    n = len(values)
+    if n == 0:
+        return [0.0] * periods_ahead
+    if n < 2:
+        return [round(values[0], 2)] * periods_ahead
+
+    x_mean = (n - 1) / 2
+    y_mean = sum(values) / n
+    numerator = sum((x - x_mean) * (y - y_mean) for x, y in enumerate(values))
+    denominator = sum((x - x_mean) ** 2 for x in range(n))
+    slope = numerator / denominator if denominator else 0
+    intercept = y_mean - slope * x_mean
+
+    return [round(max(0.0, intercept + slope * (n + i)), 2) for i in range(periods_ahead)]
+
+
 class FinancialReportView(OrgAdminMixin, View):
     def get(self, request, org_slug):
         from billing.models import Invoice, Payment, Expense
@@ -874,6 +901,34 @@ class FinancialReportView(OrgAdminMixin, View):
         expense_chart_data = [expense_map.get(m, 0) for m in months]
         profit_chart_data = [round(chart_data[i] - expense_chart_data[i], 2) for i in range(len(months))]
 
+        # Forecast — projects revenue (bucketed by the date funds were actually
+        # received, i.e. Payment.paid_at, same basis as chart_data above) and
+        # expenses 6 months beyond the trailing 12 months of history above.
+        FORECAST_MONTHS = 6
+        forecast_month_dates = []
+        cursor = months[-1]
+        for _ in range(FORECAST_MONTHS):
+            y, m = cursor.year, cursor.month + 1
+            if m > 12:
+                y, m = y + 1, 1
+            cursor = date(y, m, 1)
+            forecast_month_dates.append(cursor)
+        forecast_labels = [m.strftime('%b %Y') for m in forecast_month_dates]
+
+        forecast_revenue = _linear_forecast(chart_data, FORECAST_MONTHS)
+        forecast_expenses = _linear_forecast(expense_chart_data, FORECAST_MONTHS)
+
+        forecast_chart_labels = chart_labels + forecast_labels
+        # Actual series trail off with nulls over the forecast months (Chart.js
+        # skips them, leaving a gap); the forecast series is null-padded over the
+        # historical months except for one bridge point — a repeat of the last
+        # actual value — so its dashed line picks up exactly where the solid
+        # actual line ends, instead of starting from a disconnected origin.
+        revenue_actual_series = chart_data + [None] * FORECAST_MONTHS
+        revenue_forecast_series = [None] * (len(months) - 1) + [chart_data[-1]] + forecast_revenue
+        expense_actual_series = expense_chart_data + [None] * FORECAST_MONTHS
+        expense_forecast_series = [None] * (len(months) - 1) + [expense_chart_data[-1]] + forecast_expenses
+
         outstanding_members = (
             Invoice.objects.filter(organisation=self.org, status=Invoice.Status.UNPAID)
             .select_related('member')
@@ -919,6 +974,11 @@ class FinancialReportView(OrgAdminMixin, View):
             'chart_data': json.dumps(chart_data),
             'expense_chart_data': json.dumps(expense_chart_data),
             'profit_chart_data': json.dumps(profit_chart_data),
+            'forecast_chart_labels': json.dumps(forecast_chart_labels),
+            'revenue_actual_series': json.dumps(revenue_actual_series),
+            'revenue_forecast_series': json.dumps(revenue_forecast_series),
+            'expense_actual_series': json.dumps(expense_actual_series),
+            'expense_forecast_series': json.dumps(expense_forecast_series),
             'outstanding_members': outstanding_members,
             'total_revenue_ytd': total_revenue_ytd,
             'total_outstanding': total_outstanding,
@@ -945,6 +1005,7 @@ class AccountView(OrgMixin, View):
             'memberships': request.user.organisation_memberships.select_related('organisation').order_by('organisation__name'),
             'holidays': holidays,
             'today': date.today(),
+            'accent_theme_choices': OrganisationMember.AccentTheme.choices,
         })
 
     def post(self, request, org_slug):
@@ -1024,6 +1085,34 @@ class AccountView(OrgMixin, View):
             self.org_membership.calendar_colour = colour
             self.org_membership.save(update_fields=['calendar_colour'])
             messages.success(request, 'Calendar colour updated.')
+            return redirect('account_settings', org_slug=self.org.slug)
+
+        elif action == 'update_dark_mode':
+            if not self.org_membership:
+                messages.error(request, "You're not a staff member of this organisation.")
+                return redirect('account_settings', org_slug=self.org.slug)
+
+            # Scoped to self.org_membership — a coach can only ever set their own preference here.
+            self.org_membership.dark_mode = request.POST.get('dark_mode') == '1'
+            self.org_membership.save(update_fields=['dark_mode'])
+            messages.success(request, 'Appearance updated.')
+            return redirect('account_settings', org_slug=self.org.slug)
+
+        elif action == 'update_accent_theme':
+            if not self.org_membership:
+                messages.error(request, "You're not a staff member of this organisation.")
+                return redirect('account_settings', org_slug=self.org.slug)
+
+            accent_theme = request.POST.get('accent_theme', '').strip()
+            valid_values = {choice for choice, _ in OrganisationMember.AccentTheme.choices}
+            if accent_theme not in valid_values:
+                messages.error(request, 'Unrecognised theme.')
+                return redirect('account_settings', org_slug=self.org.slug)
+
+            # Scoped to self.org_membership — a coach can only ever set their own preference here.
+            self.org_membership.accent_theme = accent_theme
+            self.org_membership.save(update_fields=['accent_theme'])
+            messages.success(request, 'Appearance updated.')
             return redirect('account_settings', org_slug=self.org.slug)
 
         user = request.user

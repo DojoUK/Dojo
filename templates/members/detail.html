@@ -19,6 +19,10 @@
     <a href="{% url 'member_edit' org_slug=org.slug pk=member.pk %}" class="btn btn-dark btn-sm">
         <i class="bi bi-pencil me-1"></i> Edit
     </a>
+    <a href="/p/{{ member.token }}/" target="_blank" class="btn btn-outline-secondary btn-sm"
+       title="Open their member portal directly, without a magic-link email — handy for testing or support">
+        <i class="bi bi-box-arrow-up-right me-1"></i> View portal
+    </a>
     <form method="post" action="{% url 'member_send_welcome' org_slug=org.slug pk=member.pk %}" class="d-inline">
         {% csrf_token %}
         <button type="submit" class="btn btn-outline-secondary btn-sm">
@@ -50,6 +54,36 @@
 {% endblock %}
 
 {% block main_content %}
+
+{% if leaving_request %}
+<div class="card border-0 shadow-sm mb-4" style="border-left: 4px solid #ffc107 !important;">
+    <div class="card-body py-3 px-3 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <p class="small fw-semibold mb-0 text-warning-emphasis">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                {{ member.name }} asked to stop training via the member portal, {{ leaving_request.requested_at|date:"d M Y" }}.
+            </p>
+            {% if leaving_request.reason %}
+            <p class="small text-muted mb-0 mt-1 fst-italic">"{{ leaving_request.reason }}"</p>
+            {% endif %}
+        </div>
+        <div class="d-flex gap-2">
+            <form method="post" action="{% url 'member_leaving_request_resolve' org_slug=org.slug pk=member.pk request_pk=leaving_request.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="resolution" value="dismiss">
+                <button type="submit" class="btn btn-sm btn-outline-secondary">Dismiss</button>
+            </form>
+            <form method="post" action="{% url 'member_leaving_request_resolve' org_slug=org.slug pk=member.pk request_pk=leaving_request.pk %}">
+                {% csrf_token %}
+                <input type="hidden" name="resolution" value="archive">
+                <button type="submit" class="btn btn-sm btn-warning"
+                        onclick="return confirm('Archive {{ member.name }}?')">Archive member</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="row g-4">
 
     <div class="col-lg-8">
@@ -334,6 +368,38 @@
             {% endif %}
         </div>
 
+        {% for card in syllabus_cards %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Syllabus — {{ card.stage.name }}</h6>
+                <p class="text-muted small mb-0 mt-1">{{ card.section.name }}{% if card.section.content %} · {{ card.section.content }}{% endif %}</p>
+            </div>
+            {% if card.items %}
+            <ul class="list-group list-group-flush">
+                {% for entry in card.items %}
+                <li class="list-group-item py-2 px-3">
+                    <form method="post" action="{% url 'member_syllabus_toggle' org_slug=org.slug pk=member.pk item_pk=entry.item.pk %}">
+                        {% csrf_token %}
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="syllabus-item-{{ entry.item.pk }}"
+                                   {% if entry.done %}checked{% endif %} onchange="this.form.submit()">
+                            <label class="form-check-label small {% if entry.done %}text-decoration-line-through text-muted{% endif %}" for="syllabus-item-{{ entry.item.pk }}">
+                                {{ entry.item.name }}
+                            </label>
+                            {% if entry.item.description %}<div class="small text-muted">{{ entry.item.description }}</div>{% endif %}
+                        </div>
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="card-body py-2">
+                <p class="text-muted small mb-0">No checklist items yet for this section.</p>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
         <div class="card border-0 shadow-sm mb-3">
             <div class="card-header bg-white border-bottom py-3">
                 <h6 class="mb-0">Classes</h6>
@@ -410,7 +476,7 @@
                 <a href="{% url 'invoice_list' org_slug=org.slug %}?q={{ member.name|urlencode }}" class="btn btn-sm btn-outline-secondary">View all</a>
             </div>
             <!-- Policy & discounts -->
-            <div class="card-body border-bottom py-3 px-3" style="background:#fafafa;">
+            <div class="card-body border-bottom py-3 px-3 dojo-subtle-panel">
                 <div class="row g-3 align-items-start">
                     <div class="col-sm-6">
                         <div class="small fw-semibold text-muted mb-1">Billing policy</div>
@@ -665,7 +731,10 @@
                     <tbody>
                         {% for doc in member.documents.all %}
                         <tr>
-                            <td class="ps-3 py-2 small fw-semibold">{{ doc.name }}</td>
+                            <td class="ps-3 py-2 small fw-semibold">
+                                {{ doc.name }}
+                                {% if doc.uploaded_by_member %}<span class="badge bg-secondary-subtle text-secondary ms-1" style="font-size:0.65rem;">From member</span>{% endif %}
+                            </td>
                             <td class="py-2 small text-muted">{{ doc.get_category_display }}</td>
                             <td class="py-2 small text-muted">{{ doc.uploaded_at|date:"d M Y" }}</td>
                             <td class="py-2 text-end pe-3">

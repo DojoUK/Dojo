@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="{% if org_membership.dark_mode %}dark{% endif %}" data-accent-theme="{{ org_membership.accent_theme|default:'' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -28,6 +28,36 @@
             --dojo-shadow: 0 1px 3px rgba(0,0,0,.06), 0 2px 8px rgba(0,0,0,.04);
             --dojo-shadow-md: 0 4px 12px rgba(0,0,0,.08), 0 1px 3px rgba(0,0,0,.05);
         }
+        /* Dark mode — set via <html data-bs-theme="dark">, driven by the signed-in
+           staff member's own "Appearance" preference (account settings). Bootstrap's
+           own components (cards, tables, forms, dropdowns, alerts, badges) pick up
+           Bootstrap 5.3's built-in dark variables automatically from this same
+           attribute; these overrides just cover Dojo's own custom --dojo-* palette. */
+        :root[data-bs-theme="dark"] {
+            --dojo-sidebar: #161616;
+            --dojo-sidebar-dark: #080808;
+            --dojo-body-bg: #0a0a0a;
+            --dojo-card-bg: #171717;
+            --dojo-text: #e8e8e8;
+            --dojo-muted: #9a9a9a;
+            --dojo-border: #2e2e2e;
+            --dojo-shadow: 0 1px 3px rgba(0,0,0,.6), 0 2px 8px rgba(0,0,0,.5);
+            --dojo-shadow-md: 0 4px 12px rgba(0,0,0,.7), 0 1px 3px rgba(0,0,0,.6);
+        }
+        /* Bootstrap's plain .bg-white/.bg-light utilities are fixed literal colours,
+           not theme-aware (unlike .bg-body etc.) — used throughout for card headers
+           and light sub-panels, so remap them here rather than in every template. */
+        [data-bs-theme="dark"] .bg-white { background-color: var(--dojo-card-bg) !important; }
+        [data-bs-theme="dark"] .bg-light { background-color: #1c1c1c !important; }
+        /* Subtle shaded panel inside a card (e.g. a "current settings" summary
+           strip) — themed instead of a hardcoded light-grey so it never ends
+           up light-on-light or, in dark mode, light-text-on-light-bg. */
+        .dojo-subtle-panel { background: rgba(0,0,0,.02); }
+        [data-bs-theme="dark"] .dojo-subtle-panel { background: rgba(255,255,255,.03); }
+        /* .text-dark/.text-black are also plain literal-colour utilities (not
+           theme-aware) — used for member-name links in tables across the app. */
+        [data-bs-theme="dark"] .text-dark,
+        [data-bs-theme="dark"] .text-black { color: var(--dojo-text) !important; }
         * { box-sizing: border-box; }
         body { font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 15px; color: var(--dojo-text); background: var(--dojo-body-bg); }
         h1,h2,h3,h4,h5,h6 { font-weight: 600; }
@@ -49,7 +79,7 @@
             .card-header.d-flex h6 { min-width: 0; }
             /* dl label/value pairs stack on mobile */
             dl.row dt, dl.row dd { float: none; width: 100%; max-width: 100%; padding: 0; margin: 0; }
-            dl.row dd { color: #0f172a; padding-bottom: 10px; }
+            dl.row dd { color: var(--dojo-text); padding-bottom: 10px; }
             dl.row dt { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .05em; padding-top: 6px; }
             dl.row dt:first-child { padding-top: 0; }
             /* Stat tiles on small screens */

@@ -1,0 +1,169 @@
+{% extends 'portal/base.html' %}
+
+{% block title_suffix %} — My data{% endblock %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+    <div>
+        <h5 class="mb-1">My data</h5>
+        <p class="text-muted small mb-0">
+            Everything {{ org.name }} holds on your member record — for internal coach/admin notes not shown here, contact the club directly.
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i> Print / save as PDF
+        </button>
+        <a href="{% url 'portal_download_data' token=member.token %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-filetype-json me-1"></i> Raw JSON
+        </a>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white border-bottom py-3"><h6 class="mb-0">Profile</h6></div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-4 text-muted fw-normal small">Name</dt>
+            <dd class="col-sm-8 small">{{ member.name }}</dd>
+            <dt class="col-sm-4 text-muted fw-normal small">Date of birth</dt>
+            <dd class="col-sm-8 small">{{ member.date_of_birth|date:"d M Y"|default:"—" }}</dd>
+            <dt class="col-sm-4 text-muted fw-normal small">Email</dt>
+            <dd class="col-sm-8 small">{{ member.email|default:"—" }}</dd>
+            <dt class="col-sm-4 text-muted fw-normal small">Phone</dt>
+            <dd class="col-sm-8 small">{{ member.phone|default:"—" }}</dd>
+            <dt class="col-sm-4 text-muted fw-normal small">Emergency contact 1</dt>
+            <dd class="col-sm-8 small">{{ member.emergency_contact_name|default:"—" }}{% if member.emergency_contact_phone %} — {{ member.emergency_contact_phone }}{% endif %}</dd>
+            <dt class="col-sm-4 text-muted fw-normal small">Emergency contact 2</dt>
+            <dd class="col-sm-8 small">{{ member.emergency_contact_2_name|default:"—" }}{% if member.emergency_contact_2_phone %} — {{ member.emergency_contact_2_phone }}{% endif %}</dd>
+            <dt class="col-sm-4 text-muted fw-normal small">Medical information</dt>
+            <dd class="col-sm-8 small" style="white-space:pre-line;">{{ member.medical_info|default:"—" }}</dd>
+            <dt class="col-sm-4 text-muted fw-normal small">Member since</dt>
+            <dd class="col-sm-8 small">{{ member.joined_date|date:"d M Y"|default:"—" }}</dd>
+            <dt class="col-sm-4 text-muted fw-normal small">Licence number</dt>
+            <dd class="col-sm-8 small">{{ member.licence_number|default:"—" }}{% if member.licence_expiry %} (expires {{ member.licence_expiry|date:"d M Y" }}){% endif %}</dd>
+            <dt class="col-sm-4 text-muted fw-normal small">Monthly fee</dt>
+            <dd class="col-sm-8 small">{% if member.monthly_fee %}£{{ member.monthly_fee|floatformat:2 }}{% else %}—{% endif %}</dd>
+            <dt class="col-sm-4 text-muted fw-normal small">Autopay status</dt>
+            <dd class="col-sm-8 small">{{ member.subscription_status|default:"—" }}</dd>
+        </dl>
+    </div>
+</div>
+
+{% if guardians %}
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white border-bottom py-3"><h6 class="mb-0">Guardians</h6></div>
+    <ul class="list-group list-group-flush">
+        {% for g in guardians %}
+        <li class="list-group-item small">
+            <span class="fw-semibold">{{ g.name }}</span>{% if g.relationship %} — {{ g.relationship }}{% endif %}
+            {% if g.email %}· {{ g.email }}{% endif %}{% if g.phone %} · {{ g.phone }}{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white border-bottom py-3"><h6 class="mb-0">Grade history</h6></div>
+    {% if progressions %}
+    <div class="table-responsive">
+    <table class="table table-sm mb-0">
+        <tbody>
+            {% for p in progressions %}
+            <tr>
+                <td class="ps-3 py-2 small fw-semibold">{{ p.stage.name }}</td>
+                <td class="py-2 small text-muted">{{ p.stage.system.name }}</td>
+                <td class="py-2 small text-muted">{{ p.achieved_date|date:"d M Y" }}</td>
+                <td class="py-2 small text-muted pe-3">{{ p.notes|default:"" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <div class="card-body"><p class="text-muted small mb-0">No grades recorded yet.</p></div>
+    {% endif %}
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white border-bottom py-3"><h6 class="mb-0">Attendance</h6></div>
+    {% if attendance %}
+    <div class="table-responsive" style="max-height:400px;overflow-y:auto;">
+    <table class="table table-sm mb-0">
+        <tbody>
+            {% for a in attendance %}
+            <tr>
+                <td class="ps-3 py-2 small">{{ a.session.date|date:"d M Y" }}</td>
+                <td class="py-2 small text-muted">{{ a.session.assigned_class.name }}</td>
+                <td class="py-2 small text-end pe-3">{% if a.present %}Present{% else %}Absent{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <div class="card-body"><p class="text-muted small mb-0">No attendance recorded yet.</p></div>
+    {% endif %}
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white border-bottom py-3"><h6 class="mb-0">Invoices &amp; payments</h6></div>
+    {% if invoices %}
+    <div class="table-responsive">
+    <table class="table table-sm mb-0">
+        <tbody>
+            {% for inv in invoices %}
+            <tr>
+                <td class="ps-3 py-2 small fw-semibold">{{ inv.period }}</td>
+                <td class="py-2 small text-muted">Due {{ inv.due_date|date:"d M Y" }}</td>
+                <td class="py-2 small">£{{ inv.amount|floatformat:2 }}</td>
+                <td class="py-2 small text-end pe-3">
+                    <span class="badge bg-{% if inv.status == 'paid' %}success{% else %}warning{% endif %}-subtle text-{% if inv.status == 'paid' %}success{% else %}warning{% endif %}">{{ inv.get_status_display }}</span>
+                </td>
+            </tr>
+            {% for payment in inv.payments.all %}
+            <tr>
+                <td></td>
+                <td colspan="3" class="py-1 small text-muted">
+                    <i class="bi bi-arrow-return-right me-1"></i>{{ payment.get_method_display }} — £{{ payment.amount|floatformat:2 }} on {{ payment.paid_at|date:"d M Y" }}
+                </td>
+            </tr>
+            {% endfor %}
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% else %}
+    <div class="card-body"><p class="text-muted small mb-0">No invoices yet.</p></div>
+    {% endif %}
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white border-bottom py-3"><h6 class="mb-0">Documents</h6></div>
+    {% if documents %}
+    <ul class="list-group list-group-flush">
+        {% for d in documents %}
+        <li class="list-group-item small">{{ d.name }} — {{ d.get_category_display }} <span class="text-muted">({{ d.uploaded_at|date:"d M Y" }})</span></li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <div class="card-body"><p class="text-muted small mb-0">No documents on file.</p></div>
+    {% endif %}
+</div>
+
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white border-bottom py-3"><h6 class="mb-0">Signed waivers</h6></div>
+    {% if signed_waivers %}
+    <ul class="list-group list-group-flush">
+        {% for w in signed_waivers %}
+        <li class="list-group-item small">{{ w.template.name }} — signed by {{ w.signer_name }} <span class="text-muted">({{ w.signed_at|date:"d M Y" }})</span></li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <div class="card-body"><p class="text-muted small mb-0">No signed waivers on file.</p></div>
+    {% endif %}
+</div>
+
+{% endblock %}

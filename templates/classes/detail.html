@@ -71,8 +71,14 @@
                                 <span title="Photo consent given">📷</span>
                                 {% endif %}
                             </td>
-                            <td class="text-muted small py-2">{{ member.emergency_contact_phone|default:"" }}</td>
-                            <td class="text-muted small py-2">{{ member.emergency_contact_2_phone|default:"" }}</td>
+                            <td class="text-muted small py-2">
+                                {% if member.latest_progression %}
+                                <span class="fw-semibold" {% if member.latest_progression.stage.colour %}style="color:{{ member.latest_progression.stage.colour }};"{% endif %}>{{ member.latest_progression.stage.name }}</span>
+                                <span class="text-muted" style="font-size:0.75rem;">({{ member.latest_progression.achieved_date|date:"d M Y" }})</span>
+                                {% else %}
+                                <span class="text-muted fst-italic" style="font-size:0.8rem;">No grading yet</span>
+                                {% endif %}
+                            </td>
                             <td class="text-end pe-3 py-2">
                                 <form method="post" action="{% url 'class_unenrol' org_slug=org.slug pk=cls.pk member_pk=member.pk %}" class="d-inline">
                                     {% csrf_token %}

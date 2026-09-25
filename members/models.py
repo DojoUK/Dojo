@@ -166,6 +166,33 @@ class FamilyGroupMember(models.Model):
         unique_together = ('family_group', 'member')
 
 
+class MemberLeavingRequest(models.Model):
+    """
+    A member's self-reported intention to stop training, submitted from the
+    member portal. This does NOT archive the member automatically — it's
+    flagged here for staff to review and action from the staff side, so an
+    accidental click (or a request that needs a follow-up conversation)
+    doesn't silently remove someone.
+    """
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pending review'
+        ACTIONED = 'actioned', 'Archived'
+        DISMISSED = 'dismissed', 'Dismissed'
+
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='leaving_requests')
+    reason = models.TextField(blank=True)
+    requested_at = models.DateTimeField(default=timezone.now)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+
+    def __str__(self):
+        return f"{self.member} — leaving request ({self.get_status_display()})"
+
+    class Meta:
+        ordering = ['-requested_at']
+
+
 class MemberNote(models.Model):
     member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='notes')
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)

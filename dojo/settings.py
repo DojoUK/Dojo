@@ -133,6 +133,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = '/'
 
+# Auto-logout after 2 hours of inactivity: SESSION_SAVE_EVERY_REQUEST resets each
+# session's expiry on every request, so it's 2 hours since the *last* request that
+# matters, not since login — a sliding window rather than a fixed session length.
+SESSION_COOKIE_AGE = 60 * 60 * 2
+SESSION_SAVE_EVERY_REQUEST = True
+
 # Email — defaults to console (prints to docker logs) if SMTP not configured
 EMAIL_BACKEND = os.environ.get(
     'EMAIL_BACKEND',

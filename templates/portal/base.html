@@ -1,0 +1,115 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ org.name }}{% block title_suffix %}{% endblock %}</title>
+    <link href="{% static 'vendor/bootstrap/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="{% static 'img/favicon/favicon.ico' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/favicon/favicon-32x32.png' %}">
+    <link rel="apple-touch-icon" href="{% static 'img/favicon/apple-touch-icon.png' %}">
+    <style>
+        body { background: #f8f9fa; }
+        .portal-header { background: #212529; color: #fff; padding: 1.25rem 0; }
+        .portal-header .org-name { font-weight: 600; font-size: 1.1rem; }
+        .portal-header .member-name { font-size: 0.85rem; opacity: 0.6; }
+
+        /* Nav tabs — a horizontally-scrolling strip on narrow screens, doubling
+           as the way the portal is split into separate sections on mobile. */
+        .portal-nav { background: #fff; border-bottom: 1px solid #e5e7eb; }
+        .portal-nav .nav-scroll {
+            display: flex; gap: 2px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+            max-width: 1200px; margin: 0 auto; padding: 0 1rem;
+        }
+        .portal-nav a {
+            display: flex; align-items: center; gap: 6px; padding: 12px 14px;
+            font-size: 0.82rem; font-weight: 600; color: #6b7280; text-decoration: none;
+            white-space: nowrap; border-bottom: 2px solid transparent; flex-shrink: 0;
+        }
+        .portal-nav a:hover { color: #212529; }
+        .portal-nav a.active { color: #212529; border-bottom-color: #212529; }
+
+        /* Mobile-first: one narrow, centred column — this is deliberate here,
+           it's what makes each page a focused single-topic section. */
+        .portal-container { max-width: 680px; margin: 0 auto; padding-bottom: 3rem; }
+
+        /* Desktop: stop consolidating everything into that same narrow centre
+           column — widen the canvas and let pages lay their cards out in a
+           grid across the extra space instead of one long stacked list. */
+        @media (min-width: 992px) {
+            .portal-container { max-width: 1200px; padding-left: 1.5rem; padding-right: 1.5rem; }
+            .portal-grid {
+                display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 1.25rem; align-items: start;
+            }
+            .portal-grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            .portal-grid .span-2 { grid-column: 1 / -1; }
+        }
+        @media print {
+            .portal-nav, .portal-header, button, form { display: none !important; }
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<header class="portal-header">
+    <div class="container">
+        <div class="org-name">{{ org.name }}</div>
+        <div class="member-name">{{ member.name }}</div>
+    </div>
+</header>
+
+<nav class="portal-nav">
+    <div class="nav-scroll">
+        <a href="{% url 'member_portal' token=member.token %}" class="{% if active == 'dashboard' %}active{% endif %}">
+            <i class="bi bi-speedometer2"></i> Dashboard
+        </a>
+        <a href="{% url 'portal_my_details' token=member.token %}" class="{% if active == 'details' %}active{% endif %}">
+            <i class="bi bi-person"></i> My details
+        </a>
+        <a href="{% url 'portal_syllabus' token=member.token %}" class="{% if active == 'syllabus' %}active{% endif %}">
+            <i class="bi bi-award"></i> Syllabus
+        </a>
+        <a href="{% url 'portal_classes' token=member.token %}" class="{% if active == 'classes' %}active{% endif %}">
+            <i class="bi bi-people"></i> Classes
+        </a>
+        <a href="{% url 'portal_payments' token=member.token %}" class="{% if active == 'payments' %}active{% endif %}">
+            <i class="bi bi-receipt"></i> Payments
+        </a>
+    </div>
+</nav>
+
+{% if messages %}
+<div class="portal-container pt-3 pb-0">
+    {% for message in messages %}
+    <div style="background:#d1fae5;border:1px solid #6ee7b7;border-radius:8px;padding:12px 16px;margin-bottom:12px;">
+        <span style="color:#065f46;font-weight:600;font-size:14px;">{{ message }}</span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if request.GET.paid %}
+<div class="portal-container pt-3 pb-0">
+    <div style="background:#d1fae5;border:1px solid #6ee7b7;border-radius:8px;padding:12px 16px;">
+        <span style="color:#065f46;font-weight:600;font-size:14px;">Payment received — thank you!</span>
+    </div>
+</div>
+{% endif %}
+{% if request.GET.subscribed %}
+<div class="portal-container pt-3 pb-0">
+    <div style="background:#d1fae5;border:1px solid #6ee7b7;border-radius:8px;padding:12px 16px;">
+        <span style="color:#065f46;font-weight:600;font-size:14px;">Autopay set up — you'll be charged £{{ member.monthly_fee|floatformat:2 }} each month.</span>
+    </div>
+</div>
+{% endif %}
+
+<div class="portal-container pt-4">
+{% block content %}{% endblock %}
+</div>
+
+</body>
+</html>
