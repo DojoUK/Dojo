@@ -267,7 +267,14 @@
         <li class="list-group-item py-2 px-3">
             <div class="d-flex align-items-start justify-content-between gap-2">
                 <div>
-                    <p class="small fw-semibold mb-0"><i class="bi bi-check2-square me-1 text-muted"></i>{{ item.name }}</p>
+                    <p class="small fw-semibold mb-0">
+                        <i class="bi bi-check2-square me-1 text-muted"></i>{{ item.name }}
+                        {% if item.link %}
+                        <a href="{{ item.link }}" target="_blank" rel="noopener" class="ms-1" title="Open link">
+                            <i class="bi bi-link-45deg"></i>
+                        </a>
+                        {% endif %}
+                    </p>
                     {% if item.description %}<p class="small text-muted mb-0">{{ item.description }}</p>{% endif %}
                 </div>
                 <div class="d-flex gap-1 flex-shrink-0">
@@ -287,11 +294,14 @@
             <div class="collapse mt-2" id="edit-item-{{ item.pk }}">
                 <form method="post" action="{% url 'syllabus_item_edit' org_slug=org.slug section_pk=section.pk pk=item.pk %}" class="row g-2">
                     {% csrf_token %}
-                    <div class="col-sm-4">
+                    <div class="col-sm-3">
                         <input type="text" name="name" class="form-control form-control-sm" value="{{ item.name }}" placeholder="Name">
                     </div>
-                    <div class="col-sm-6">
+                    <div class="col-sm-4">
                         <input type="text" name="description" class="form-control form-control-sm" value="{{ item.description }}" placeholder="Description (optional)">
+                    </div>
+                    <div class="col-sm-3">
+                        <input type="url" name="link" class="form-control form-control-sm" value="{{ item.link }}" placeholder="Link (optional)">
                     </div>
                     <div class="col-sm-2">
                         <button type="submit" class="btn btn-dark btn-sm w-100">Save</button>
@@ -311,13 +321,17 @@
         <form method="post" action="{% url 'syllabus_item_add' org_slug=org.slug section_pk=section.pk %}">
             {% csrf_token %}
             <div class="row g-2 align-items-end">
-                <div class="col-sm-4">
+                <div class="col-sm-3">
                     <label class="form-label small fw-semibold">Item name</label>
                     <input type="text" name="name" class="form-control form-control-sm" placeholder="e.g. O-goshi">
                 </div>
-                <div class="col-sm-6">
+                <div class="col-sm-4">
                     <label class="form-label small fw-semibold">Description <span class="text-muted fw-normal">(optional)</span></label>
                     <input type="text" name="description" class="form-control form-control-sm" placeholder="Notes on what's required">
+                </div>
+                <div class="col-sm-3">
+                    <label class="form-label small fw-semibold">Link <span class="text-muted fw-normal">(optional)</span></label>
+                    <input type="url" name="link" class="form-control form-control-sm" placeholder="https://…">
                 </div>
                 <div class="col-sm-2">
                     <button type="submit" class="btn btn-dark btn-sm w-100">Add item</button>

@@ -53,6 +53,10 @@ class SyllabusItem(models.Model):
     section = models.ForeignKey(SyllabusSection, on_delete=models.CASCADE, related_name='items')
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
+    link = models.URLField(
+        blank=True,
+        help_text='Optional link for this item, e.g. a technique video or reference page.',
+    )
     order = models.PositiveIntegerField(default=0)
 
     def __str__(self):

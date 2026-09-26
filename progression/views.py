@@ -197,12 +197,13 @@ class AddSyllabusItemView(OrgAdminMixin, View):
         section = get_object_or_404(SyllabusSection, pk=section_pk, organisation=self.org)
         name = request.POST.get('name', '').strip()
         description = request.POST.get('description', '').strip()
+        link = request.POST.get('link', '').strip()
         if not name:
             messages.error(request, 'Item name is required.')
             return redirect('progression_settings', org_slug=org_slug)
         last = section.items.order_by('order').last()
         section.items.create(
-            name=name, description=description,
+            name=name, description=description, link=link,
             order=(last.order + 1) if last else 0,
         )
         messages.success(request, f'"{name}" added to {section.name}.')
@@ -215,12 +216,14 @@ class EditSyllabusItemView(OrgAdminMixin, View):
         item = get_object_or_404(SyllabusItem, pk=pk, section=section)
         name = request.POST.get('name', '').strip()
         description = request.POST.get('description', '').strip()
+        link = request.POST.get('link', '').strip()
         if not name:
             messages.error(request, 'Item name is required.')
             return redirect('progression_settings', org_slug=org_slug)
         item.name = name
         item.description = description
-        item.save(update_fields=['name', 'description'])
+        item.link = link
+        item.save(update_fields=['name', 'description', 'link'])
         messages.success(request, 'Item updated.')
         return redirect('progression_settings', org_slug=org_slug)
 
