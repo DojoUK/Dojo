@@ -61,10 +61,16 @@
 
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-white border-bottom py-3">
-        <h6 class="mb-0">Revenue vs expenses — last 12 months</h6>
+        <h6 class="mb-0">
+            Revenue &amp; expenses forecast
+            <span class="text-muted fw-normal small ms-1">last 12 months, projected 6 months ahead</span>
+        </h6>
     </div>
     <div class="card-body">
-        <canvas id="revenueChart" height="80"></canvas>
+        <canvas id="forecastChart" height="80"></canvas>
+        <p class="text-muted small mb-0 mt-2">
+            Dashed lines are a straight-line trend projection from revenue received (by payment date) and recorded expenses — not a guarantee, just where the current trend points.
+        </p>
     </div>
 </div>
 
@@ -120,24 +126,46 @@
 
 {% block extra_scripts %}
 <script>
-const ctx = document.getElementById('revenueChart');
-new Chart(ctx, {
-    type: 'bar',
+const forecastCtx = document.getElementById('forecastChart');
+new Chart(forecastCtx, {
+    type: 'line',
     data: {
-        labels: {{ chart_labels|safe }},
+        labels: {{ forecast_chart_labels|safe }},
         datasets: [
             {
-                label: 'Revenue (£)',
-                data: {{ chart_data|safe }},
+                label: 'Revenue received (£)',
+                data: {{ revenue_actual_series|safe }},
+                borderColor: '#198754',
                 backgroundColor: '#198754',
-                borderRadius: 4,
+                spanGaps: false,
+                tension: 0.2,
+            },
+            {
+                label: 'Revenue forecast (£)',
+                data: {{ revenue_forecast_series|safe }},
+                borderColor: '#198754',
+                backgroundColor: '#198754',
+                borderDash: [6, 4],
+                spanGaps: true,
+                tension: 0.2,
             },
             {
                 label: 'Expenses (£)',
-                data: {{ expense_chart_data|safe }},
+                data: {{ expense_actual_series|safe }},
+                borderColor: '#dc3545',
                 backgroundColor: '#dc3545',
-                borderRadius: 4,
-            }
+                spanGaps: false,
+                tension: 0.2,
+            },
+            {
+                label: 'Expenses forecast (£)',
+                data: {{ expense_forecast_series|safe }},
+                borderColor: '#dc3545',
+                backgroundColor: '#dc3545',
+                borderDash: [6, 4],
+                spanGaps: true,
+                tension: 0.2,
+            },
         ]
     },
     options: {
@@ -163,6 +191,7 @@ new Chart(ctx, {
 
 const profitCtx = document.getElementById('profitChart');
 const profitData = {{ profit_chart_data|safe }};
+const isDarkMode = document.documentElement.getAttribute('data-bs-theme') === 'dark';
 new Chart(profitCtx, {
     type: 'bar',
     data: {
@@ -170,7 +199,7 @@ new Chart(profitCtx, {
         datasets: [{
             label: 'Profit (£)',
             data: profitData,
-            backgroundColor: profitData.map(v => v >= 0 ? '#212529' : '#dc3545'),
+            backgroundColor: profitData.map(v => v >= 0 ? (isDarkMode ? '#e8e8e8' : '#212529') : '#dc3545'),
             borderRadius: 4,
         }]
     },

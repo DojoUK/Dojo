@@ -1,0 +1,55 @@
+{% extends 'portal/base.html' %}
+
+{% block title_suffix %} — My classes{% endblock %}
+
+{% block content %}
+<div class="portal-grid">
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3">
+            <h6 class="mb-0">Classes</h6>
+        </div>
+        {% if enrolments %}
+        <ul class="list-group list-group-flush">
+            {% for enrolment in enrolments %}
+            <li class="list-group-item py-2 px-3">
+                <div class="small fw-semibold">{{ enrolment.assigned_class.name }}</div>
+                <div class="small text-muted">{{ enrolment.assigned_class.schedule_display }}</div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="card-body">
+            <p class="text-muted small mb-0">Not enrolled in any classes yet.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3">
+            <h6 class="mb-0">Recent attendance</h6>
+        </div>
+        {% if recent_attendance %}
+        <div class="card-body p-0">
+            <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <tbody>
+                    {% for att in recent_attendance %}
+                    <tr>
+                        <td class="ps-3 py-2 small">{{ att.session.date|date:"d M Y" }}</td>
+                        <td class="py-2 small text-muted pe-3">{{ att.session.assigned_class.name }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="card-body">
+            <p class="text-muted small mb-0">No attendance recorded yet.</p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

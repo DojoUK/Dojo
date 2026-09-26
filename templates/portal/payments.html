@@ -1,0 +1,91 @@
+{% extends 'portal/base.html' %}
+
+{% block title_suffix %} — Payment history{% endblock %}
+
+{% block content %}
+<div class="portal-grid">
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3">
+            <h6 class="mb-0">Outstanding</h6>
+        </div>
+        {% if outstanding %}
+        <div class="card-body p-0">
+            <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <tbody>
+                    {% for invoice in outstanding %}
+                    <tr>
+                        <td class="ps-3 py-3 small fw-semibold">{{ invoice.period }}</td>
+                        <td class="py-3 small text-muted">
+                            Due {{ invoice.due_date|date:"d M Y" }}
+                            {% if invoice.is_overdue %}<span class="badge bg-warning-subtle text-warning ms-1">Overdue</span>{% endif %}
+                        </td>
+                        <td class="py-3 fw-bold">£{{ invoice.amount|floatformat:2 }}</td>
+                        <td class="py-3 pe-3 text-end">
+                            {% if stripe_enabled %}
+                            <form method="post" action="{% url 'portal_checkout' token=member.token invoice_pk=invoice.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-dark btn-sm">
+                                    Pay £{{ invoice.amount|floatformat:2 }}
+                                </button>
+                            </form>
+                            {% else %}
+                            <button class="btn btn-dark btn-sm" disabled>Pay</button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if invoice.notes %}
+                    <tr>
+                        <td colspan="4" class="ps-3 pb-2 pt-0 small text-muted fst-italic">{{ invoice.notes }}</td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </div>
+        <div class="card-footer bg-white border-top py-2 px-3 d-flex justify-content-between align-items-center">
+            <span class="small text-muted">Total outstanding</span>
+            <span class="fw-bold">£{{ outstanding_total|floatformat:2 }}</span>
+        </div>
+        {% else %}
+        <div class="card-body text-center py-4">
+            <i class="bi bi-check-circle text-success display-6 d-block mb-2"></i>
+            <p class="mb-0 fw-semibold">No outstanding invoices</p>
+            <p class="text-muted small mb-0">You're all up to date.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3">
+            <h6 class="mb-0">Payment history</h6>
+        </div>
+        {% if paid %}
+        <div class="card-body p-0">
+            <div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <tbody>
+                    {% for invoice in paid %}
+                    <tr>
+                        <td class="ps-3 py-2 small">{{ invoice.period }}</td>
+                        <td class="py-2 small fw-semibold">£{{ invoice.amount|floatformat:2 }}</td>
+                        <td class="py-2 small text-end pe-3">
+                            <span class="badge bg-success-subtle text-success">Paid</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="card-body">
+            <p class="text-muted small mb-0">No payments recorded yet.</p>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

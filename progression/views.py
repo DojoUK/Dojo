@@ -7,7 +7,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 
 from dojo.mixins import OrgAdminMixin
-from .models import MemberProgression, ProgressionStage, ProgressionSystem
+from .models import (
+    MemberProgression, MemberSyllabusProgress, ProgressionStage, ProgressionSystem,
+    SyllabusItem, SyllabusSection,
+)
 
 
 class ProgressionSettingsView(OrgAdminMixin, View):
@@ -17,8 +20,10 @@ class ProgressionSettingsView(OrgAdminMixin, View):
             .filter(organisation=self.org)
             .prefetch_related('stages')
         )
+        syllabus_sections = SyllabusSection.objects.filter(organisation=self.org).prefetch_related('stages', 'items')
         return render(request, 'progression/settings.html', {
             'systems': systems,
+            'syllabus_sections': syllabus_sections,
             'org': self.org,
             'org_membership': self.org_membership,
         })
@@ -127,10 +132,105 @@ class EditStageView(OrgAdminMixin, View):
         if system.stages.filter(name=name).exclude(pk=pk).exists():
             messages.error(request, f'"{name}" already exists in {system.name}.')
             return redirect('progression_settings', org_slug=org_slug)
+        syllabus_section_id = request.POST.get('syllabus_section_id', '').strip()
+        if syllabus_section_id:
+            stage.syllabus_section = get_object_or_404(
+                SyllabusSection, pk=syllabus_section_id, organisation=self.org
+            )
+        else:
+            stage.syllabus_section = None
+
         stage.name = name
         stage.colour = colour
-        stage.save(update_fields=['name', 'colour'])
+        stage.save(update_fields=['name', 'colour', 'syllabus_section'])
         messages.success(request, f'Stage updated.')
+        return redirect('progression_settings', org_slug=org_slug)
+
+
+class AddSyllabusSectionView(OrgAdminMixin, View):
+    def post(self, request, org_slug):
+        name = request.POST.get('name', '').strip()
+        content = request.POST.get('content', '').strip()
+        if not name:
+            messages.error(request, 'Section name is required.')
+            return redirect('progression_settings', org_slug=org_slug)
+        if SyllabusSection.objects.filter(organisation=self.org, name=name).exists():
+            messages.error(request, f'A syllabus section called "{name}" already exists.')
+            return redirect('progression_settings', org_slug=org_slug)
+        last = SyllabusSection.objects.filter(organisation=self.org).order_by('order').last()
+        SyllabusSection.objects.create(
+            organisation=self.org, name=name, content=content,
+            order=(last.order + 1) if last else 0,
+        )
+        messages.success(request, f'"{name}" syllabus section created.')
+        return redirect('progression_settings', org_slug=org_slug)
+
+
+class EditSyllabusSectionView(OrgAdminMixin, View):
+    def post(self, request, org_slug, pk):
+        section = get_object_or_404(SyllabusSection, pk=pk, organisation=self.org)
+        name = request.POST.get('name', '').strip()
+        content = request.POST.get('content', '').strip()
+        if not name:
+            messages.error(request, 'Section name is required.')
+            return redirect('progression_settings', org_slug=org_slug)
+        if SyllabusSection.objects.filter(organisation=self.org, name=name).exclude(pk=pk).exists():
+            messages.error(request, f'A syllabus section called "{name}" already exists.')
+            return redirect('progression_settings', org_slug=org_slug)
+        section.name = name
+        section.content = content
+        section.save(update_fields=['name', 'content'])
+        messages.success(request, 'Syllabus section updated.')
+        return redirect('progression_settings', org_slug=org_slug)
+
+
+class DeleteSyllabusSectionView(OrgAdminMixin, View):
+    def post(self, request, org_slug, pk):
+        section = get_object_or_404(SyllabusSection, pk=pk, organisation=self.org)
+        section.delete()
+        messages.success(request, f'"{section.name}" deleted. Stages that referenced it are now unlinked.')
+        return redirect('progression_settings', org_slug=org_slug)
+
+
+class AddSyllabusItemView(OrgAdminMixin, View):
+    def post(self, request, org_slug, section_pk):
+        section = get_object_or_404(SyllabusSection, pk=section_pk, organisation=self.org)
+        name = request.POST.get('name', '').strip()
+        description = request.POST.get('description', '').strip()
+        if not name:
+            messages.error(request, 'Item name is required.')
+            return redirect('progression_settings', org_slug=org_slug)
+        last = section.items.order_by('order').last()
+        section.items.create(
+            name=name, description=description,
+            order=(last.order + 1) if last else 0,
+        )
+        messages.success(request, f'"{name}" added to {section.name}.')
+        return redirect('progression_settings', org_slug=org_slug)
+
+
+class EditSyllabusItemView(OrgAdminMixin, View):
+    def post(self, request, org_slug, section_pk, pk):
+        section = get_object_or_404(SyllabusSection, pk=section_pk, organisation=self.org)
+        item = get_object_or_404(SyllabusItem, pk=pk, section=section)
+        name = request.POST.get('name', '').strip()
+        description = request.POST.get('description', '').strip()
+        if not name:
+            messages.error(request, 'Item name is required.')
+            return redirect('progression_settings', org_slug=org_slug)
+        item.name = name
+        item.description = description
+        item.save(update_fields=['name', 'description'])
+        messages.success(request, 'Item updated.')
+        return redirect('progression_settings', org_slug=org_slug)
+
+
+class DeleteSyllabusItemView(OrgAdminMixin, View):
+    def post(self, request, org_slug, section_pk, pk):
+        section = get_object_or_404(SyllabusSection, pk=section_pk, organisation=self.org)
+        item = get_object_or_404(SyllabusItem, pk=pk, section=section)
+        item.delete()
+        messages.success(request, f'"{item.name}" deleted.')
         return redirect('progression_settings', org_slug=org_slug)
 
 

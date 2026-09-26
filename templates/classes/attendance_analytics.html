@@ -209,6 +209,8 @@
 const trendCtx = document.getElementById('attendanceTrendChart');
 const trendAverage = {{ trend_average }};
 const trendData = {{ trend_data|safe }};
+const isDarkMode = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+const trendLineColor = isDarkMode ? '#e8e8e8' : '#212529';
 new Chart(trendCtx, {
     type: 'line',
     data: {
@@ -217,12 +219,12 @@ new Chart(trendCtx, {
             {
                 label: 'Members present',
                 data: trendData,
-                borderColor: '#212529',
-                backgroundColor: 'rgba(33,37,41,0.08)',
+                borderColor: trendLineColor,
+                backgroundColor: isDarkMode ? 'rgba(232,232,232,0.10)' : 'rgba(33,37,41,0.08)',
                 tension: 0.3,
                 fill: true,
                 pointRadius: 4,
-                pointBackgroundColor: '#212529',
+                pointBackgroundColor: trendLineColor,
             },
             {
                 label: `Average (${trendAverage})`,

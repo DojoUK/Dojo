@@ -19,6 +19,8 @@ class Member(models.Model):
     emergency_contact_phone = models.CharField(max_length=20, blank=True)
     emergency_contact_2_name = models.CharField(max_length=255, blank=True)
     emergency_contact_2_phone = models.CharField(max_length=20, blank=True)
+    address_line1 = models.CharField(max_length=255, blank=True)
+    address_line2 = models.CharField(max_length=255, blank=True)
     is_active = models.BooleanField(default=True)
     token = models.CharField(max_length=64, unique=True, default=generate_token)
     token_created_at = models.DateTimeField(default=timezone.now, help_text='When the current portal token was issued — used to auto-rotate stale links')
@@ -50,6 +52,8 @@ class Member(models.Model):
         self.emergency_contact_phone = ''
         self.emergency_contact_2_name = ''
         self.emergency_contact_2_phone = ''
+        self.address_line1 = ''
+        self.address_line2 = ''
         self.custom_field_values = {}
         self.stripe_customer_id = ''
         self.stripe_subscription_id = ''
@@ -164,6 +168,33 @@ class FamilyGroupMember(models.Model):
 
     class Meta:
         unique_together = ('family_group', 'member')
+
+
+class MemberLeavingRequest(models.Model):
+    """
+    A member's self-reported intention to stop training, submitted from the
+    member portal. This does NOT archive the member automatically — it's
+    flagged here for staff to review and action from the staff side, so an
+    accidental click (or a request that needs a follow-up conversation)
+    doesn't silently remove someone.
+    """
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pending review'
+        ACTIONED = 'actioned', 'Archived'
+        DISMISSED = 'dismissed', 'Dismissed'
+
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='leaving_requests')
+    reason = models.TextField(blank=True)
+    requested_at = models.DateTimeField(default=timezone.now)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    resolved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+
+    def __str__(self):
+        return f"{self.member} — leaving request ({self.get_status_display()})"
+
+    class Meta:
+        ordering = ['-requested_at']
 
 
 class MemberNote(models.Model):

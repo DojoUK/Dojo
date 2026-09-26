@@ -660,9 +660,10 @@ class BillingPolicyCreateView(OrgMixin,View):
             return redirect('billing_policies', org_slug=self.org.slug)
 
         try:
-            amount_val = float(amount)
-        except ValueError:
-            messages.error(request, 'Invalid amount.')
+            amount_field = BillingPolicy._meta.get_field('amount')
+            amount_val = amount_field.clean(Decimal(amount), None)
+        except (InvalidOperation, ValidationError) as e:
+            messages.error(request, f'Invalid amount: {"; ".join(e.messages) if hasattr(e, "messages") else "not a valid number"}')
             return redirect('billing_policies', org_slug=self.org.slug)
 
         BillingPolicy.objects.create(
@@ -683,9 +684,10 @@ class BillingPolicyEditView(OrgMixin,View):
         policy.billing_cycle = request.POST.get('billing_cycle', policy.billing_cycle).strip()
         policy.description = request.POST.get('description', '').strip()
         try:
-            policy.amount = float(request.POST.get('amount', policy.amount))
-        except ValueError:
-            messages.error(request, 'Invalid amount.')
+            amount_field = BillingPolicy._meta.get_field('amount')
+            policy.amount = amount_field.clean(Decimal(request.POST.get('amount', policy.amount)), None)
+        except (InvalidOperation, ValidationError) as e:
+            messages.error(request, f'Invalid amount: {"; ".join(e.messages) if hasattr(e, "messages") else "not a valid number"}')
             return redirect('billing_policies', org_slug=self.org.slug)
         policy.is_active = request.POST.get('is_active') == '1'
         policy.save()
@@ -715,9 +717,10 @@ class PolicyDiscountCreateView(OrgMixin,View):
             return redirect('billing_policies', org_slug=self.org.slug)
 
         try:
-            value_val = float(value)
-        except ValueError:
-            messages.error(request, 'Invalid discount value.')
+            value_field = PolicyDiscount._meta.get_field('value')
+            value_val = value_field.clean(Decimal(value), None)
+        except (InvalidOperation, ValidationError) as e:
+            messages.error(request, f'Invalid discount value: {"; ".join(e.messages) if hasattr(e, "messages") else "not a valid number"}')
             return redirect('billing_policies', org_slug=self.org.slug)
 
         PolicyDiscount.objects.create(

@@ -59,9 +59,53 @@
                                            {% if row.present %}checked{% endif %}>
                                 </td>
                                 <td class="py-3">
-                                    <label class="form-check-label fw-semibold mb-0" for="m{{ row.member.pk }}" style="cursor:pointer;">
-                                        {{ row.member.name }}
-                                    </label>
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <label class="form-check-label fw-semibold mb-0" for="m{{ row.member.pk }}" style="cursor:pointer;">
+                                            {{ row.member.name }}
+                                        </label>
+                                        {% if row.member.medical_info %}
+                                        <button type="button"
+                                                class="badge bg-warning text-dark border-0 d-flex align-items-center gap-1"
+                                                style="font-size:0.65rem;cursor:pointer;"
+                                                data-bs-toggle="collapse"
+                                                data-bs-target="#med{{ row.member.pk }}">
+                                            <i class="bi bi-heart-pulse-fill"></i> Medical info
+                                        </button>
+                                        {% endif %}
+                                        {% if row.member.emergency_contact_phone or row.member.emergency_contact_2_phone %}
+                                        <button type="button"
+                                                class="btn btn-link p-0 text-danger border-0"
+                                                style="font-size:1rem;line-height:1;cursor:pointer;"
+                                                data-bs-toggle="collapse"
+                                                data-bs-target="#emg{{ row.member.pk }}"
+                                                title="Emergency contact — click to view">
+                                            <i class="bi bi-telephone-fill"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    {% if row.member.medical_info %}
+                                    <div class="collapse mt-2" id="med{{ row.member.pk }}">
+                                        <div class="p-2 rounded small" style="background:#fef9c3;border:1px solid #fde68a;color:#78350f;white-space:pre-line;">
+                                            <i class="bi bi-heart-pulse-fill me-1"></i>{{ row.member.medical_info }}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    {% if row.member.emergency_contact_phone or row.member.emergency_contact_2_phone %}
+                                    <div class="collapse mt-2" id="emg{{ row.member.pk }}">
+                                        <div class="p-2 rounded small" style="background:#e0f2fe;border:1px solid #bae6fd;color:#075985;">
+                                            {% if row.member.emergency_contact_name or row.member.emergency_contact_phone %}
+                                            <div>
+                                                <i class="bi bi-telephone-fill me-1"></i>{{ row.member.emergency_contact_name|default:"Contact 1" }}{% if row.member.emergency_contact_phone %}: {{ row.member.emergency_contact_phone }}{% endif %}
+                                            </div>
+                                            {% endif %}
+                                            {% if row.member.emergency_contact_2_name or row.member.emergency_contact_2_phone %}
+                                            <div>
+                                                <i class="bi bi-telephone-fill me-1"></i>{{ row.member.emergency_contact_2_name|default:"Contact 2" }}{% if row.member.emergency_contact_2_phone %}: {{ row.member.emergency_contact_2_phone }}{% endif %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endif %}
                                 </td>
                                 <td class="py-3 small text-muted">
                                     {% if row.current_grade %}{{ row.current_grade.stage.name }}{% else %}—{% endif %}

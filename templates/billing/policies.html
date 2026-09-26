@@ -111,7 +111,7 @@
                                     </div>
                                     <div class="col">
                                         <label class="form-label small fw-semibold">Amount (£)</label>
-                                        <input type="number" name="amount" class="form-control" step="0.01" min="0" value="{{ policy.amount }}" required>
+                                        <input type="number" name="amount" class="form-control" step="0.01" min="0" max="999999.99" value="{{ policy.amount }}" required>
                                     </div>
                                 </div>
                                 <div class="mb-3">
@@ -155,7 +155,7 @@
                                     </div>
                                     <div class="col">
                                         <label class="form-label small fw-semibold">Value</label>
-                                        <input type="number" name="value" class="form-control" step="0.01" min="0" placeholder="e.g. 10" required>
+                                        <input type="number" name="value" class="form-control" step="0.01" min="0" max="999999.99" placeholder="e.g. 10" required>
                                     </div>
                                 </div>
                                 <div class="form-check">
@@ -248,7 +248,7 @@
                         </div>
                         <div class="col">
                             <label class="form-label small fw-semibold">Amount (£)</label>
-                            <input type="number" name="amount" class="form-control" step="0.01" min="0" placeholder="0.00" required>
+                            <input type="number" name="amount" class="form-control" step="0.01" min="0" max="999999.99" placeholder="0.00" required>
                         </div>
                     </div>
                     <div class="mb-3">

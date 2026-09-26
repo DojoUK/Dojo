@@ -1,0 +1,144 @@
+{% extends 'portal/base.html' %}
+
+{% block title_suffix %} — My details{% endblock %}
+
+{% block content %}
+<div class="portal-grid">
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3">
+            <h6 class="mb-0">Edit my details</h6>
+            <p class="text-muted small mb-0 mt-1">Name and date of birth are kept up to date by {{ org.name }} — contact them if these need changing.</p>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+
+                <p class="small fw-semibold text-muted text-uppercase mb-2" style="font-size:0.72rem;letter-spacing:.05em;">Contact details</p>
+                <div class="row g-3 mb-4">
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold">Email</label>
+                        <input type="email" name="email" value="{{ member.email }}" class="form-control">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold">Phone</label>
+                        <input type="text" name="phone" value="{{ member.phone }}" class="form-control">
+                    </div>
+                </div>
+
+                <p class="small fw-semibold text-muted text-uppercase mb-2" style="font-size:0.72rem;letter-spacing:.05em;">Emergency contacts</p>
+                <div class="row g-3 mb-4">
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold">Contact 1 — name</label>
+                        <input type="text" name="emergency_contact_name" value="{{ member.emergency_contact_name }}" class="form-control">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold">Contact 1 — phone</label>
+                        <input type="text" name="emergency_contact_phone" value="{{ member.emergency_contact_phone }}" class="form-control">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold">Contact 2 — name <span class="text-muted fw-normal">(optional)</span></label>
+                        <input type="text" name="emergency_contact_2_name" value="{{ member.emergency_contact_2_name }}" class="form-control">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold">Contact 2 — phone <span class="text-muted fw-normal">(optional)</span></label>
+                        <input type="text" name="emergency_contact_2_phone" value="{{ member.emergency_contact_2_phone }}" class="form-control">
+                    </div>
+                </div>
+
+                <p class="small fw-semibold text-muted text-uppercase mb-2" style="font-size:0.72rem;letter-spacing:.05em;">Medical information</p>
+                <div class="mb-4">
+                    <label class="form-label small fw-semibold">Conditions, allergies, or anything coaches should know about</label>
+                    <textarea name="medical_info" class="form-control" rows="3">{{ member.medical_info }}</textarea>
+                </div>
+
+                {% if photo_consent_field %}
+                <p class="small fw-semibold text-muted text-uppercase mb-2" style="font-size:0.72rem;letter-spacing:.05em;">Photo consent</p>
+                <div class="mb-4 form-check">
+                    <input type="checkbox" name="photo_consent" value="1" class="form-check-input" id="photo-consent-check" {% if photo_consent %}checked{% endif %}>
+                    <label class="form-check-label small" for="photo-consent-check">
+                        I consent to {{ org.name }} taking and using photos/video of me (or my child) for club purposes.
+                    </label>
+                </div>
+                {% endif %}
+
+                <button type="submit" class="btn btn-dark">Save changes</button>
+            </form>
+        </div>
+    </div>
+
+    <div>
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Documents</h6>
+                <p class="text-muted small mb-0 mt-1">Files {{ org.name }} has shared with you, and anything you've uploaded — waivers, medical letters, ID, and so on.</p>
+            </div>
+            {% if documents %}
+            <div class="list-group list-group-flush">
+                {% for doc in documents %}
+                <div class="list-group-item py-2 px-3 d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small fw-semibold">{{ doc.name }}</div>
+                        <div class="text-muted small">
+                            {{ doc.get_category_display }} · {{ doc.uploaded_at|date:"d M Y" }}
+                            {% if doc.uploaded_by_member %}<span class="badge bg-secondary-subtle text-secondary ms-1">Uploaded by you</span>{% endif %}
+                        </div>
+                    </div>
+                    <a href="{% url 'portal_document_download' token=member.token pk=doc.pk %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-download"></i>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div class="card-body">
+                <form method="post" action="{% url 'portal_document_upload' token=member.token %}" enctype="multipart/form-data" class="row g-2 align-items-end">
+                    {% csrf_token %}
+                    <div class="col-sm-5">
+                        <label class="form-label small fw-semibold">File</label>
+                        <input type="file" name="file" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label small fw-semibold">Category</label>
+                        <select name="category" class="form-select form-select-sm">
+                            {% for value, label in document_categories %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-sm-3">
+                        <button type="submit" class="btn btn-dark btn-sm w-100">Upload</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Stopping training?</h6>
+            </div>
+            <div class="card-body">
+                {% if leaving_request %}
+                <p class="small text-muted mb-0">
+                    <i class="bi bi-check-circle me-1"></i>
+                    We've let {{ org.name }} know — they'll be in touch. Your account hasn't changed yet.
+                </p>
+                {% else %}
+                <p class="text-muted small mb-3">Let {{ org.name }} know you're planning to stop — they'll review it and follow up with you before anything changes on your account.</p>
+                <form method="post" action="{% url 'portal_stop_training' token=member.token %}">
+                    {% csrf_token %}
+                    <div class="mb-2">
+                        <textarea name="reason" class="form-control form-control-sm" rows="2" placeholder="Reason (optional)"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-outline-danger btn-sm"
+                            onclick="return confirm('Let {{ org.name }} know you\'re planning to stop training?')">
+                        I'm planning to stop training
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

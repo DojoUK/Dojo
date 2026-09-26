@@ -57,6 +57,24 @@ class OrganisationMember(models.Model):
         max_length=7, blank=True,
         help_text='Hex colour used for this staff member\'s sessions on the org calendar, e.g. #2563EB.',
     )
+    dark_mode = models.BooleanField(
+        default=False,
+        help_text="Use the dark theme for this staff member's own view of the app.",
+    )
+
+    class AccentTheme(models.TextChoices):
+        DEFAULT = '', "Club default"
+        BLUE = 'blue', 'Blue'
+        GREEN = 'green', 'Green'
+        PURPLE = 'purple', 'Purple'
+        AMBER = 'amber', 'Amber'
+        ROSE = 'rose', 'Rose'
+        SLATE = 'slate', 'Slate'
+
+    accent_theme = models.CharField(
+        max_length=20, choices=AccentTheme.choices, blank=True, default='',
+        help_text="Secondary personal theme — recolours the sidebar and buttons for this staff member's own view. Works alongside dark mode.",
+    )
 
     def __str__(self):
         return f"{self.user.get_full_name() or self.user.username} — {self.organisation} ({self.get_role_display()})"

@@ -101,6 +101,68 @@
         </div>
         {% endif %}
 
+        {# Appearance #}
+        {% if org_membership %}
+        <div class="card mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0"><i class="bi bi-moon-stars-fill me-1"></i>Appearance</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Switch to a dark theme for your own view of the app. This is a personal preference — it doesn't affect anyone else.
+                </p>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_dark_mode">
+                    <div class="form-check form-switch mb-3">
+                        <input type="checkbox" name="dark_mode" value="1" class="form-check-input" role="switch"
+                               id="dark-mode-switch" {% if org_membership.dark_mode %}checked{% endif %}
+                               onchange="this.form.submit()">
+                        <label class="form-check-label small" for="dark-mode-switch">Dark mode</label>
+                    </div>
+                    <noscript><button type="submit" class="btn btn-dark btn-sm">Save</button></noscript>
+                </form>
+
+                <hr class="my-3">
+
+                <p class="small fw-semibold mb-1">Sidebar &amp; button colour</p>
+                <p class="text-muted small mb-3">
+                    A secondary theme on top of dark mode — recolours your sidebar and buttons. Only affects your own view.
+                </p>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_accent_theme">
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for value, label in accent_theme_choices %}
+                        <label class="accent-swatch-label" title="{{ label }}">
+                            <input type="radio" name="accent_theme" value="{{ value }}" class="d-none accent-swatch-input"
+                                   {% if org_membership.accent_theme == value %}checked{% endif %}
+                                   onchange="this.form.submit()">
+                            <span class="accent-swatch" data-accent-swatch="{{ value }}"></span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <noscript><button type="submit" class="btn btn-dark btn-sm mt-3">Save</button></noscript>
+                </form>
+                <style>
+                    .accent-swatch-label { cursor: pointer; }
+                    .accent-swatch {
+                        display: block; width: 28px; height: 28px; border-radius: 50%;
+                        border: 2px solid var(--dojo-border); box-shadow: 0 1px 2px rgba(0,0,0,.15);
+                    }
+                    .accent-swatch-input:checked + .accent-swatch { border-color: var(--dojo-text); box-shadow: 0 0 0 2px var(--dojo-card-bg), 0 0 0 4px var(--dojo-text); }
+                    .accent-swatch[data-accent-swatch=""] { background: linear-gradient(135deg, #1E3A5F 50%, #2563EB 50%); }
+                    .accent-swatch[data-accent-swatch="blue"] { background: linear-gradient(135deg, #1E3A5F 50%, #2563EB 50%); }
+                    .accent-swatch[data-accent-swatch="green"] { background: linear-gradient(135deg, #14532d 50%, #16a34a 50%); }
+                    .accent-swatch[data-accent-swatch="purple"] { background: linear-gradient(135deg, #3b0764 50%, #7c3aed 50%); }
+                    .accent-swatch[data-accent-swatch="amber"] { background: linear-gradient(135deg, #78350f 50%, #d97706 50%); }
+                    .accent-swatch[data-accent-swatch="rose"] { background: linear-gradient(135deg, #4c0519 50%, #e11d48 50%); }
+                    .accent-swatch[data-accent-swatch="slate"] { background: linear-gradient(135deg, #1e293b 50%, #475569 50%); }
+                </style>
+            </div>
+        </div>
+        {% endif %}
+
         {# Password #}
         <div class="card mb-4">
             <div class="card-header bg-white border-bottom py-3">

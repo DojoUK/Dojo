@@ -1,0 +1,57 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ org.name }} — Member sign in</title>
+    <link href="{% static 'vendor/bootstrap/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="{% static 'img/favicon/favicon.ico' %}">
+    <style>
+        body { background: #f8f9fa; }
+        .portal-header { background: #212529; color: #fff; padding: 1.25rem 0; }
+        .portal-header .org-name { font-weight: 600; font-size: 1.1rem; }
+    </style>
+</head>
+<body>
+
+<header class="portal-header mb-4">
+    <div class="container">
+        <div class="org-name">{{ org.name }}</div>
+    </div>
+</header>
+
+<div class="container pb-5" style="max-width: 440px;">
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+            {% if submitted %}
+            <i class="bi bi-envelope-check display-6 d-block mb-3 text-success"></i>
+            <h6 class="fw-semibold">Check your email</h6>
+            <p class="text-muted small mb-0">
+                If that email matches a member record with us, we've sent a sign-in link to it.
+                The link takes you straight to your member portal — no password needed.
+            </p>
+            {% else %}
+            <h6 class="fw-semibold mb-1">Member sign in</h6>
+            <p class="text-muted small mb-3">
+                Enter the email address we have on file for you (or your guardian's, if you're a junior member)
+                and we'll send you a link to your member portal.
+            </p>
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Email address</label>
+                    <input type="email" name="email" class="form-control" required autofocus>
+                </div>
+                <button type="submit" class="btn btn-dark w-100">Send me a link</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    <p class="text-center text-muted small mt-4">
+        Questions? Contact {{ org.name }}{% if org.email %} at <a href="mailto:{{ org.email }}">{{ org.email }}</a>{% endif %}.
+    </p>
+</div>
+</body>
+</html>

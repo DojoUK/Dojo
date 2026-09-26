@@ -14,6 +14,20 @@
 </style>
 {% endwith %}
 {% if org.custom_css %}<style>{{ org.custom_css }}</style>{% endif %}
+<style>
+/* Secondary personal theme (OrganisationMember.accent_theme) — recolours the
+   sidebar + buttons on top of the org default and dark mode. Each preset's
+   sidebar colours are already dark-toned, so no separate dark-mode variant
+   is needed — they read fine whether data-bs-theme is "dark" or not. The
+   html[data-accent-theme="…"] selector outranks the plain :root block above
+   regardless of source order, so it always wins when a preference is set. */
+html[data-accent-theme="blue"]   { --dojo-accent:#2563EB; --dojo-accent-hover:#1d4ed8; --dojo-sidebar:#1E3A5F; --dojo-sidebar-dark:#152d4a; }
+html[data-accent-theme="green"]  { --dojo-accent:#16a34a; --dojo-accent-hover:#15803d; --dojo-sidebar:#14532d; --dojo-sidebar-dark:#052e13; }
+html[data-accent-theme="purple"] { --dojo-accent:#7c3aed; --dojo-accent-hover:#6d28d9; --dojo-sidebar:#3b0764; --dojo-sidebar-dark:#1e0333; }
+html[data-accent-theme="amber"]  { --dojo-accent:#d97706; --dojo-accent-hover:#b45309; --dojo-sidebar:#78350f; --dojo-sidebar-dark:#3f1d05; }
+html[data-accent-theme="rose"]   { --dojo-accent:#e11d48; --dojo-accent-hover:#be123c; --dojo-sidebar:#4c0519; --dojo-sidebar-dark:#27020d; }
+html[data-accent-theme="slate"]  { --dojo-accent:#475569; --dojo-accent-hover:#334155; --dojo-sidebar:#1e293b; --dojo-sidebar-dark:#0f172a; }
+</style>
 {% endblock %}
 
 {% block body %}
@@ -118,7 +132,7 @@
 }
 .dojo-topbar {
     height: 60px;
-    background: #fff;
+    background: var(--dojo-card-bg);
     border-bottom: 1px solid var(--dojo-border);
     display: flex;
     align-items: center;
@@ -356,7 +370,7 @@
         <a href="{% url 'account_settings' org_slug=org.slug %}" class="user-name" title="My account">
             <i class="bi bi-person-circle me-1"></i>{{ request.user.get_full_name|default:request.user.username }}
         </a>
-        <form method="post" action="{% url 'logout' %}">
+        <form method="post" action="{% url 'logout' %}" id="logout-form">
             {% csrf_token %}
             <button type="submit" class="btn btn-sm w-100" style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.15);font-size:0.8rem;">
                 <i class="bi bi-box-arrow-right me-1"></i> Log out
@@ -431,6 +445,32 @@ function closeSidebar() {
     document.getElementById('sidebar').classList.remove('open');
     document.getElementById('sidebarOverlay').classList.remove('open');
 }
+
+// Auto-logout after 2 hours of inactivity. SESSION_COOKIE_AGE +
+// SESSION_SAVE_EVERY_REQUEST (see settings.py) already expire the session
+// server-side 2 hours after the last request — this covers the case where
+// the tab is just left open with no requests being made at all in that time,
+// by submitting the same logout form the sidebar button uses.
+(function () {
+    var INACTIVITY_LIMIT_MS = 2 * 60 * 60 * 1000;
+    var timer;
+
+    function doLogout() {
+        var form = document.getElementById('logout-form');
+        if (form) form.submit();
+    }
+
+    function resetTimer() {
+        clearTimeout(timer);
+        timer = setTimeout(doLogout, INACTIVITY_LIMIT_MS);
+    }
+
+    ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'].forEach(function (evt) {
+        document.addEventListener(evt, resetTimer, { passive: true });
+    });
+
+    resetTimer();
+})();
 </script>
 
 {% endblock %}

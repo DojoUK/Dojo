@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.db import models
 from organisations.models import Organisation
 from members.models import Member
@@ -20,6 +21,62 @@ class ProgressionSystem(models.Model):
         unique_together = ('organisation', 'name')
 
 
+class SyllabusSection(models.Model):
+    """
+    A block of syllabus content (techniques, theory, requirements) for one or
+    more progression stages to share. Several stages — even across different
+    systems — can point at the same section, e.g. a "Groundwork basics"
+    section linked to both "Yellow Belt" (Kyu Grades) and "Stage 3" (Mon
+    Grades) so the content is written once and reused.
+    """
+    organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='syllabus_sections')
+    name = models.CharField(max_length=255)
+    content = models.TextField(
+        blank=True,
+        help_text='Optional intro/description for this section — the actual requirements are the checklist items below it.',
+    )
+    order = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.organisation} — {self.name}"
+
+    class Meta:
+        ordering = ['organisation', 'order', 'name']
+
+
+class SyllabusItem(models.Model):
+    """
+    One checkable requirement within a SyllabusSection, e.g. "O-goshi" or
+    "Break-falls — both sides" under a "Groundwork basics" section. Staff
+    tick these off per member (MemberSyllabusProgress) as they're covered.
+    """
+    section = models.ForeignKey(SyllabusSection, on_delete=models.CASCADE, related_name='items')
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    order = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.section} — {self.name}"
+
+    class Meta:
+        ordering = ['section', 'order', 'name']
+
+
+class MemberSyllabusProgress(models.Model):
+    """Whether a given member has had a given syllabus item signed off. Staff-only to change; view-only for the member."""
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='syllabus_progress')
+    item = models.ForeignKey(SyllabusItem, on_delete=models.CASCADE, related_name='member_progress')
+    completed = models.BooleanField(default=False)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    completed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
+
+    def __str__(self):
+        return f"{self.member} — {self.item} ({'done' if self.completed else 'pending'})"
+
+    class Meta:
+        unique_together = ('member', 'item')
+
+
 class ProgressionStage(models.Model):
     system = models.ForeignKey(ProgressionSystem, on_delete=models.CASCADE, related_name='stages')
     name = models.CharField(max_length=255)
@@ -28,6 +85,10 @@ class ProgressionStage(models.Model):
     is_default = models.BooleanField(
         default=False,
         help_text='New members are assigned this stage automatically when the system is set to auto-assign.',
+    )
+    syllabus_section = models.ForeignKey(
+        SyllabusSection, null=True, blank=True, on_delete=models.SET_NULL, related_name='stages',
+        help_text='Syllabus content shown to members currently at this stage.',
     )
 
     def __str__(self):

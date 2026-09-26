@@ -51,6 +51,43 @@ def send_welcome_email(member):
     return True, recipient
 
 
+def send_portal_login_link_email(member):
+    """Email a member (or their guardian) their existing portal link, in response to a login request."""
+    recipient = member.email
+    has_guardians = member.guardians.exists()
+    if not recipient:
+        guardian = member.guardians.filter(email__gt='').first()
+        if guardian:
+            recipient = guardian.email
+    if not recipient:
+        return False, 'No email address on file.'
+
+    org_name = member.organisation.name
+    subject = f'Your {org_name} member portal link'
+
+    portal_path = reverse('member_portal', kwargs={'token': member.token})
+    site_url = getattr(settings, 'SITE_URL', 'http://localhost:8000')
+    portal_url = f"{site_url.rstrip('/')}{portal_path}"
+
+    greeting = f"Dear guardian of {member.name}" if has_guardians and not member.email else f"Hi {member.name}"
+    text_body = (
+        f"{greeting},\n\n"
+        f"Here's your link to sign in to your {org_name} member portal:\n"
+        f"{portal_url}\n\n"
+        f"If you didn't request this, you can safely ignore this email.\n\n"
+        f"Thanks,\n{org_name}\n"
+    )
+
+    msg = EmailMultiAlternatives(
+        subject=subject,
+        body=text_body,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[recipient],
+    )
+    msg.send()
+    return True, recipient
+
+
 def send_portal_link_refreshed_email(member):
     """Tell a member their portal token was auto-rotated and share the new link. Returns (success, recipient_or_error)."""
     recipient = member.email

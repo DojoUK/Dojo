@@ -13,4 +13,10 @@ urlpatterns = [
     path('systems/<int:system_pk>/stages/<int:pk>/edit/', views.EditStageView.as_view(), name='progression_stage_edit'),
     path('systems/<int:pk>/apply-default/', views.ApplyDefaultStageView.as_view(), name='progression_system_apply_default'),
     path('import/', views.ImportProgressionView.as_view(), name='progression_import'),
+    path('syllabus/add/', views.AddSyllabusSectionView.as_view(), name='syllabus_section_add'),
+    path('syllabus/<int:pk>/edit/', views.EditSyllabusSectionView.as_view(), name='syllabus_section_edit'),
+    path('syllabus/<int:pk>/delete/', views.DeleteSyllabusSectionView.as_view(), name='syllabus_section_delete'),
+    path('syllabus/<int:section_pk>/items/add/', views.AddSyllabusItemView.as_view(), name='syllabus_item_add'),
+    path('syllabus/<int:section_pk>/items/<int:pk>/edit/', views.EditSyllabusItemView.as_view(), name='syllabus_item_edit'),
+    path('syllabus/<int:section_pk>/items/<int:pk>/delete/', views.DeleteSyllabusItemView.as_view(), name='syllabus_item_delete'),
 ]

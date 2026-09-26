@@ -1,0 +1,87 @@
+{% extends 'portal/base.html' %}
+
+{% block title_suffix %} — My syllabus{% endblock %}
+
+{% block content %}
+
+{% if syllabus_cards %}
+<div class="portal-grid">
+    {% for card in syllabus_cards %}
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white border-bottom py-3 d-flex align-items-center gap-2">
+            {% if card.stage.colour %}
+            <span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:{{ card.stage.colour }};border:1px solid rgba(0,0,0,0.1);flex-shrink:0;"></span>
+            {% endif %}
+            <div>
+                <h6 class="mb-0">{{ card.stage.name }}</h6>
+                <p class="text-muted small mb-0">{{ card.stage.system.name }}{% if card.section %} · {{ card.section.name }}{% endif %}</p>
+            </div>
+        </div>
+        {% if card.section %}
+            {% if card.items %}
+            <ul class="list-group list-group-flush">
+                {% for entry in card.items %}
+                <li class="list-group-item py-2 px-3">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" disabled {% if entry.done %}checked{% endif %}>
+                        <label class="form-check-label small {% if entry.done %}text-decoration-line-through text-muted{% endif %}">
+                            {{ entry.item.name }}
+                        </label>
+                        {% if entry.item.description %}<div class="small text-muted">{{ entry.item.description }}</div>{% endif %}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            <div class="card-body py-2">
+                <p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i>Ticked off by your coach as you're signed off on each item.</p>
+            </div>
+            {% else %}
+            <div class="card-body">
+                <p class="text-muted small mb-0">No checklist items yet for this grade — check with your coach.</p>
+            </div>
+            {% endif %}
+        {% else %}
+        <div class="card-body">
+            <p class="text-muted small mb-0">No syllabus has been set for this grade yet — check with your coach.</p>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body text-center py-5">
+        <p class="text-muted small mb-0">You don't have a grade recorded yet.</p>
+    </div>
+</div>
+{% endif %}
+
+{% if progressions.count > 1 %}
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom py-3">
+        <h6 class="mb-0">Grade history</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+        <table class="table table-sm mb-0">
+            <tbody>
+                {% for prog in progressions %}
+                <tr>
+                    <td class="ps-3 py-2" style="width:28px;">
+                        {% if prog.stage.colour %}
+                        <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:{{ prog.stage.colour }};border:1px solid rgba(0,0,0,0.1);"></span>
+                        {% endif %}
+                    </td>
+                    <td class="py-2 small fw-semibold">{{ prog.stage.name }}</td>
+                    <td class="py-2 small text-muted">{{ prog.stage.system.name }}</td>
+                    <td class="py-2 small text-muted pe-3">{{ prog.achieved_date|date:"d M Y" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -75,6 +75,7 @@
                     <th class="ps-3 small fw-semibold" style="width:36px;"></th>
                     <th class="small fw-semibold">Name</th>
                     <th class="small fw-semibold">Members</th>
+                    <th class="small fw-semibold">Syllabus</th>
                     <th class="small fw-semibold">Default</th>
                     <th></th>
                 </tr>
@@ -91,6 +92,7 @@
                     </td>
                     <td class="py-2 fw-semibold small">{{ stage.name }}</td>
                     <td class="py-2 small text-muted">{{ stage.achievements.count }}</td>
+                    <td class="py-2 small text-muted">{{ stage.syllabus_section.name|default:"—" }}</td>
                     <td class="py-2">
                         {% if stage.is_default %}
                         <span class="badge bg-success-subtle text-success small">Default</span>
@@ -131,18 +133,27 @@
                     </td>
                 </tr>
                 <tr class="collapse" id="edit-stage-{{ stage.pk }}">
-                    <td colspan="5" class="bg-light py-2 px-3">
+                    <td colspan="6" class="bg-light py-2 px-3">
                         <form method="post" action="{% url 'progression_stage_edit' org_slug=org.slug system_pk=system.pk pk=stage.pk %}" class="row g-2 align-items-end">
                             {% csrf_token %}
-                            <div class="col-sm-5">
+                            <div class="col-sm-4">
                                 <label class="form-label small fw-semibold mb-1">Name</label>
                                 <input type="text" name="name" class="form-control form-control-sm" value="{{ stage.name }}">
                             </div>
-                            <div class="col-sm-3">
+                            <div class="col-sm-2">
                                 <label class="form-label small fw-semibold mb-1">Colour</label>
                                 <input type="color" name="colour" class="form-control form-control-color form-control-sm w-100" value="{{ stage.colour|default:'#ffffff' }}">
                             </div>
                             <div class="col-sm-4">
+                                <label class="form-label small fw-semibold mb-1">Syllabus section</label>
+                                <select name="syllabus_section_id" class="form-select form-select-sm">
+                                    <option value="">— None —</option>
+                                    {% for section in syllabus_sections %}
+                                    <option value="{{ section.pk }}" {% if stage.syllabus_section_id == section.pk %}selected{% endif %}>{{ section.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-sm-2">
                                 <button type="submit" class="btn btn-dark btn-sm w-100">Save changes</button>
                             </div>
                         </form>
@@ -194,6 +205,153 @@
                 </div>
                 <div class="col-sm-4">
                     <button type="submit" class="btn btn-dark w-100">Create system</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="mb-2">
+    <h6 class="mb-1">Syllabus</h6>
+    <p class="text-muted small mb-3">
+        Break each section into checkable requirements, then link the section to any stage(s) above that should show it —
+        several stages, even across different systems, can share the same section. Staff tick off each item per member
+        from that member's profile page.
+    </p>
+</div>
+
+{% for section in syllabus_sections %}
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white border-bottom py-3 d-flex align-items-center gap-3 flex-wrap">
+        <div class="me-auto">
+            <h6 class="mb-0">{{ section.name }}</h6>
+            <p class="text-muted small mb-0">
+                {% for stage in section.stages.all %}{{ stage.system.name }} — {{ stage.name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="fst-italic">Not linked to any stage</span>{% endfor %}
+            </p>
+        </div>
+        <button class="btn btn-sm btn-outline-secondary px-2" type="button"
+                data-bs-toggle="collapse" data-bs-target="#edit-syllabus-{{ section.pk }}" title="Edit section">
+            <i class="bi bi-pencil"></i>
+        </button>
+        <form method="post" action="{% url 'syllabus_section_delete' org_slug=org.slug pk=section.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-danger"
+                    onclick="return confirm('Delete \'{{ section.name }}\'? Its items and links to stages will be removed too.')">
+                <i class="bi bi-trash"></i>
+            </button>
+        </form>
+    </div>
+
+    <div class="collapse" id="edit-syllabus-{{ section.pk }}">
+        <div class="card-body border-bottom bg-light">
+            <form method="post" action="{% url 'syllabus_section_edit' org_slug=org.slug pk=section.pk %}" class="row g-2">
+                {% csrf_token %}
+                <div class="col-sm-4">
+                    <label class="form-label small fw-semibold mb-1">Name</label>
+                    <input type="text" name="name" class="form-control form-control-sm" value="{{ section.name }}">
+                </div>
+                <div class="col-sm-8">
+                    <label class="form-label small fw-semibold mb-1">Description <span class="text-muted fw-normal">(optional intro)</span></label>
+                    <textarea name="content" class="form-control form-control-sm" rows="2">{{ section.content }}</textarea>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-dark btn-sm">Save changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if section.items.all %}
+    <ul class="list-group list-group-flush">
+        {% for item in section.items.all %}
+        <li class="list-group-item py-2 px-3">
+            <div class="d-flex align-items-start justify-content-between gap-2">
+                <div>
+                    <p class="small fw-semibold mb-0"><i class="bi bi-check2-square me-1 text-muted"></i>{{ item.name }}</p>
+                    {% if item.description %}<p class="small text-muted mb-0">{{ item.description }}</p>{% endif %}
+                </div>
+                <div class="d-flex gap-1 flex-shrink-0">
+                    <button class="btn btn-sm btn-outline-secondary px-2" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#edit-item-{{ item.pk }}" title="Edit">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <form method="post" action="{% url 'syllabus_item_delete' org_slug=org.slug section_pk=section.pk pk=item.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                onclick="return confirm('Delete \'{{ item.name }}\'? Any recorded progress on it is lost.')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <div class="collapse mt-2" id="edit-item-{{ item.pk }}">
+                <form method="post" action="{% url 'syllabus_item_edit' org_slug=org.slug section_pk=section.pk pk=item.pk %}" class="row g-2">
+                    {% csrf_token %}
+                    <div class="col-sm-4">
+                        <input type="text" name="name" class="form-control form-control-sm" value="{{ item.name }}" placeholder="Name">
+                    </div>
+                    <div class="col-sm-6">
+                        <input type="text" name="description" class="form-control form-control-sm" value="{{ item.description }}" placeholder="Description (optional)">
+                    </div>
+                    <div class="col-sm-2">
+                        <button type="submit" class="btn btn-dark btn-sm w-100">Save</button>
+                    </div>
+                </form>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <div class="card-body py-2">
+        <p class="text-muted small mb-0">No checklist items yet — add one below.</p>
+    </div>
+    {% endif %}
+
+    <div class="card-footer bg-white border-top">
+        <form method="post" action="{% url 'syllabus_item_add' org_slug=org.slug section_pk=section.pk %}">
+            {% csrf_token %}
+            <div class="row g-2 align-items-end">
+                <div class="col-sm-4">
+                    <label class="form-label small fw-semibold">Item name</label>
+                    <input type="text" name="name" class="form-control form-control-sm" placeholder="e.g. O-goshi">
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label small fw-semibold">Description <span class="text-muted fw-normal">(optional)</span></label>
+                    <input type="text" name="description" class="form-control form-control-sm" placeholder="Notes on what's required">
+                </div>
+                <div class="col-sm-2">
+                    <button type="submit" class="btn btn-dark btn-sm w-100">Add item</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% empty %}
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <p class="text-muted small mb-0">No syllabus sections yet — add one below, then link it to a stage above.</p>
+    </div>
+</div>
+{% endfor %}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom py-3">
+        <h6 class="mb-0">Add syllabus section</h6>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{% url 'syllabus_section_add' org_slug=org.slug %}">
+            {% csrf_token %}
+            <div class="row g-2 align-items-end">
+                <div class="col-sm-3">
+                    <label class="form-label small fw-semibold">Section name</label>
+                    <input type="text" name="name" class="form-control form-control-sm" placeholder="e.g. Groundwork basics">
+                </div>
+                <div class="col-sm-7">
+                    <label class="form-label small fw-semibold">Description <span class="text-muted fw-normal">(optional intro)</span></label>
+                    <textarea name="content" class="form-control form-control-sm" rows="1"></textarea>
+                </div>
+                <div class="col-sm-2">
+                    <button type="submit" class="btn btn-dark btn-sm w-100">Add section</button>
                 </div>
             </div>
         </form>
