@@ -21,7 +21,8 @@ class BillingPolicy(models.Model):
     billing_cycle = models.CharField(max_length=20, choices=BillingCycle.choices)
     pricing_model = models.CharField(max_length=20, choices=PricingModel.choices, default=PricingModel.FLAT)
     # Flat pricing
-    amount = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    amount = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True,
+                                 validators=[MinValueValidator(0)])
     # Per-session pricing
     per_session_rate = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True,
                                            help_text='Rate per session for the first enrolled class')
@@ -69,7 +70,7 @@ class PolicyDiscount(models.Model):
     policy = models.ForeignKey(BillingPolicy, on_delete=models.CASCADE, related_name='discounts')
     name = models.CharField(max_length=255)
     discount_type = models.CharField(max_length=20, choices=DiscountType.choices)
-    value = models.DecimalField(max_digits=8, decimal_places=2)
+    value = models.DecimalField(max_digits=8, decimal_places=2, validators=[MinValueValidator(0)])
     auto_apply = models.BooleanField(default=False, help_text='Automatically apply to all new members on this policy')
 
     def __str__(self):

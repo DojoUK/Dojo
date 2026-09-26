@@ -340,6 +340,20 @@ class MemberUpdateView(OrgAdminMixin, UpdateView):
         return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
 
 
+class MemberBillingPolicySetView(OrgAdminMixin, View):
+    def post(self, request, org_slug, pk):
+        from billing.models import BillingPolicy
+        member = get_object_or_404(Member, pk=pk, organisation=self.org)
+        policy_id = request.POST.get('billing_policy')
+        if policy_id:
+            member.billing_policy = get_object_or_404(BillingPolicy, pk=policy_id, organisation=self.org)
+        else:
+            member.billing_policy = None
+        member.save(update_fields=['billing_policy'])
+        messages.success(request, f'Billing policy updated for {member.name}.')
+        return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
+
+
 class MemberArchiveView(OrgAdminMixin, View):
     def post(self, request, org_slug, pk):
         from django.utils import timezone
@@ -470,6 +484,8 @@ class ApproveApplicationView(OrgAdminMixin, View):
             email=app.email,
             phone=app.phone,
             medical_info=app.medical_info,
+            address_line1=app.address_line1,
+            address_line2=app.address_line2,
         )
         if app.guardian_name:
             from .models import Guardian

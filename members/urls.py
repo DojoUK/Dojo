@@ -6,6 +6,7 @@ urlpatterns = [
     path('add/', views.MemberCreateView.as_view(), name='member_add'),
     path('<int:pk>/', views.MemberDetailView.as_view(), name='member_detail'),
     path('<int:pk>/edit/', views.MemberUpdateView.as_view(), name='member_edit'),
+    path('<int:pk>/billing-policy/', views.MemberBillingPolicySetView.as_view(), name='member_billing_policy_set'),
     path('<int:pk>/archive/', views.MemberArchiveView.as_view(), name='member_archive'),
     path('<int:pk>/leaving-requests/<int:request_pk>/resolve/', views.ResolveLeavingRequestView.as_view(), name='member_leaving_request_resolve'),
     path('<int:pk>/erase/', views.EraseMemberView.as_view(), name='member_erase'),
