@@ -178,6 +178,17 @@ class PortalClassesView(View):
         })
 
 
+class PortalCodeOfConductView(View):
+    """Static Code of Conduct page — same content for every member/org, just needs the shared portal chrome."""
+    def get(self, request, token):
+        member = get_object_or_404(Member, token=token, is_active=True)
+        return render(request, 'portal/code_of_conduct.html', {
+            'active': 'conduct',
+            'member': member,
+            'org': member.organisation,
+        })
+
+
 class PortalPaymentHistoryView(View):
     """Full invoice history — outstanding (with pay buttons) and paid."""
     def get(self, request, token):

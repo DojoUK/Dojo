@@ -79,6 +79,9 @@
         <a href="{% url 'portal_payments' token=member.token %}" class="{% if active == 'payments' %}active{% endif %}">
             <i class="bi bi-receipt"></i> Payments
         </a>
+        <a href="{% url 'portal_code_of_conduct' token=member.token %}" class="{% if active == 'conduct' %}active{% endif %}">
+            <i class="bi bi-shield-check"></i> Code of Conduct
+        </a>
     </div>
 </nav>
 
