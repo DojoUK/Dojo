@@ -393,6 +393,11 @@
                             <label class="form-check-label small {% if entry.done %}text-decoration-line-through text-muted{% endif %}" for="syllabus-item-{{ entry.item.pk }}">
                                 {{ entry.item.name }}
                             </label>
+                            {% if entry.item.link %}
+                            <a href="{{ entry.item.link }}" target="_blank" rel="noopener" class="ms-1" title="Open link">
+                                <i class="bi bi-link-45deg"></i>
+                            </a>
+                            {% endif %}
                             {% if entry.item.description %}<div class="small text-muted">{{ entry.item.description }}</div>{% endif %}
                         </div>
                     </form>
