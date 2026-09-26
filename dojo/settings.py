@@ -40,6 +40,12 @@ if SITE_URL.startswith('https://'):
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+    # TLS is terminated by the reverse proxy in front of us, so the request
+    # Django sees arrives over plain HTTP. Without trusting the proxy's
+    # forwarded scheme, SECURE_SSL_REDIRECT above sees 'http' and redirects
+    # forever, and CSRF rejects posts whose Origin is the https site.
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    CSRF_TRUSTED_ORIGINS = [SITE_URL.rstrip('/')]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
