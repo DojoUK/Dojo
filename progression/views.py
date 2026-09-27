@@ -20,7 +20,7 @@ class ProgressionSettingsView(OrgAdminMixin, View):
             .filter(organisation=self.org)
             .prefetch_related('stages')
         )
-        syllabus_sections = SyllabusSection.objects.filter(organisation=self.org).prefetch_related('stages', 'items')
+        syllabus_sections = SyllabusSection.objects.filter(organisation=self.org).prefetch_related('stages', 'items', 'subsections')
         return render(request, 'progression/settings.html', {
             'systems': systems,
             'syllabus_sections': syllabus_sections,
