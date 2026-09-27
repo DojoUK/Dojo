@@ -18,9 +18,13 @@
             </div>
         </div>
         {% if card.section %}
-            {% if card.items %}
+            {% if card.groups %}
+            {% for group in card.groups %}
+            {% if group.subsection %}
+            <div class="px-3 pt-3 pb-1 small fw-semibold text-uppercase text-muted">{{ group.subsection.name }}</div>
+            {% endif %}
             <ul class="list-group list-group-flush">
-                {% for entry in card.items %}
+                {% for entry in group.items %}
                 <li class="list-group-item py-2 px-3">
                     <div class="form-check">
                         <input type="checkbox" class="form-check-input" disabled {% if entry.done %}checked{% endif %}>
@@ -37,6 +41,7 @@
                 </li>
                 {% endfor %}
             </ul>
+            {% endfor %}
             <div class="card-body py-2">
                 <p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i>Ticked off by your coach as you're signed off on each item.</p>
             </div>
