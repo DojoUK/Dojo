@@ -40,8 +40,39 @@ class SyllabusSection(models.Model):
     def __str__(self):
         return f"{self.organisation} — {self.name}"
 
+    def grouped_items(self):
+        """Items grouped by subsection, in subsection order; ungrouped items form a final group with subsection=None."""
+        by_subsection = {}
+        for item in self.items.all():
+            by_subsection.setdefault(item.subsection_id, []).append(item)
+        groups = [
+            {'subsection': sub, 'items': by_subsection.get(sub.pk, [])}
+            for sub in self.subsections.all()
+        ]
+        ungrouped = by_subsection.get(None, [])
+        if ungrouped:
+            groups.append({'subsection': None, 'items': ungrouped})
+        return groups
+
     class Meta:
         ordering = ['organisation', 'order', 'name']
+
+
+class SyllabusSubsection(models.Model):
+    """
+    An optional header within a SyllabusSection used to split its checklist
+    into parts, e.g. "Throws" and "Groundwork" within a "Yellow Belt"
+    section. Purely organisational — items still belong to the section.
+    """
+    section = models.ForeignKey(SyllabusSection, on_delete=models.CASCADE, related_name='subsections')
+    name = models.CharField(max_length=255)
+    order = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.section} — {self.name}"
+
+    class Meta:
+        ordering = ['section', 'order', 'name']
 
 
 class SyllabusItem(models.Model):
@@ -49,8 +80,13 @@ class SyllabusItem(models.Model):
     One checkable requirement within a SyllabusSection, e.g. "O-goshi" or
     "Break-falls — both sides" under a "Groundwork basics" section. Staff
     tick these off per member (MemberSyllabusProgress) as they're covered.
+    Optionally grouped under a SyllabusSubsection header within the section.
     """
     section = models.ForeignKey(SyllabusSection, on_delete=models.CASCADE, related_name='items')
+    subsection = models.ForeignKey(
+        SyllabusSubsection, null=True, blank=True, on_delete=models.SET_NULL, related_name='items',
+        help_text='Optional sub-header to group this item under within the section.',
+    )
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     link = models.URLField(

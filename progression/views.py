@@ -9,7 +9,7 @@ from django.views import View
 from dojo.mixins import OrgAdminMixin
 from .models import (
     MemberProgression, MemberSyllabusProgress, ProgressionStage, ProgressionSystem,
-    SyllabusItem, SyllabusSection,
+    SyllabusItem, SyllabusSection, SyllabusSubsection,
 )
 
 
@@ -192,18 +192,56 @@ class DeleteSyllabusSectionView(OrgAdminMixin, View):
         return redirect('progression_settings', org_slug=org_slug)
 
 
+class AddSyllabusSubsectionView(OrgAdminMixin, View):
+    def post(self, request, org_slug, section_pk):
+        section = get_object_or_404(SyllabusSection, pk=section_pk, organisation=self.org)
+        name = request.POST.get('name', '').strip()
+        if not name:
+            messages.error(request, 'Sub-section name is required.')
+            return redirect('progression_settings', org_slug=org_slug)
+        last = section.subsections.order_by('order').last()
+        section.subsections.create(name=name, order=(last.order + 1) if last else 0)
+        messages.success(request, f'"{name}" sub-section added to {section.name}.')
+        return redirect('progression_settings', org_slug=org_slug)
+
+
+class EditSyllabusSubsectionView(OrgAdminMixin, View):
+    def post(self, request, org_slug, section_pk, pk):
+        section = get_object_or_404(SyllabusSection, pk=section_pk, organisation=self.org)
+        subsection = get_object_or_404(SyllabusSubsection, pk=pk, section=section)
+        name = request.POST.get('name', '').strip()
+        if not name:
+            messages.error(request, 'Sub-section name is required.')
+            return redirect('progression_settings', org_slug=org_slug)
+        subsection.name = name
+        subsection.save(update_fields=['name'])
+        messages.success(request, 'Sub-section updated.')
+        return redirect('progression_settings', org_slug=org_slug)
+
+
+class DeleteSyllabusSubsectionView(OrgAdminMixin, View):
+    def post(self, request, org_slug, section_pk, pk):
+        section = get_object_or_404(SyllabusSection, pk=section_pk, organisation=self.org)
+        subsection = get_object_or_404(SyllabusSubsection, pk=pk, section=section)
+        subsection.delete()
+        messages.success(request, f'"{subsection.name}" sub-section deleted. Its items were kept, now ungrouped.')
+        return redirect('progression_settings', org_slug=org_slug)
+
+
 class AddSyllabusItemView(OrgAdminMixin, View):
     def post(self, request, org_slug, section_pk):
         section = get_object_or_404(SyllabusSection, pk=section_pk, organisation=self.org)
         name = request.POST.get('name', '').strip()
         description = request.POST.get('description', '').strip()
         link = request.POST.get('link', '').strip()
+        subsection_id = request.POST.get('subsection_id') or None
+        subsection = get_object_or_404(SyllabusSubsection, pk=subsection_id, section=section) if subsection_id else None
         if not name:
             messages.error(request, 'Item name is required.')
             return redirect('progression_settings', org_slug=org_slug)
         last = section.items.order_by('order').last()
         section.items.create(
-            name=name, description=description, link=link,
+            name=name, description=description, link=link, subsection=subsection,
             order=(last.order + 1) if last else 0,
         )
         messages.success(request, f'"{name}" added to {section.name}.')
@@ -217,13 +255,16 @@ class EditSyllabusItemView(OrgAdminMixin, View):
         name = request.POST.get('name', '').strip()
         description = request.POST.get('description', '').strip()
         link = request.POST.get('link', '').strip()
+        subsection_id = request.POST.get('subsection_id') or None
+        subsection = get_object_or_404(SyllabusSubsection, pk=subsection_id, section=section) if subsection_id else None
         if not name:
             messages.error(request, 'Item name is required.')
             return redirect('progression_settings', org_slug=org_slug)
         item.name = name
         item.description = description
         item.link = link
-        item.save(update_fields=['name', 'description', 'link'])
+        item.subsection = subsection
+        item.save(update_fields=['name', 'description', 'link', 'subsection'])
         messages.success(request, 'Item updated.')
         return redirect('progression_settings', org_slug=org_slug)
 

@@ -258,10 +258,14 @@ class PortalSyllabusView(View):
                     member=member, item__in=items, completed=True
                 ).values_list('item_id', flat=True)
             )
+            groups = [
+                {'subsection': g['subsection'], 'items': [{'item': i, 'done': i.pk in done_ids} for i in g['items']]}
+                for g in section.grouped_items()
+            ] if section else []
             syllabus_cards.append({
                 'stage': p.stage,
                 'section': section,
-                'items': [{'item': i, 'done': i.pk in done_ids} for i in items],
+                'groups': groups,
             })
 
         return render(request, 'portal/syllabus.html', {
@@ -376,8 +380,6 @@ class DownloadDataView(View):
                 'emergency_contact_phone': member.emergency_contact_phone,
                 'emergency_contact_2_name': member.emergency_contact_2_name,
                 'emergency_contact_2_phone': member.emergency_contact_2_phone,
-                'address_line1': member.address_line1,
-                'address_line2': member.address_line2,
                 'joined_date': member.joined_date,
                 'licence_number': member.licence_number,
                 'licence_expiry': member.licence_expiry,
