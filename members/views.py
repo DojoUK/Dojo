@@ -344,6 +344,20 @@ class MemberUpdateView(OrgAdminMixin, UpdateView):
         return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
 
 
+class MemberBillingPolicySetView(OrgAdminMixin, View):
+    def post(self, request, org_slug, pk):
+        from billing.models import BillingPolicy
+        member = get_object_or_404(Member, pk=pk, organisation=self.org)
+        policy_id = request.POST.get('billing_policy')
+        if policy_id:
+            member.billing_policy = get_object_or_404(BillingPolicy, pk=policy_id, organisation=self.org)
+        else:
+            member.billing_policy = None
+        member.save(update_fields=['billing_policy'])
+        messages.success(request, f'Billing policy updated for {member.name}.')
+        return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
+
+
 class MemberArchiveView(OrgAdminMixin, View):
     def post(self, request, org_slug, pk):
         from django.utils import timezone
@@ -443,6 +457,14 @@ class ToggleMemberSyllabusItemView(OrgAdminMixin, View):
         progress.completed_at = timezone.now() if progress.completed else None
         progress.completed_by = request.user if progress.completed else None
         progress.save(update_fields=['completed', 'completed_at', 'completed_by'])
+        if request.htmx:
+            # Swap just this checklist item in place instead of reloading the page.
+            from django.shortcuts import render
+            return render(request, 'members/_syllabus_item.html', {
+                'org': self.org,
+                'member': member,
+                'entry': {'item': item, 'done': progress.completed},
+            })
         return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
 
 
@@ -474,6 +496,8 @@ class ApproveApplicationView(OrgAdminMixin, View):
             email=app.email,
             phone=app.phone,
             medical_info=app.medical_info,
+            address_line1=app.address_line1,
+            address_line2=app.address_line2,
         )
         if app.guardian_name:
             from .models import Guardian
