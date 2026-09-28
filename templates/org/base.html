@@ -145,6 +145,8 @@ html[data-accent-theme="slate"]  { --dojo-accent:#475569; --dojo-accent-hover:#3
 .dojo-page-title { font-size: 1.1rem; font-weight: 700; margin: 0; color: var(--dojo-text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dojo-topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
 .dojo-content { padding: 28px; flex: 1; }
+.dojo-messages-floating { position: fixed; top: 1rem; right: 1rem; z-index: 1080; width: min(420px, calc(100vw - 2rem)); margin: 0 !important; }
+.dojo-messages-floating .alert { box-shadow: 0 .5rem 1rem rgba(0,0,0,.15); }
 
 /* ── Mobile ──────────────────────────────────────── */
 @media (max-width: 767px) {
@@ -403,7 +405,7 @@ html[data-accent-theme="slate"]  { --dojo-accent:#475569; --dojo-accent-hover:#3
     <div class="dojo-content">
 
         {% if messages %}
-        <div class="mb-4">
+        <div class="mb-4" id="dojo-messages">
             {% for message in messages %}
             <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
                 {{ message }}
