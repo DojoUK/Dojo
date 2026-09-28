@@ -54,3 +54,4 @@ class SyllabusToggleTests(TestCase):
         html = self.client.get(reverse('portal_syllabus', kwargs={'token': self.member.token})).content.decode()
         self.assertIn('Kicks', html)
         self.assertIn('Front kick', html)
+        self.assertIn('syllabus-columns', html)
