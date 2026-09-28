@@ -2,12 +2,24 @@
 
 {% block title_suffix %} — My syllabus{% endblock %}
 
+{% block extra_head %}
+<style>
+/* Desktop: spread the checklist evenly over two columns. Mobile keeps one column. */
+@media (min-width: 992px) {
+    .syllabus-columns { column-count: 2; column-gap: 0; column-rule: 1px solid var(--bs-border-color); }
+    .syllabus-columns .list-group { display: block; }
+    .syllabus-columns .list-group-item { break-inside: avoid; }
+    .syllabus-columns .syllabus-subsection { break-after: avoid; }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 
 {% if syllabus_cards %}
 <div class="portal-grid">
     {% for card in syllabus_cards %}
-    <div class="card border-0 shadow-sm mb-3">
+    <div class="card border-0 shadow-sm mb-3 span-2">
         <div class="card-header bg-white border-bottom py-3 d-flex align-items-center gap-2">
             {% if card.stage.colour %}
             <span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:{{ card.stage.colour }};border:1px solid rgba(0,0,0,0.1);flex-shrink:0;"></span>
@@ -19,9 +31,10 @@
         </div>
         {% if card.section %}
             {% if card.groups %}
+            <div class="syllabus-columns">
             {% for group in card.groups %}
             {% if group.subsection %}
-            <div class="px-3 pt-3 pb-1 small fw-semibold text-uppercase text-muted">{{ group.subsection.name }}</div>
+            <div class="syllabus-subsection px-3 pt-3 pb-1 small fw-semibold text-uppercase text-muted">{{ group.subsection.name }}</div>
             {% endif %}
             <ul class="list-group list-group-flush">
                 {% for entry in group.items %}
@@ -42,7 +55,8 @@
                 {% endfor %}
             </ul>
             {% endfor %}
-            <div class="card-body py-2">
+            </div>
+            <div class="card-body py-2 border-top">
                 <p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i>Ticked off by your coach as you're signed off on each item.</p>
             </div>
             {% else %}
