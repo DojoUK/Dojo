@@ -8,8 +8,9 @@
 @media (min-width: 992px) {
     .syllabus-columns { column-count: 2; column-gap: 0; column-rule: 1px solid var(--bs-border-color); }
     .syllabus-columns .list-group { display: block; }
+    /* Keep each sub-section whole in one column; only a sub-section taller than a column splits. */
+    .syllabus-columns .syllabus-group { break-inside: avoid; }
     .syllabus-columns .list-group-item { break-inside: avoid; }
-    .syllabus-columns .syllabus-subsection { break-after: avoid; }
 }
 </style>
 {% endblock %}
@@ -33,6 +34,7 @@
             {% if card.groups %}
             <div class="syllabus-columns">
             {% for group in card.groups %}
+            <div class="syllabus-group">
             {% if group.subsection %}
             <div class="syllabus-subsection px-3 pt-3 pb-1 small fw-semibold text-uppercase text-muted">{{ group.subsection.name }}</div>
             {% endif %}
@@ -54,6 +56,7 @@
                 </li>
                 {% endfor %}
             </ul>
+            </div>
             {% endfor %}
             </div>
             <div class="card-body py-2 border-top">
