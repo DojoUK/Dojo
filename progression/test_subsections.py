@@ -47,3 +47,12 @@ class SyllabusSubsectionSettingsTests(TestCase):
         item.refresh_from_db()
         self.assertIsNone(item.subsection)
         self.assertIn('O-goshi', self.client.get(self.settings_url).content.decode())
+
+    def test_systems_and_sections_are_collapsible(self):
+        from progression.models import ProgressionSystem
+        system = ProgressionSystem.objects.create(organisation=self.org, name='Kyu')
+        html = self.client.get(self.settings_url).content.decode()
+        self.assertIn(f'id="system-body-{system.pk}"', html)
+        self.assertIn(f'data-bs-target="#system-body-{system.pk}"', html)
+        self.assertIn(f'id="syllabus-body-{self.section.pk}"', html)
+        self.assertIn(f'data-bs-target="#syllabus-body-{self.section.pk}"', html)
