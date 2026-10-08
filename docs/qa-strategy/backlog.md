@@ -1,0 +1,92 @@
+# Backlog: GitHub issues to create
+
+> One milestone per phase ("QA Phase 0" to "QA Phase 4"). Every issue carries
+> `qa-strategy` and its `phase-N` label plus a domain label from the existing set
+> (`billing`, `auth`, `models`, `setup`, `docker`, `frontend`). Decisions are titled
+> `[Decision] ...`. Issue bodies link back to the strategy page that specifies them.
+> Not yet created on GitHub; this file is the source.
+
+## QA Phase 0: Visible (`phase-0`)
+
+1. Add `dojo/settings_test.py`: locmem email, sentinel Stripe keys, constant secret key, root database user (`setup`)
+2. Make `manage.py test` and `pytest` run from a clean `docker compose up` (`docker`, `setup`)
+3. Add `pytest`, `pytest-django`, `coverage`, `hypothesis`, `freezegun`, `ruff` to a new `requirements-dev.txt` (`setup`)
+4. Pin `requirements.txt` to the versions the image resolves today; set `stripe.api_version` (`setup`, `billing`)
+5. Add `.github/workflows/ci.yml`: lint, migrations check, tests on MySQL 8, gitleaks, docker build (`docker`)
+6. Add `.github/dependabot.yml` for pip and GitHub Actions (`setup`)
+7. Add `.pre-commit-config.yaml` with ruff lint and format (`setup`)
+8. Review and merge PR #61: webhook subscription payments (`billing`)
+9. Build the two-organisation fixture in `dojo/testing.py` with sentinel values (`auth`)
+10. Add the route sweep in reporting mode: list named routes with no boundary matrix entry (`auth`)
+11. Add coverage reporting as a CI artefact, with the money modules as a separate figure (`billing`)
+12. `[Decision]` Accept the QA strategy and Tier 1 (item 1)
+13. `[Decision]` Test runner (item 2)
+14. `[Decision]` Test database access (item 3)
+15. `[Decision]` Pin dependencies and the Stripe API version (item 5)
+
+## QA Phase 1: Protect the boundary, the data and the money (`phase-1`, `gating`)
+
+16. Tenant matrix: organisations app routes (`auth`)
+17. Tenant matrix: members app routes including POST object references (`auth`)
+18. Tenant matrix: classes app routes and coach siloing (`auth`)
+19. Tenant matrix: billing, inventory, documents, progression routes (`auth`)
+20. Route sweep switched to failing mode (`auth`)
+21. Token door suite: wrong, archived, anonymised, regenerated tokens; scope of portal and export (`auth`)
+22. Media door: serve files only through authenticated views; test anonymous and cross-org fetches (`auth`, `models`)
+23. `AddCoachView` restricted to organisation members, with the failing test first (`auth`)
+24. `ReseedDemoView` scoped to the demo organisation, with the failing test first (`auth`)
+25. Signup suite: organisation scoping, required signature, forwarded IP, no echo of other data (`frontend`)
+26. Host header and password reset: implement or record (item 17) (`auth`)
+27. Calculator golden masters (`billing`)
+28. Calculator properties with `hypothesis` (`billing`)
+29. `Decimal` on every money path; lint rule for `float(` in money modules (`billing`)
+30. Invoice state suite: record payment, mark paid, mark unpaid, overdue (`billing`)
+31. Webhook additions on top of PR #61: checkout idempotency, amount source (`billing`)
+32. Money-module coverage gate at 100 percent line and branch (`billing`)
+33. Branch rules on `main`: pull requests and the `ci` checks required (`setup`)
+34. `[Decision]` Media behind authentication (item 4)
+35. `[Decision]` Branch rules for a solo maintainer (item 6)
+36. `[Decision]` Mark-paid creates a payment (item 7)
+37. `[Decision]` Overdue status computed not persisted (item 8)
+38. `[Decision]` Rounding rule per line (item 9)
+39. `[Decision]` Demo reset scope (item 12)
+40. `[Decision]` Superuser bypass pinned (item 21)
+41. `[Decision]` Signup abuse control (item 16)
+
+## QA Phase 2: Resilience (`phase-2`)
+
+42. `enforce_retention` against a frozen clock: day before, day of, retention notes, second run, dry run (`models`)
+43. `purge_stale_applications`, `rotate_stale_portal_tokens`, `send_overdue_reminders` against a frozen clock (`models`)
+44. One `resolve_recipient` in `members/recipients.py` used by all eight send sites; recipient matrix golden master (`frontend`)
+45. Every send site records a skip reason instead of `except Exception: pass` (`frontend`)
+46. Stripe redelivery for every handled event type (`billing`)
+47. Concurrency: two sales of the last unit; two bulk runs for one period (`billing`, `models`)
+48. `ApproveApplicationView` idempotent (`models`)
+49. Bulk archive sets `archived_at` (`models`)
+50. Audit view shows the registered models; token and signature fields excluded (`auth`)
+51. Repo-wide coverage floor at the Phase 1 measurement (`setup`)
+52. `[Decision]` Recipient rule (item 11)
+53. `[Decision]` Checkout amount source (item 10)
+54. `[Decision]` Export and medical info (item 20)
+55. `[Decision]` Release tagging (item 23)
+
+## QA Phase 3: Journeys and non-functional (`phase-3`)
+
+56. Playwright: setup wizard creates the first organisation and admin (`frontend`)
+57. Playwright: signup with a drawn signature, approve, welcome email, portal link opens (`frontend`)
+58. Playwright: bulk invoice run to portal payment with Stripe stubbed (`billing`, `frontend`)
+59. Playwright: coach opens own register, refused on another class (`auth`, `frontend`)
+60. Playwright: archive and erase a member; old portal link dead (`models`, `frontend`)
+61. `axe` baseline on `/join/<slug>/` and `/p/<token>/` (`frontend`)
+62. Weekly Stripe test-mode journey workflow with repository secrets (`billing`, `docker`)
+63. `DEBUG=False` works: `collectstatic` or WhiteNoise; `check --deploy` closed or recorded; guide updated (issue #26) (`docker`)
+64. Query-count assertions on member list, import and bulk run at 1,000 members (`models`)
+65. `[Decision]` Static files and `DEBUG` (item 18)
+66. `[Decision]` Stripe test-mode secrets (item 22)
+
+## QA Phase 4: Contract and ratchet (`phase-4`)
+
+67. Scheduled Stripe fixture re-recording at the pinned and next API versions; drift opens a pull request (`billing`)
+68. `mutmut` on the calculator and webhook handlers; score reported (`billing`)
+69. Coverage destination 80 percent; floors only rise (`setup`)
+70. Stripe Connect inherits the bar: account id in the matrix, platform fee in the golden masters (`billing`)
