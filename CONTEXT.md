@@ -419,6 +419,19 @@ All templates extend `org/base.html`. Partials in `templates/members/partials/` 
 
 ---
 
+## QA and Testing
+
+The QA strategy lives under `docs/qa-strategy/` (landing page: `docs/qa-strategy/README.md`),
+with a one-paragraph stub at `QA_STRATEGY.md`. It is a risk-weighted plan: the access
+boundary and personal data first, money second, everything else ordinary. Read the hard
+rules on the landing page before changing any view that takes an `org_slug`, a token or an
+object key, any money path, any email send site, or any management command. The PR
+template's checklist is those rules. The backlog is GitHub issues labelled `qa-strategy`,
+one milestone per phase; decisions still open are in
+`docs/qa-strategy/06-open-items-and-decision-log.md`.
+
+---
+
 ## Developer Notes
 
 - The developer is working solo on this as a spare time project
