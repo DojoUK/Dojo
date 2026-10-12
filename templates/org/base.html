@@ -286,6 +286,13 @@
             </a>
         </li>
         {% endif %}
+        {% if 'syllabus' in org.enabled_features %}
+        <li>
+            <a href="{% url 'syllabus_home' org_slug=org.slug %}" class="{% if 'syllabus' in url_name or 'technique' in url_name %}active{% endif %}">
+                <i class="bi bi-journal-check"></i> Syllabus
+            </a>
+        </li>
+        {% endif %}
         <li>
             <a href="{% url 'org_staff' org_slug=org.slug %}" class="{% if url_name == 'org_staff' %}active{% endif %}">
                 <i class="bi bi-person-badge"></i> Staff

@@ -34,6 +34,10 @@ class ProgressionStage(models.Model):
         default=False,
         help_text='New members are assigned this stage automatically when the system is set to auto-assign.',
     )
+    syllabus = models.ForeignKey(
+        'Syllabus', null=True, blank=True, on_delete=models.SET_NULL, related_name='stages',
+        help_text='What members at this grade are working on. Several grades can share one syllabus.',
+    )
 
     def __str__(self):
         return f"{self.system.name} — {self.name}"
@@ -138,3 +142,80 @@ class GradingCandidate(models.Model):
     class Meta:
         ordering = ('member__name',)
         unique_together = ('session', 'member')
+
+
+class Technique(models.Model):
+    """
+    One entry in the club's technique library, e.g. "Ushiro ukemi". Written
+    once and used in as many syllabuses as include it, so teaching it counts
+    towards every one of them.
+    """
+    organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='techniques')
+    name = models.CharField(max_length=255)
+    category = models.CharField(
+        max_length=100, blank=True, help_text='Optional grouping, e.g. "Nage Waza" or "Ukemi".',
+    )
+    description = models.TextField(blank=True)
+    link = models.URLField(blank=True, help_text='Optional https:// link, e.g. a video of the technique.')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ('category', 'name', 'pk')
+
+
+class Syllabus(models.Model):
+    """What members are working on between gradings, e.g. "White to Yellow"."""
+    organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='syllabuses')
+    name = models.CharField(max_length=255)
+    introduction = models.TextField(blank=True)
+    order = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return self.name
+
+    def grouped_entries(self):
+        """[(heading or None, [entries])] in display order; entries without a heading come last."""
+        entries = list(self.entries.select_related('technique', 'heading'))
+        groups = [(heading, [e for e in entries if e.heading_id == heading.pk]) for heading in self.headings.all()]
+        loose = [e for e in entries if e.heading_id is None]
+        if loose:
+            groups.append((None, loose))
+        return groups
+
+    class Meta:
+        ordering = ('order', 'name', 'pk')
+        verbose_name_plural = 'syllabuses'
+
+
+class SyllabusHeading(models.Model):
+    """A sub-heading within a syllabus, e.g. "Nage Waza - Throwing Techniques"."""
+    syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE, related_name='headings')
+    name = models.CharField(max_length=255)
+    order = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ('order', 'pk')
+
+
+class SyllabusEntry(models.Model):
+    """A technique in a syllabus, optionally under a heading."""
+    syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE, related_name='entries')
+    heading = models.ForeignKey(
+        SyllabusHeading, null=True, blank=True, on_delete=models.SET_NULL, related_name='entries',
+    )
+    technique = models.ForeignKey(Technique, on_delete=models.PROTECT, related_name='syllabus_entries')
+    notes = models.TextField(blank=True, help_text='Anything specific to this syllabus, e.g. "both sides".')
+    order = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f"{self.syllabus} — {self.technique}"
+
+    class Meta:
+        ordering = ('order', 'pk')
+        unique_together = ('syllabus', 'technique')

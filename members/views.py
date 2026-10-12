@@ -229,6 +229,10 @@ class MemberDetailView(OrgAdminMixin, DetailView):
             organisation=self.org
         ).prefetch_related('stages')
         context['current_grade'] = context['progressions'].first()
+        context['syllabus_cards'] = []
+        if self.org.has_feature('syllabus'):
+            from progression.syllabus import current_syllabuses
+            context['syllabus_cards'] = current_syllabuses(self.object)
         from .models import MemberNote
         context['notes'] = MemberNote.objects.filter(member=self.object).select_related('author')
         context['custom_fields'] = build_custom_field_widgets(

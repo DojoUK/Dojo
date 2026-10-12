@@ -7,6 +7,7 @@ urlpatterns = [
     path('members/', include('members.urls')),
     path('classes/', include('classes.urls')),
     path('gradings/', include('progression.grading_urls')),
+    path('syllabus/', include('progression.syllabus_urls')),
     path('billing/', include('billing.urls')),
     path('inventory/', include('inventory.urls')),
     path('audit/', views.AuditLogView.as_view(), name='org_audit_log'),
