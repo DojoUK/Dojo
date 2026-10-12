@@ -602,6 +602,7 @@
     {# ── Documents ── #}
     <div class="tab-pane fade" id="pane-documents" role="tabpanel" aria-labelledby="tab-documents" tabindex="0">
         <div class="row g-4">
+            {% if waiver_templates %}
             <div class="col-lg-6">
                 {# ── Signed waivers ── #}
                 {% if 'documents' in org.enabled_features %}
@@ -689,7 +690,8 @@
                 {% endif %}
                 {% endif %}
             </div>
-            <div class="col-lg-6">
+            {% endif %}
+            <div class="{% if waiver_templates %}col-lg-6{% else %}col-xl-8{% endif %}">
                 {% if 'documents' in org.enabled_features %}
                 <div class="card border-0 shadow-sm mb-3">
                     <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
