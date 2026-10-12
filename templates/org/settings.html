@@ -12,7 +12,7 @@
 </style>
 
 {# One section at a time, picked from tabs. Sections: OrgSettingsView.SECTIONS. #}
-<ul class="nav nav-tabs settings-tabs" role="tablist">
+<ul class="nav nav-tabs settings-tabs dojo-tabs" role="tablist">
     {% for key, label, icon, help in settings_sections %}
     <li class="nav-item" role="presentation">
         <button class="nav-link{% if forloop.first %} active{% endif %}" id="tab-{{ key }}" data-bs-toggle="tab"
@@ -40,19 +40,6 @@
 
 {% block extra_scripts %}
 <script>
-// Open the tab named in the URL (e.g. #features after saving), and keep the URL in step.
-(function () {
-    const showFromHash = () => {
-        const tab = document.querySelector(`.settings-tabs [data-section="${location.hash.slice(1)}"]`);
-        if (tab) bootstrap.Tab.getOrCreateInstance(tab).show();
-    };
-    showFromHash();
-    window.addEventListener('hashchange', showFromHash);
-    document.querySelectorAll('.settings-tabs [data-section]').forEach(tab => {
-        tab.addEventListener('shown.bs.tab', () => history.replaceState(null, '', '#' + tab.dataset.section));
-    });
-})();
-
 // Sync colour pickers <-> hex inputs
 function syncColor(picker, hex) {
     picker.addEventListener('input', () => {

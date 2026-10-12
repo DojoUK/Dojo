@@ -15,6 +15,7 @@ from members.models import Member
 from inventory.models import Product, ProductVariant, StockMovement
 
 from .models import Invoice, InvoiceItem, Payment, BillingPolicy, OrgTerm, PolicyDiscount, MemberDiscount
+from members.navigation import redirect_to_member
 
 
 class InsufficientStockError(Exception):
@@ -812,7 +813,7 @@ class MemberDiscountAddView(BillingManagerMixin, View):
         discount = get_object_or_404(PolicyDiscount, pk=discount_id, policy__organisation=self.org)
         MemberDiscount.objects.get_or_create(member=member, discount=discount)
         messages.success(request, f'Discount "{discount.name}" applied to {member.name}.')
-        return redirect('member_detail', org_slug=self.org.slug, pk=member_pk)
+        return redirect_to_member(self.org.slug, member_pk, 'billing')
 
 
 class MemberDiscountRemoveView(BillingManagerMixin, View):
@@ -822,4 +823,4 @@ class MemberDiscountRemoveView(BillingManagerMixin, View):
         name = md.discount.name
         md.delete()
         messages.success(request, f'Discount "{name}" removed.')
-        return redirect('member_detail', org_slug=self.org.slug, pk=member_pk)
+        return redirect_to_member(self.org.slug, member_pk, 'billing')

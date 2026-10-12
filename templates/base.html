@@ -63,6 +63,22 @@
     <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
     <script src="{% static 'vendor/htmx/htmx.min.js' %}"></script>
     {% if DOJO_DEBUG %}<script src="{% static 'js/dojo-diagnostics.js' %}"></script>{% endif %}
+    <script>
+    // Tabbed pages (.dojo-tabs): open the tab named in the URL (e.g. #notes after
+    // saving one), follow in-page links to a tab, and keep the URL in step.
+    (function () {
+        const tabFor = key => document.querySelector(`.dojo-tabs [data-section="${key}"]`);
+        const showFromHash = () => {
+            const tab = tabFor(location.hash.slice(1));
+            if (tab) bootstrap.Tab.getOrCreateInstance(tab).show();
+        };
+        showFromHash();
+        window.addEventListener('hashchange', showFromHash);
+        document.querySelectorAll('.dojo-tabs [data-section]').forEach(tab => {
+            tab.addEventListener('shown.bs.tab', () => history.replaceState(null, '', '#' + tab.dataset.section));
+        });
+    })();
+    </script>
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>
