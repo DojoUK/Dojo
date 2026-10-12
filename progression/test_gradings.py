@@ -323,3 +323,27 @@ class GradingAccessTests(GradingTestBase):
         self.assertEqual(self.candidate_b.result, GradingCandidate.Result.PENDING)
         self.assertTrue(GradingCandidate.objects.filter(pk=self.candidate_b.pk).exists())
         self.assertFalse(MemberProgression.objects.filter(member=self.member_b).exists())
+
+
+class MemberPageGradeHistoryTests(GradingTestBase):
+    def setUp(self):
+        super().setUp()
+        candidate = self.candidate(self.alice, target=self.orange)
+        gradings.record_result(candidate, PASSED, self.orange, '')
+        candidate.refresh_from_db()
+        self.awarded = candidate.progression
+
+    def test_a_grade_from_a_grading_cannot_be_deleted_from_the_member_page(self):
+        delete_url = self.url('member_progression_delete', pk=self.alice.pk, prog_pk=self.awarded.pk)
+        response = self.client.get(self.url('member_detail', pk=self.alice.pk))
+        self.assertNotContains(response, delete_url)
+        self.assertContains(response, self.url('grading_detail', pk=self.grading.pk))
+
+        self.client.post(delete_url)
+        self.assertTrue(MemberProgression.objects.filter(pk=self.awarded.pk).exists())
+
+    def test_other_grades_can_still_be_deleted(self):
+        delete_url = self.url('member_progression_delete', pk=self.alice.pk, prog_pk=self.alice_yellow.pk)
+        self.assertContains(self.client.get(self.url('member_detail', pk=self.alice.pk)), delete_url)
+        self.client.post(delete_url)
+        self.assertFalse(MemberProgression.objects.filter(pk=self.alice_yellow.pk).exists())
