@@ -176,9 +176,9 @@
                 <div class="card-body">
                     <p class="small text-muted mb-1">Member since</p>
                     <p class="fw-semibold mb-0">
-                        {% if member.joined_date %}{{ member.joined_date|date:"F Y" }}{% else %}—{% endif %}
+                        {% if member.joined_date and 'joined_date' in org.enabled_fields %}{{ member.joined_date|date:"F Y" }}{% else %}—{% endif %}
                     </p>
-                    {% if has_guardians %}
+                    {% if has_guardians and 'guardians' in org.enabled_fields %}
                     <p class="small text-muted mb-0 mt-1"><i class="bi bi-person-heart me-1"></i>Junior member</p>
                     {% endif %}
                 </div>

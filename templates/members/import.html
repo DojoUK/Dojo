@@ -115,10 +115,10 @@
                 <p>Required column: <strong>name</strong></p>
                 <p>Optional columns:</p>
                 <ul class="mb-2">
-                    <li><code>date_of_birth</code> — YYYY-MM-DD or DD/MM/YYYY</li>
+                    {% if 'date_of_birth' in org.enabled_fields %}<li><code>date_of_birth</code> — YYYY-MM-DD or DD/MM/YYYY</li>{% endif %}
                     <li><code>email</code></li>
-                    <li><code>phone</code></li>
-                    <li><code>joined_date</code> — same date formats</li>
+                    {% if 'phone' in org.enabled_fields %}<li><code>phone</code></li>{% endif %}
+                    {% if 'joined_date' in org.enabled_fields %}<li><code>joined_date</code> — same date formats</li>{% endif %}
                 </ul>
                 <p class="mb-0">The first row must be headers. Extra columns are ignored.</p>
             </div>

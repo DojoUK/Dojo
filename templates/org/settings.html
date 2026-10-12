@@ -58,6 +58,24 @@
             </div>
         </div>
 
+        {# Fields #}
+        <div class="card mb-4" id="fields">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Fields</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">
+                    Choose which built-in details Dojo records. Switched-off fields are hidden everywhere, but anything already recorded is kept.
+                </p>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="fields">
+                    {% include 'org/_field_checkboxes.html' %}
+                    <button type="submit" class="btn btn-dark btn-sm mt-3">Save fields</button>
+                </form>
+            </div>
+        </div>
+
         {# More settings #}
         <div class="card mb-4">
             <div class="card-header bg-white border-bottom py-3">

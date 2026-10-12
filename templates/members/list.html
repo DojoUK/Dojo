@@ -80,8 +80,8 @@
                     </th>
                     <th>Name</th>
                     <th>Email</th>
-                    <th>Phone</th>
-                    <th>Joined</th>
+                    {% if 'phone' in org.enabled_fields %}<th>Phone</th>{% endif %}
+                    {% if 'joined_date' in org.enabled_fields %}<th>Joined</th>{% endif %}
                     <th>Status</th>
                     <th></th>
                 </tr>

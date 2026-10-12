@@ -6,36 +6,40 @@
     </td>
     <td>
         <a href="{% url 'member_detail' org_slug=org.slug pk=member.pk %}" class="text-decoration-none fw-semibold">{{ member.name }}</a>
-        {% if member.medical_info %}
+        {% if member.medical_info and 'medical_info' in org.enabled_fields %}
         <span class="badge bg-warning-subtle text-warning ms-1" style="font-size:0.6rem;" title="{{ member.medical_info }}">
             <i class="bi bi-heart-pulse-fill"></i>
         </span>
         {% endif %}
-        {% if guardian %}
+        {% if guardian and 'guardians' in org.enabled_fields %}
         <div class="text-muted small">via {{ guardian.name }}{% if guardian.relationship %} ({{ guardian.relationship }}){% endif %}</div>
         {% endif %}
     </td>
     <td class="text-muted small">
         {% if member.email %}
             {{ member.email }}
-        {% elif guardian and guardian.email %}
+        {% elif guardian and guardian.email and 'guardians' in org.enabled_fields %}
             {{ guardian.email }}
             <span class="badge bg-light text-secondary border ms-1" style="font-size: 0.65rem;">guardian</span>
         {% else %}
             —
         {% endif %}
     </td>
+    {% if 'phone' in org.enabled_fields %}
     <td class="text-muted small">
         {% if member.phone %}
             {{ member.phone }}
-        {% elif guardian and guardian.phone %}
+        {% elif guardian and guardian.phone and 'guardians' in org.enabled_fields %}
             {{ guardian.phone }}
             <span class="badge bg-light text-secondary border ms-1" style="font-size: 0.65rem;">guardian</span>
         {% else %}
             —
         {% endif %}
     </td>
+    {% endif %}
+    {% if 'joined_date' in org.enabled_fields %}
     <td class="text-muted small">{{ member.joined_date|date:"d M Y"|default:"—" }}</td>
+    {% endif %}
     <td>
         {% if member.is_active %}
         <span class="badge bg-success-subtle text-success">Active</span>

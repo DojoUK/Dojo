@@ -62,11 +62,15 @@
             </div>
             <div class="card-body">
                 <dl class="row mb-0">
+                    {% if 'date_of_birth' in org.enabled_fields %}
                     <dt class="col-sm-4 text-muted fw-normal small">Date of birth</dt>
                     <dd class="col-sm-8 small">{{ member.date_of_birth|date:"d M Y"|default:"—" }}</dd>
+                    {% endif %}
 
+                    {% if 'joined_date' in org.enabled_fields %}
                     <dt class="col-sm-4 text-muted fw-normal small">Joined</dt>
                     <dd class="col-sm-8 small">{{ member.joined_date|date:"d M Y"|default:"—" }}</dd>
+                    {% endif %}
 
                     <dt class="col-sm-4 text-muted fw-normal small">Email</dt>
                     <dd class="col-sm-8 small">
@@ -75,24 +79,29 @@
                         {% else %}—{% endif %}
                     </dd>
 
+                    {% if 'phone' in org.enabled_fields %}
                     <dt class="col-sm-4 text-muted fw-normal small">Phone</dt>
                     <dd class="col-sm-8 small">
                         {% if member.phone %}
                             <a href="tel:{{ member.phone }}">{{ member.phone }}</a>
                         {% else %}—{% endif %}
                     </dd>
+                    {% endif %}
 
+                    {% if 'address' in org.enabled_fields %}
                     <dt class="col-sm-4 text-muted fw-normal small">Address</dt>
                     <dd class="col-sm-8 small">
                         {% if member.address_line1 %}
                             {{ member.address_line1 }}{% if member.address_line2 %}<br>{{ member.address_line2 }}{% endif %}
                         {% else %}—{% endif %}
                     </dd>
+                    {% endif %}
 
-                    <dt class="col-sm-4 text-muted fw-normal small">Licence no.</dt>
+                    {% if 'licence' in org.enabled_fields %}
+                    <dt class="col-sm-4 text-muted fw-normal small">{{ org.licence_label }} no.</dt>
                     <dd class="col-sm-8 small">{{ member.licence_number|default:"—" }}</dd>
 
-                    <dt class="col-sm-4 text-muted fw-normal small">Licence expiry</dt>
+                    <dt class="col-sm-4 text-muted fw-normal small">{{ org.licence_label }} expiry</dt>
                     <dd class="col-sm-8 small mb-0">
                         {% if member.licence_expiry %}
                             {{ member.licence_expiry|date:"d M Y" }}
@@ -103,11 +112,12 @@
                             {% endif %}
                         {% else %}—{% endif %}
                     </dd>
+                    {% endif %}
                 </dl>
             </div>
         </div>
 
-        {% if member.medical_info %}
+        {% if member.medical_info and 'medical_info' in org.enabled_fields %}
         <div class="card mb-3" style="border-color:#fca5a5!important;border-width:2px!important;">
             <div class="card-header py-3 d-flex align-items-center gap-2" style="background:#fff5f5;border-bottom-color:#fca5a5;">
                 <i class="bi bi-heart-pulse-fill text-danger"></i>
@@ -125,7 +135,7 @@
                 <h6 class="mb-0">Emergency contacts</h6>
             </div>
             <div class="card-body">
-                {% if member.emergency_contact_name or member.emergency_contact_2_name %}
+                {% if member.emergency_contact_name or member.emergency_contact_2_name and 'emergency_contact_2' in org.enabled_fields %}
                 <div class="row g-3">
                     {% if member.emergency_contact_name %}
                     <div class="col-sm-6">
@@ -136,7 +146,7 @@
                         {% endif %}
                     </div>
                     {% endif %}
-                    {% if member.emergency_contact_2_name %}
+                    {% if member.emergency_contact_2_name and 'emergency_contact_2' in org.enabled_fields %}
                     <div class="col-sm-6">
                         <p class="text-muted small mb-1">Contact 2</p>
                         <p class="mb-0 fw-semibold small">{{ member.emergency_contact_2_name }}</p>
@@ -209,7 +219,7 @@
         </div>
         {% endif %}
 
-        {% if guardians %}
+        {% if guardians and 'guardians' in org.enabled_fields %}
         <div class="card border-0 shadow-sm mb-3">
             <div class="card-header bg-white border-bottom py-3">
                 <h6 class="mb-0">Guardians</h6>

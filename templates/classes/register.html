@@ -56,7 +56,7 @@
                                         <label class="form-check-label fw-semibold mb-0" for="m{{ cm.member.pk }}" style="cursor:pointer;">
                                             {{ cm.member.name }}
                                         </label>
-                                        {% if cm.member.medical_info %}
+                                        {% if cm.member.medical_info and 'medical_info' in org.enabled_fields %}
                                         <button type="button"
                                                 class="badge bg-warning text-dark border-0 d-flex align-items-center gap-1"
                                                 style="font-size:0.65rem;cursor:pointer;"
@@ -72,7 +72,7 @@
                                         </span>
                                         {% endif %}
                                     </div>
-                                    {% if cm.member.medical_info %}
+                                    {% if cm.member.medical_info and 'medical_info' in org.enabled_fields %}
                                     <div class="collapse mt-2" id="med{{ cm.member.pk }}" onclick="event.stopPropagation()">
                                         <div class="p-2 rounded small" style="background:#fef9c3;border:1px solid #fde68a;color:#78350f;white-space:pre-line;">
                                             <i class="bi bi-heart-pulse-fill me-1"></i>{{ cm.member.medical_info }}
