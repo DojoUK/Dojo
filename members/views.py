@@ -7,6 +7,7 @@ from dojo.mixins import OrgAdminMixin
 from .forms import GuardianFormSet, MemberForm, build_custom_field_widgets, extract_custom_field_values
 from .models import Member
 from .navigation import redirect_to_member
+from mailer import connection_for
 
 
 class MemberListView(OrgAdminMixin, ListView):
@@ -98,6 +99,7 @@ class MemberBulkActionView(OrgAdminMixin, View):
                         EmailMultiAlternatives(
                             subject=subject, body=body,
                             from_email=settings.DEFAULT_FROM_EMAIL, to=[recipient],
+                            connection=connection_for(self.org),
                         ).send()
                         sent += 1
                     except Exception:

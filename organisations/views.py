@@ -20,6 +20,8 @@ from .models import Announcement, Organisation, OrganisationMember, StaffHoliday
 from members.models import CustomField
 from .branding import email_branding
 from accounts.policy import device_for, two_factor_required
+from mailer.forms import provider_rows as email_provider_rows
+from mailer import connection_for
 
 
 class SetupView(View):
@@ -41,6 +43,7 @@ class SetupView(View):
             'demo_mode': request.GET.get('demo') == '1',
             'feature_rows': feature_rows({f.key for f in FEATURES if default_enabled(f)}),
             'field_groups': field_groups(effective_fields({})),
+            **email_provider_rows(),
         })
 
     def post(self, request):
@@ -86,6 +89,10 @@ class SetupView(View):
         feature_choices = choices_from_keys(request.POST.getlist('features'))
         optional_field_choices = field_choices(request.POST.getlist('optional_fields'))
         labels = labels_from_post(request.POST)
+        from mailer.forms import apply_post
+        from mailer.models import EmailSettings
+        email_settings = EmailSettings()
+        errors += apply_post(email_settings, request.POST)
 
         if errors:
             return render(request, self.template_name, {
@@ -99,6 +106,7 @@ class SetupView(View):
                 'org_email': request.POST.get('org_email', '').strip(),
                 'org_phone': request.POST.get('org_phone', '').strip(),
                 'org_website': request.POST.get('org_website', '').strip(),
+                **email_provider_rows(post=request.POST),
             })
 
         user = User.objects.create_superuser(username=username, email=admin_email, password=password)
@@ -113,6 +121,12 @@ class SetupView(View):
             settings={**labels, 'two_factor': Organisation.TWO_FACTOR_ALL},
         )
         OrganisationMember.objects.create(user=user, organisation=org, role=OrganisationMember.Role.ORG_ADMIN)
+        # "Not yet" saves nothing, so the server's EMAIL_* settings (if any) carry on applying.
+        if email_settings.provider != 'log':
+            email_settings.organisation = org
+            email_settings.save()
+        if email_settings.provider == 'dojo_mail':
+            email_settings.dkim_private_key(create=True)
 
         login(request, user)
         return redirect('org_dashboard', org_slug=org.slug)
@@ -568,19 +582,21 @@ class TestEmailView(OrgAdminMixin, View):
         from django.core.mail import send_mail
         recipient = request.user.email
         if not recipient:
-            messages.error(request, 'Your user account has no email address set — add one in the Django admin first.')
-            return redirect('org_settings', org_slug=self.org.slug)
+            messages.error(request, 'Your account has no email address. Add one on your account page first.')
+            return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#email")
+        from mailer import connection_for
         try:
             send_mail(
                 subject=f'Test email from {self.org.name} (Dojo)',
                 message=f'This is a test email from Dojo to confirm your email settings are working.\n\n— {self.org.name}',
                 from_email=None,
                 recipient_list=[recipient],
+                connection=connection_for(self.org),
             )
-            messages.success(request, f'Test email sent to {recipient}.')
-        except Exception as e:
+            messages.success(request, f'Test email sent to {recipient}. If it doesn\'t arrive in a few minutes, check spam.')
+        except Exception as e:  # any failure is shown to the admin testing their settings
             messages.error(request, f'Email failed: {e}')
-        return redirect('org_settings', org_slug=self.org.slug)
+        return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#email")
 
 
 class OrgSettingsView(OrgAdminMixin, View):
@@ -606,9 +622,28 @@ class OrgSettingsView(OrgAdminMixin, View):
         ('fields', 'Fields', 'input-cursor-text', 'Which built-in details Dojo records. Switched-off fields are hidden '
                                                   'everywhere, but anything already recorded is kept.'),
         ('security', 'Security', 'shield-lock', ''),
-        ('email', 'Email', 'envelope', ''),
+        ('email', 'Email', 'envelope', 'How Dojo sends emails to members and staff.'),
         ('more', 'More', 'three-dots', 'Other settings pages.'),
     )
+
+    def _email_context(self):
+        from mailer.forms import provider_rows
+        from mailer.models import EmailSettings
+        email_settings = EmailSettings.objects.filter(organisation=self.org).first()
+        context = {**provider_rows(email_settings), 'email_settings': email_settings}
+        if email_settings is None:
+            from django.conf import settings as django_settings
+            fallback = django_settings.DOJO_FALLBACK_EMAIL_BACKEND
+            context['email_fallback'] = (
+                'printing emails to the server log instead of sending them' if fallback.endswith('console.EmailBackend')
+                else f'using the server\'s email settings from .env ({django_settings.EMAIL_HOST or fallback})'
+            )
+        if email_settings and email_settings.provider == 'dojo_mail':
+            context['email_dns_records'] = email_settings.dns_records()
+            if self.request.GET.get('check_dns'):
+                from mailer import dns_check
+                context['email_dns_check'] = dns_check.check(email_settings)
+        return context
 
     def _context(self):
         from .features import feature_rows
@@ -626,6 +661,7 @@ class OrgSettingsView(OrgAdminMixin, View):
             'field_groups': field_groups(self.org.enabled_fields, self.org.settings),
             'session_timeout_choices': Organisation.SESSION_TIMEOUT_CHOICES,
             'two_factor_choices': Organisation.TWO_FACTOR_CHOICES,
+            **self._email_context(),
             'staff_without_two_factor': (
                 OrganisationMember.objects.filter(organisation=self.org, user__two_factor__isnull=True)
                 .select_related('user').order_by('user__first_name', 'user__username')
@@ -645,6 +681,22 @@ class OrgSettingsView(OrgAdminMixin, View):
             self.org.save(update_fields=['features'])
             messages.success(request, 'Features saved.')
             return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#features")
+
+        if action == 'email':
+            from mailer.forms import apply_post
+            from mailer.models import EmailSettings
+            email_settings = (EmailSettings.objects.filter(organisation=self.org).first()
+                              or EmailSettings(organisation=self.org))
+            errors = apply_post(email_settings, request.POST)
+            for error in errors:
+                messages.error(request, error)
+            if not errors:
+                email_settings.save()
+                if email_settings.provider == 'dojo_mail':
+                    email_settings.dkim_private_key(create=True)
+                messages.success(request, f'Email settings saved: sending with {email_settings.provider_info.label}. '
+                                          'Send a test email to check.')
+            return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#email")
 
         if action == 'security':
             try:
@@ -860,6 +912,7 @@ class AnnouncementListView(OrgMixin, View):
                 body=text_body,
                 from_email=None,
                 to=[recipient],
+                connection=connection_for(self.org),
             )
             msg.attach_alternative(html_body, 'text/html')
             try:

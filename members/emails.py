@@ -3,6 +3,7 @@ from django.template.loader import render_to_string
 from django.conf import settings
 from django.urls import reverse
 from organisations.branding import email_branding
+from mailer import connection_for
 
 
 def send_welcome_email(member):
@@ -47,6 +48,7 @@ def send_welcome_email(member):
         body=text_body,
         from_email=settings.DEFAULT_FROM_EMAIL,
         to=[recipient],
+        connection=connection_for(member.organisation),
     )
     msg.attach_alternative(html_body, 'text/html')
     msg.send()
@@ -95,6 +97,7 @@ def send_portal_link_refreshed_email(member):
         body=text_body,
         from_email=settings.DEFAULT_FROM_EMAIL,
         to=[recipient],
+        connection=connection_for(member.organisation),
     )
     msg.attach_alternative(html_body, 'text/html')
     msg.send()

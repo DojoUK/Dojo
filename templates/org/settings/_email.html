@@ -1,7 +1,46 @@
-<p class="small text-muted mb-3">Send a test email to your account address to verify your email settings are working.</p>
-<form method="post" action="{% url 'org_test_email' org_slug=org.slug %}">
+<form method="post">
     {% csrf_token %}
-    <button type="submit" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-envelope me-1"></i> Send test email
-    </button>
+    <input type="hidden" name="action" value="email">
+    {% if email_fallback %}
+    <div class="alert alert-info py-2 small"><i class="bi bi-info-circle me-1"></i> Your club hasn't chosen yet, so Dojo is {{ email_fallback }}.</div>
+    {% endif %}
+    {% include 'mailer/_provider_fields.html' %}
+    <button type="submit" class="btn btn-dark btn-sm mt-3">Save</button>
 </form>
+
+{% if email_settings.provider == 'dojo_mail' %}
+<div class="mt-4 pt-3 border-top" id="email-dns">
+    <div class="d-flex justify-content-between align-items-center mb-1">
+        <div class="small fw-semibold">DNS records for {{ email_settings.sending_domain }}</div>
+        <a href="?check_dns=1#email" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-repeat me-1"></i> Check DNS</a>
+    </div>
+    <p class="text-muted" style="font-size:0.75rem;">Add these at whoever manages your domain (e.g. IONOS, 123-reg, Cloudflare), so receiving servers trust email from Dojo. Changes can take a few hours to show up.
+        Also ask your hosting company to set your server's <strong>reverse DNS</strong> to your mail hostname (<code>MAIL_HOSTNAME</code>).</p>
+    {% for type, name, value, purpose in email_dns_records %}
+    <div class="border rounded p-2 mb-2 bg-white">
+        <div class="d-flex justify-content-between gap-2 small">
+            <span><span class="badge bg-secondary-subtle text-secondary me-1">{{ type }}</span><code class="user-select-all">{{ name }}</code></span>
+            {% if email_dns_check %}
+                {% for checked_name, ok in email_dns_check.items %}{% if checked_name == name %}
+                {% if ok %}<span class="text-success text-nowrap"><i class="bi bi-check-circle-fill"></i> Found</span>
+                {% else %}<span class="text-danger text-nowrap"><i class="bi bi-x-circle"></i> Not found</span>{% endif %}
+                {% endif %}{% endfor %}
+            {% endif %}
+        </div>
+        <code class="d-block small text-break user-select-all mt-1">{{ value }}</code>
+        <div class="text-muted mt-1" style="font-size:0.72rem;">{{ purpose }}</div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="mt-4 pt-3 border-top">
+    <div class="small fw-semibold mb-1">Test it</div>
+    <p class="small text-muted mb-2">Sends a test email to your own address ({{ request.user.email|default:"none set" }}) using the saved settings.</p>
+    <form method="post" action="{% url 'org_test_email' org_slug=org.slug %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-envelope me-1"></i> Send test email
+        </button>
+    </form>
+</div>

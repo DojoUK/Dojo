@@ -4,6 +4,7 @@ from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
 from organisations.branding import email_branding
+from mailer import connection_for
 
 
 def portal_url_for(member, request=None):
@@ -61,6 +62,7 @@ def send_invoice_email(invoice, request=None):
         body=text_body,
         from_email=settings.DEFAULT_FROM_EMAIL,
         to=[recipient],
+        connection=connection_for(invoice.organisation),
     )
     msg.attach_alternative(html_body, 'text/html')
     msg.send()
@@ -103,6 +105,7 @@ def send_reminder_email(invoice, request=None):
     msg = EmailMultiAlternatives(
         subject=subject, body=text_body,
         from_email=settings.DEFAULT_FROM_EMAIL, to=[recipient],
+        connection=connection_for(org),
     )
     msg.attach_alternative(html_body, 'text/html')
     msg.send()

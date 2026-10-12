@@ -29,6 +29,19 @@ services:
     depends_on:
       - db
 
+  # Dojo's own mail service: used when a club chooses it in Settings → Email.
+  # Dojo signs each email (DKIM) and hands it here; Postfix queues and delivers
+  # it on port 25, retrying if a receiving server is busy. No ports are published:
+  # only Dojo can reach it.
+  mail:
+    image: boky/postfix:5.1.0-alpine
+    restart: always
+    environment:
+      ALLOW_EMPTY_SENDER_DOMAINS: "true"
+      POSTFIX_myhostname: ${MAIL_HOSTNAME:-localhost}
+    volumes:
+      - mail_queue:/var/spool/postfix
+
   stripe:
     image: stripe/stripe-cli:latest
     command: listen --forward-to http://web:8000/stripe/webhook/ --skip-verify
@@ -39,3 +52,4 @@ services:
 
 volumes:
   mysql_data:
+  mail_queue:

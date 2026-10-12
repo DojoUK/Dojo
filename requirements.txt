@@ -8,3 +8,6 @@ Pillow
 pypdf
 reportlab
 segno>=1.6,<2
+cryptography>=50,<51
+dkimpy>=1.1,<2
+dnspython>=2.9,<3
