@@ -24,7 +24,7 @@ class VersionInfo:
     kind: str           # 'release', 'beta', 'fork' or 'unknown'
     repo: str           # e.g. 'DojoUK/Dojo' or 'WeaversJ/Dojo'; '' if unknown
     commit: str         # full commit hash; '' if unknown
-    tag: str            # release tag at this commit, or the latest known release
+    tag: str            # release tag at this commit; '' between releases
     is_official: bool
 
     @property
@@ -40,6 +40,20 @@ class VersionInfo:
         if self.kind == 'fork':
             return 'Unofficial Dojo fork'
         return 'Dojo (version unknown)'
+
+    @property
+    def status(self):
+        """Short status for a build that isn't a release: 'Beta' or 'Unofficial fork'."""
+        return {'beta': 'Beta', 'fork': 'Unofficial fork'}.get(self.kind, '')
+
+    @property
+    def short(self):
+        """One line for the sidebar: "Dojo v1.0.0", "Beta · b9da68d" or "Unofficial fork · 4f9c72d"."""
+        if self.kind == 'release':
+            return self.label
+        if self.status:
+            return f'{self.status} · {self.short_commit}' if self.short_commit else self.status
+        return ''
 
 
 def repo_from_url(url):
@@ -119,10 +133,10 @@ def _version_key(tag):
 
 
 def read_git(root):
-    """(repo, commit, exact release tag or '', latest release tag or '') from a checkout's .git folder."""
+    """(repo, commit, release tag at HEAD or '') from a checkout's .git folder."""
     git = _git_dir(root)
     if git is None:
-        return '', '', '', ''
+        return '', '', ''
     common = _common_dir(git)
     packed, peeled = _packed_refs(common)
 
@@ -140,11 +154,10 @@ def read_git(root):
                 tags[str(path.relative_to(loose))] = _peel_loose_tag(common, path.read_text().strip())
 
     exact = sorted((t for t, sha in tags.items() if sha == commit), key=_version_key)
-    latest = max(tags, key=_version_key) if tags else ''
-    return repo_from_url(_origin_url(common)), commit, (exact[-1] if exact else ''), latest
+    return repo_from_url(_origin_url(common)), commit, (exact[-1] if exact else '')
 
 
-def build_info(repo, commit, exact_tag, latest_tag):
+def build_info(repo, commit, exact_tag):
     official = repo.lower() == OFFICIAL_REPO.lower()
     if not repo and not commit:
         kind = 'unknown'
@@ -154,7 +167,7 @@ def build_info(repo, commit, exact_tag, latest_tag):
         kind = 'release'
     else:
         kind = 'beta'
-    return VersionInfo(kind=kind, repo=repo, commit=commit, tag=exact_tag or latest_tag, is_official=official)
+    return VersionInfo(kind=kind, repo=repo, commit=commit, tag=exact_tag, is_official=official)
 
 
 @lru_cache(maxsize=1)
@@ -163,8 +176,8 @@ def get_version_info():
     commit = os.environ.get('DOJO_BUILD_COMMIT', '').strip()
     tag = os.environ.get('DOJO_BUILD_TAG', '').strip()
     if repo or commit:
-        return build_info(repo_from_url(repo) or repo, commit, tag, tag)
+        return build_info(repo_from_url(repo) or repo, commit, tag)
     try:
         return build_info(*read_git(settings.BASE_DIR))
     except (OSError, ValueError, zlib.error):
-        return build_info('', '', '', '')
+        return build_info('', '', '')

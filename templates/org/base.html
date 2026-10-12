@@ -397,7 +397,8 @@
         <div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.06);text-align:center;">
             {% load static %}
             <img src="{% static 'img/dojo-wordmark.png' %}" alt="Dojo" style="height:20px;opacity:0.25;filter:brightness(0) invert(1);">
-            <div style="margin-top:4px;font-size:0.65rem;color:rgba(255,255,255,.2);letter-spacing:.03em;">
+            <div class="dojo-version" style="margin-top:4px;font-size:0.65rem;color:rgba(255,255,255,.3);letter-spacing:.03em;">{{ dojo_version.short }}</div>
+            <div style="margin-top:2px;font-size:0.65rem;color:rgba(255,255,255,.2);letter-spacing:.03em;">
                 {% if dojo_licence.type == 'commercial' %}
                     Licensed to {{ dojo_licence.holder }}
                 {% else %}

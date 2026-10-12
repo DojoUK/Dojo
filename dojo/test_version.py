@@ -53,11 +53,11 @@ class ReadGitTests(SimpleTestCase):
         info = info_for(root)
         self.assertEqual((info.kind, info.label, info.tag), ('release', 'Dojo v1.0.0', 'v1.0.0'))
 
-    def test_official_between_releases_is_beta_after_latest_release(self):
+    def test_official_between_releases_is_beta(self):
         root = make_repo('https://github.com/dojouk/dojo.git', COMMIT_B,
                          packed=f'{COMMIT_A} refs/tags/v0.9.0\n{COMMIT_A} refs/tags/v0.10.0\n')
         info = info_for(root)
-        self.assertEqual((info.kind, info.label, info.tag, info.short_commit), ('beta', 'Dojo beta', 'v0.10.0', 'bbbbbbb'))
+        self.assertEqual((info.kind, info.tag, info.short), ('beta', '', 'Beta · bbbbbbb'))
 
     def test_any_other_repository_is_an_unofficial_fork(self):
         root = make_repo('git@github.com:WeaversJ/Dojo.git', COMMIT_A, packed=f'{COMMIT_A} refs/tags/v1.0.0\n')
@@ -108,14 +108,45 @@ class EnvironmentOverrideTests(SimpleTestCase):
 
 
 class SettingsShowsVersionTests(TestCase):
-    def test_general_tab_shows_the_version(self):
+    @classmethod
+    def setUpTestData(cls):
+        cls.org = Organisation.objects.create(name='Test Club', slug='test-club')
+        cls.admin = User.objects.create_user('admin', password='pw')
+        OrganisationMember.objects.create(user=cls.admin, organisation=cls.org, role='org_admin')
+
+    def settings_page(self, info):
+        self.client.force_login(self.admin)
+        with mock.patch('organisations.views.get_version_info', return_value=info):
+            return self.client.get(reverse('org_settings', kwargs={'org_slug': self.org.slug}))
+
+    def test_fork_shows_a_build_box_marked_unofficial(self):
+        response = self.settings_page(version.build_info('WeaversJ/Dojo', COMMIT_A, ''))
+        self.assertContains(response, '<span class="build-status build-status-fork">Unofficial fork</span>', html=True)
+        self.assertContains(response, 'WeaversJ/Dojo</span>')
+        self.assertContains(response, 'aaaaaaa</span>')
+        self.assertNotContains(response, '>Version</dt>')
+
+    def test_beta_shows_a_build_box_marked_beta(self):
+        response = self.settings_page(version.build_info('DojoUK/Dojo', COMMIT_B, ''))
+        self.assertContains(response, '<span class="build-status build-status-beta">Beta</span>', html=True)
+        self.assertContains(response, 'bbbbbbb</span>')
+        self.assertNotContains(response, '>Version</dt>')
+
+    def test_release_shows_only_the_version(self):
+        response = self.settings_page(version.build_info('DojoUK/Dojo', COMMIT_A, 'v1.0.0'))
+        self.assertContains(response, '<dd class="col-sm-8 mb-0">Dojo v1.0.0</dd>', html=True)
+        self.assertNotContains(response, '>Build</dt>')
+
+
+class SidebarShowsVersionTests(TestCase):
+    def test_sidebar_footer_shows_the_version_above_the_licence(self):
         org = Organisation.objects.create(name='Test Club', slug='test-club')
-        admin = User.objects.create_user('admin', password='pw')
-        OrganisationMember.objects.create(user=admin, organisation=org, role='org_admin')
-        self.client.force_login(admin)
-        fork = version.build_info('WeaversJ/Dojo', COMMIT_A, '', '')
-        with mock.patch('organisations.views.get_version_info', return_value=fork):
-            response = self.client.get(reverse('org_settings', kwargs={'org_slug': org.slug}))
-        self.assertContains(response, 'Unofficial Dojo fork')
-        self.assertContains(response, 'href="https://github.com/WeaversJ/Dojo"')
-        self.assertContains(response, '<code>aaaaaaa</code>')
+        coach = User.objects.create_user('coach', password='pw')
+        OrganisationMember.objects.create(user=coach, organisation=org, role='coach')
+        self.client.force_login(coach)
+        beta = version.build_info('DojoUK/Dojo', COMMIT_B, '')
+        with mock.patch('dojo.version.get_version_info', return_value=beta):
+            html = self.client.get(reverse('org_dashboard', kwargs={'org_slug': org.slug})).content.decode()
+        self.assertIn('<div class="dojo-version"', html)
+        self.assertIn('Beta · bbbbbbb</div>', html)
+        self.assertLess(html.index('class="dojo-version"'), html.index('AGPL-3.0'))

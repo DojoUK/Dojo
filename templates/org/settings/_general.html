@@ -1,4 +1,15 @@
 {# Club details and account info. #}
+<style>
+.info-box { display: inline-flex; align-items: center; border: 1px solid var(--dojo-border); border-radius: 6px; background: rgba(0,0,0,.025); font-size: .78rem; overflow: hidden; }
+.info-box { max-width: 100%; }
+.info-box > span, .info-box > a { padding: 2px 8px; min-width: 0; overflow-wrap: anywhere; }
+.info-box > a { color: inherit; text-decoration: none; }
+.info-box > a:hover { text-decoration: underline; }
+.info-box > * + * { border-left: 1px solid var(--dojo-border); }
+.build-status { font-weight: 600; }
+.build-status-beta { background: rgba(37,99,235,.08); color: #1d4ed8; }
+.build-status-fork { background: rgba(217,119,6,.1); color: #b45309; }
+</style>
 <form method="post">
     {% csrf_token %}
     <input type="hidden" name="action" value="general">
@@ -23,23 +34,27 @@
 </form>
 <hr class="my-4">
 <dl class="row small mb-0">
-    <dt class="col-sm-4 text-muted fw-normal">Web address name</dt>
-    <dd class="col-sm-8"><code>{{ org.slug }}</code></dd>
-    <dt class="col-sm-4 text-muted fw-normal">Plan</dt>
-    <dd class="col-sm-8">Free - Self Hosted</dd>
-    <dt class="col-sm-4 text-muted fw-normal">Created</dt>
-    <dd class="col-sm-8">{{ org.created_at|date:"d M Y" }}</dd>
-    <dt class="col-sm-4 text-muted fw-normal">Version</dt>
-    <dd class="col-sm-8 mb-0">
-        <span class="badge {% if version.kind == 'release' %}bg-success-subtle text-success border border-success-subtle{% elif version.kind == 'beta' %}bg-primary-subtle text-primary border border-primary-subtle{% elif version.kind == 'fork' %}bg-warning-subtle text-warning-emphasis border border-warning-subtle{% else %}bg-secondary-subtle text-secondary border{% endif %}">{{ version.label }}</span>
-        {% if version.kind == 'beta' and version.tag %}<span class="text-muted ms-1">after {{ version.tag }}</span>{% endif %}
-        <div class="text-muted mt-1">
-            {% if version.repo %}<a href="https://github.com/{{ version.repo }}" target="_blank" rel="noopener noreferrer">{{ version.repo }}</a>{% endif %}
-            {% if version.short_commit %}<span class="ms-1">@ <code>{{ version.short_commit }}</code></span>{% endif %}
-            {% if version.kind == 'unknown' %}Couldn't read this installation's version.{% endif %}
-        </div>
-        {% if version.kind == 'fork' %}
-        <div class="text-muted mt-1">This is a modified copy of Dojo, not an official build. <a href="{{ releases_url }}" target="_blank" rel="noopener noreferrer">Official releases</a></div>
-        {% endif %}
+    <dt class="col-sm-4 text-muted fw-normal">Web address</dt>
+    <dd class="col-sm-8">
+        <span class="info-box"><a href="{{ org_url }}"><i class="bi bi-link-45deg me-1"></i>{{ org_url_display }}</a></span>
     </dd>
+    <dt class="col-sm-4 text-muted fw-normal">Plan</dt>
+    <dd class="col-sm-8">
+        <span class="info-box"><span><i class="bi bi-hdd-rack me-1"></i>Self-hosted · Free</span></span>
+    </dd>
+    {% if version.kind == 'release' %}
+    <dt class="col-sm-4 text-muted fw-normal">Version</dt>
+    <dd class="col-sm-8 mb-0">{{ version.label }}</dd>
+    {% else %}
+    <dt class="col-sm-4 text-muted fw-normal">Build</dt>
+    <dd class="col-sm-8 mb-0">
+        {% if version.repo or version.short_commit %}
+        <span class="info-box">
+            {% if version.status %}<span class="build-status build-status-{{ version.kind }}">{{ version.status }}</span>{% endif %}
+            {% if version.repo %}<span><i class="bi bi-github me-1"></i>{{ version.repo }}</span>{% endif %}
+            {% if version.short_commit %}<span class="font-monospace"><i class="bi bi-git me-1"></i>{{ version.short_commit }}</span>{% endif %}
+        </span>
+        {% else %}Unknown{% endif %}
+    </dd>
+    {% endif %}
 </dl>

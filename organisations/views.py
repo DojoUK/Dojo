@@ -553,6 +553,8 @@ class OrgSettingsView(OrgAdminMixin, View):
         return {
             'settings_sections': self.SECTIONS,
             'version': get_version_info(),
+            'org_url': self.request.build_absolute_uri(reverse('org_dashboard', kwargs={'org_slug': self.org.slug})),
+            'org_url_display': self.request.get_host() + reverse('org_dashboard', kwargs={'org_slug': self.org.slug}),
             'releases_url': RELEASES_URL,
             'org': self.org,
             'org_membership': self.org_membership,
