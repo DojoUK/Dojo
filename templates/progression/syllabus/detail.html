@@ -26,14 +26,16 @@
             {% for heading, entries in groups %}
             <div class="px-3 pt-3 pb-1 d-flex align-items-center gap-2 border-top">
                 {% if heading %}
-                <form method="post" action="{% url 'syllabus_heading_edit' org_slug=org.slug pk=syllabus.pk heading_pk=heading.pk %}" class="d-flex gap-1 align-items-center flex-grow-1">
+                <form method="post" action="{% url 'syllabus_heading_edit' org_slug=org.slug pk=syllabus.pk heading_pk=heading.pk %}" class="d-flex flex-wrap gap-1 align-items-center flex-grow-1">
                     {% csrf_token %}
-                    <input type="text" name="name" value="{{ heading.name }}" class="form-control form-control-sm fw-semibold border-0 bg-transparent px-0" aria-label="Heading name">
-                    <button type="submit" class="btn btn-sm btn-link text-muted" title="Save heading name"><i class="bi bi-check2"></i></button>
-                    <button type="submit" name="action" value="up" class="btn btn-sm btn-link text-muted" title="Move heading up"><i class="bi bi-arrow-up"></i></button>
-                    <button type="submit" name="action" value="down" class="btn btn-sm btn-link text-muted" title="Move heading down"><i class="bi bi-arrow-down"></i></button>
-                    <button type="submit" name="action" value="delete" class="btn btn-sm btn-link text-danger" title="Remove heading"
-                            onclick="return confirm('Remove this heading? Its techniques stay in the syllabus.')"><i class="bi bi-x-lg"></i></button>
+                    <input type="text" name="name" value="{{ heading.name }}" class="form-control form-control-sm fw-semibold border-0 bg-transparent px-0" style="flex:1 1 14rem;min-width:0;" aria-label="Heading name">
+                    <div class="d-flex gap-1 ms-auto">
+                        <button type="submit" class="btn btn-sm btn-link text-muted" title="Save heading name"><i class="bi bi-check2"></i></button>
+                        <button type="submit" name="action" value="up" class="btn btn-sm btn-link text-muted" title="Move heading up"><i class="bi bi-arrow-up"></i></button>
+                        <button type="submit" name="action" value="down" class="btn btn-sm btn-link text-muted" title="Move heading down"><i class="bi bi-arrow-down"></i></button>
+                        <button type="submit" name="action" value="delete" class="btn btn-sm btn-link text-danger" title="Remove heading"
+                                onclick="return confirm('Remove this heading? Its techniques stay in the syllabus.')"><i class="bi bi-x-lg"></i></button>
+                    </div>
                 </form>
                 {% else %}
                 <span class="small text-muted fw-semibold">No heading</span>
@@ -42,14 +44,14 @@
             <ul class="list-group list-group-flush">
                 {% for entry in entries %}
                 <li class="list-group-item">
-                    <div class="d-flex justify-content-between align-items-start gap-2">
-                        <div>
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                        <div style="min-width:0;overflow-wrap:anywhere;">
                             <span class="small fw-semibold">{{ entry.technique.name }}</span>
                             {% if entry.technique.category %}<span class="badge bg-light text-secondary border ms-1">{{ entry.technique.category }}</span>{% endif %}
                             {% if entry.technique.link %}<a href="{{ entry.technique.link }}" target="_blank" rel="noopener noreferrer" class="ms-1 small" title="Open link"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
                             {% if entry.notes %}<div class="text-muted small">{{ entry.notes }}</div>{% endif %}
                         </div>
-                        <form method="post" action="{% url 'syllabus_entry_edit' org_slug=org.slug pk=syllabus.pk entry_pk=entry.pk %}" class="d-flex gap-1 flex-shrink-0">
+                        <form method="post" action="{% url 'syllabus_entry_edit' org_slug=org.slug pk=syllabus.pk entry_pk=entry.pk %}" class="d-flex gap-1 flex-shrink-0 ms-auto">
                             {% csrf_token %}
                             <button type="submit" name="action" value="up" class="btn btn-sm btn-link text-muted" title="Move up"><i class="bi bi-arrow-up"></i></button>
                             <button type="submit" name="action" value="down" class="btn btn-sm btn-link text-muted" title="Move down"><i class="bi bi-arrow-down"></i></button>

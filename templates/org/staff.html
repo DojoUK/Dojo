@@ -193,100 +193,104 @@
                         </div>
                     </td>
                 </tr>
-                <tr class="collapse" id="quals-{{ om.pk }}">
-                    <td colspan="7" class="bg-light px-3 py-3">
-                        {% if 'dbs' in org.enabled_fields or 'coaching_licence' in org.enabled_fields or 'staff_emergency_contact' in org.enabled_fields or 'staff_emergency_contact_2' in org.enabled_fields %}
-                        <form method="post">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="update_qualifications">
-                            <input type="hidden" name="member_pk" value="{{ om.pk }}">
-                            <div class="row g-2">
-                                {% if 'dbs' in org.enabled_fields %}
-                                <div class="col-sm-3">
-                                    <label class="form-label small fw-semibold">DBS number</label>
-                                    <input type="text" name="dbs_number" value="{{ om.dbs_number }}" class="form-control form-control-sm">
-                                </div>
-                                {% endif %}
-                                {% if 'dbs' in org.enabled_fields %}
-                                <div class="col-sm-3">
-                                    <label class="form-label small fw-semibold">DBS expiry</label>
-                                    <input type="date" name="dbs_expiry" value="{{ om.dbs_expiry|date:'Y-m-d' }}" class="form-control form-control-sm">
-                                </div>
-                                {% endif %}
-                                {% if 'coaching_licence' in org.enabled_fields %}
-                                <div class="col-sm-3">
-                                    <label class="form-label small fw-semibold">{{ org.coaching_licence_label }}</label>
-                                    <input type="text" name="coaching_licence" value="{{ om.coaching_licence }}" class="form-control form-control-sm">
-                                </div>
-                                {% endif %}
-                                {% if 'coaching_licence' in org.enabled_fields %}
-                                <div class="col-sm-3">
-                                    <label class="form-label small fw-semibold">{{ org.coaching_licence_label }} expiry</label>
-                                    <input type="date" name="coaching_licence_expiry" value="{{ om.coaching_licence_expiry|date:'Y-m-d' }}" class="form-control form-control-sm">
-                                </div>
-                                {% endif %}
-                                {% if 'staff_emergency_contact' in org.enabled_fields %}
-                                <div class="col-sm-3">
-                                    <label class="form-label small fw-semibold">Emergency contact name</label>
-                                    <input type="text" name="emergency_contact_name" value="{{ om.emergency_contact_name }}" class="form-control form-control-sm">
-                                </div>
-                                {% endif %}
-                                {% if 'staff_emergency_contact' in org.enabled_fields %}
-                                <div class="col-sm-3">
-                                    <label class="form-label small fw-semibold">Emergency contact phone</label>
-                                    <input type="text" name="emergency_contact_phone" value="{{ om.emergency_contact_phone }}" class="form-control form-control-sm">
-                                </div>
-                                {% endif %}
-                                {% if 'staff_emergency_contact_2' in org.enabled_fields %}
-                                <div class="col-sm-3">
-                                    <label class="form-label small fw-semibold">Second contact name</label>
-                                    <input type="text" name="emergency_contact_2_name" value="{{ om.emergency_contact_2_name }}" class="form-control form-control-sm">
-                                </div>
-                                <div class="col-sm-3">
-                                    <label class="form-label small fw-semibold">Second contact phone</label>
-                                    <input type="text" name="emergency_contact_2_phone" value="{{ om.emergency_contact_2_phone }}" class="form-control form-control-sm">
-                                </div>
-                                {% endif %}
-                                <div class="col-12">
-                                    <button type="submit" class="btn btn-sm btn-dark">Save details</button>
-                                </div>
-                            </div>
-                        </form>
-                        {% endif %}
-                        {% if not om.is_org_admin %}
-                        <form method="post" class="mt-3 pt-3 border-top">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="update_capabilities">
-                            <input type="hidden" name="member_pk" value="{{ om.pk }}">
-                            <div class="small fw-semibold mb-1">Permissions</div>
-                            <div class="text-muted mb-2" style="font-size:0.75rem;">
-                                Coaches can always take registers, add helpers, and view attendance and send announcements for their own classes. Tick anything extra this person needs.
-                            </div>
-                            <div class="row g-2">
-                                {% for name, label, help, granted in om.capability_states %}
-                                <div class="col-sm-6">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="capabilities" value="{{ name }}"
-                                               id="cap-{{ om.pk }}-{{ name }}"
-                                               {% if granted %}checked{% endif %}>
-                                        <label class="form-check-label small" for="cap-{{ om.pk }}-{{ name }}">
-                                            <span class="fw-semibold">{{ label }}</span>
-                                            <span class="d-block text-muted" style="font-size:0.75rem;">{{ help }}</span>
-                                        </label>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                                <div class="col-12">
-                                    <button type="submit" class="btn btn-sm btn-dark">Save permissions</button>
-                                </div>
-                            </div>
-                        </form>
-                        {% endif %}
-                    </td>
-                </tr>
                 {% endfor %}
             </tbody>
         </table>
+        </div>
+        {# Edit panels live outside the table so on a phone they use the full card width. #}
+        <div id="staff-panels">
+        {% for om in staff %}
+        <div class="collapse border-top bg-light px-3 py-3" id="quals-{{ om.pk }}" data-bs-parent="#staff-panels">
+            <div class="small fw-semibold mb-2">{{ om.user.get_full_name|default:om.user.username }}</div>
+            {% if 'dbs' in org.enabled_fields or 'coaching_licence' in org.enabled_fields or 'staff_emergency_contact' in org.enabled_fields or 'staff_emergency_contact_2' in org.enabled_fields %}
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update_qualifications">
+                <input type="hidden" name="member_pk" value="{{ om.pk }}">
+                <div class="row g-2">
+                    {% if 'dbs' in org.enabled_fields %}
+                    <div class="col-sm-3">
+                        <label class="form-label small fw-semibold">DBS number</label>
+                        <input type="text" name="dbs_number" value="{{ om.dbs_number }}" class="form-control form-control-sm">
+                    </div>
+                    {% endif %}
+                    {% if 'dbs' in org.enabled_fields %}
+                    <div class="col-sm-3">
+                        <label class="form-label small fw-semibold">DBS expiry</label>
+                        <input type="date" name="dbs_expiry" value="{{ om.dbs_expiry|date:'Y-m-d' }}" class="form-control form-control-sm">
+                    </div>
+                    {% endif %}
+                    {% if 'coaching_licence' in org.enabled_fields %}
+                    <div class="col-sm-3">
+                        <label class="form-label small fw-semibold">{{ org.coaching_licence_label }}</label>
+                        <input type="text" name="coaching_licence" value="{{ om.coaching_licence }}" class="form-control form-control-sm">
+                    </div>
+                    {% endif %}
+                    {% if 'coaching_licence' in org.enabled_fields %}
+                    <div class="col-sm-3">
+                        <label class="form-label small fw-semibold">{{ org.coaching_licence_label }} expiry</label>
+                        <input type="date" name="coaching_licence_expiry" value="{{ om.coaching_licence_expiry|date:'Y-m-d' }}" class="form-control form-control-sm">
+                    </div>
+                    {% endif %}
+                    {% if 'staff_emergency_contact' in org.enabled_fields %}
+                    <div class="col-sm-3">
+                        <label class="form-label small fw-semibold">Emergency contact name</label>
+                        <input type="text" name="emergency_contact_name" value="{{ om.emergency_contact_name }}" class="form-control form-control-sm">
+                    </div>
+                    {% endif %}
+                    {% if 'staff_emergency_contact' in org.enabled_fields %}
+                    <div class="col-sm-3">
+                        <label class="form-label small fw-semibold">Emergency contact phone</label>
+                        <input type="text" name="emergency_contact_phone" value="{{ om.emergency_contact_phone }}" class="form-control form-control-sm">
+                    </div>
+                    {% endif %}
+                    {% if 'staff_emergency_contact_2' in org.enabled_fields %}
+                    <div class="col-sm-3">
+                        <label class="form-label small fw-semibold">Second contact name</label>
+                        <input type="text" name="emergency_contact_2_name" value="{{ om.emergency_contact_2_name }}" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-sm-3">
+                        <label class="form-label small fw-semibold">Second contact phone</label>
+                        <input type="text" name="emergency_contact_2_phone" value="{{ om.emergency_contact_2_phone }}" class="form-control form-control-sm">
+                    </div>
+                    {% endif %}
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-sm btn-dark">Save details</button>
+                    </div>
+                </div>
+            </form>
+            {% endif %}
+            {% if not om.is_org_admin %}
+            <form method="post" class="mt-3 pt-3 border-top">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update_capabilities">
+                <input type="hidden" name="member_pk" value="{{ om.pk }}">
+                <div class="small fw-semibold mb-1">Permissions</div>
+                <div class="text-muted mb-2" style="font-size:0.75rem;">
+                    Coaches can always take registers, add helpers, and view attendance and send announcements for their own classes. Tick anything extra this person needs.
+                </div>
+                <div class="row g-2">
+                    {% for name, label, help, granted in om.capability_states %}
+                    <div class="col-sm-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="capabilities" value="{{ name }}"
+                                   id="cap-{{ om.pk }}-{{ name }}"
+                                   {% if granted %}checked{% endif %}>
+                            <label class="form-check-label small" for="cap-{{ om.pk }}-{{ name }}">
+                                <span class="fw-semibold">{{ label }}</span>
+                                <span class="d-block text-muted" style="font-size:0.75rem;">{{ help }}</span>
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-sm btn-dark">Save permissions</button>
+                    </div>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+        {% endfor %}
         </div>
         {% else %}
         <div class="text-center text-muted py-5">No staff members yet.</div>
@@ -383,4 +387,15 @@
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// The edit panel opens below the staff table, so bring it into view.
+document.querySelectorAll('#staff-panels .collapse').forEach(function (panel) {
+    panel.addEventListener('shown.bs.collapse', function () {
+        panel.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    });
+});
+</script>
 {% endblock %}

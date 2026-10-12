@@ -60,7 +60,7 @@
             <thead class="table-light">
                 <tr>
                     <th class="ps-3 small fw-semibold">Grading</th>
-                    <th class="small fw-semibold">System</th>
+                    <th class="small fw-semibold d-none d-sm-table-cell">System</th>
                     <th class="small fw-semibold">Date</th>
                     <th class="small fw-semibold">People</th>
                     <th></th>
@@ -73,7 +73,7 @@
                         <a href="{% url 'grading_detail' org_slug=org.slug pk=grading.pk %}" class="fw-semibold text-decoration-none">{{ grading.name }}</a>
                         {% if grading.session_count > 1 %}<div class="text-muted small">{{ grading.session_count }} sessions</div>{% endif %}
                     </td>
-                    <td class="small text-muted">{{ grading.system.name }}</td>
+                    <td class="small text-muted d-none d-sm-table-cell">{{ grading.system.name }}</td>
                     <td class="small text-muted">{{ grading.starts|date:"d M Y" }}</td>
                     <td class="small text-muted">{{ grading.candidate_count }}</td>
                     <td class="text-end pe-3">

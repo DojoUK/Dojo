@@ -103,3 +103,54 @@ class AccountPageTests(StaffContactsTestBase):
         response = self.save(emergency_contact_name='X')
         self.assertEqual(response.status_code, 302)
         self.assertIn(reverse('login'), response['Location'])
+
+
+class StaffEditPanelsTests(StaffContactsTestBase):
+    def test_every_staff_member_has_their_own_edit_panel(self):
+        # A coach followed by more staff: a panel bug can push later panels out of place.
+        OrganisationMember.objects.create(
+            user=User.objects.create_user('zara', password='pw'), organisation=self.org, role='coach',
+        )
+        self.client.force_login(self.admin)
+        html = self.client.get(self.url('org_staff')).content.decode()
+        for om in OrganisationMember.objects.filter(organisation=self.org):
+            panel_start = html.index(f'id="quals-{om.pk}"')
+            next_panel = html.find('id="quals-', panel_start + 1)
+            panel = html[panel_start:next_panel if next_panel != -1 else len(html)]
+            with self.subTest(staff=om.user.username):
+                self.assertIn(f'name="member_pk" value="{om.pk}"', panel)
+        # Panels sit together below the table, and only one opens at a time.
+        self.assertEqual(html.count('data-bs-parent="#staff-panels"'), 3)
+        self.assertLess(html.index('</table>'), html.index('id="staff-panels"'))
+        # A misplaced closing tag would nest one panel inside another, so the
+        # browser shows only the first. Check each panel's actual parent.
+        self.assertEqual(
+            _div_parents(html, 'quals-'),
+            {f'quals-{om.pk}': 'staff-panels' for om in OrganisationMember.objects.filter(organisation=self.org)},
+        )
+
+
+def _div_parents(html, id_prefix):
+    """{div id: id of the nearest enclosing div with an id} for divs whose id starts with id_prefix."""
+    from html.parser import HTMLParser
+
+    class Parser(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.stack, self.parents = [], {}
+
+        def handle_starttag(self, tag, attrs):
+            if tag != 'div':
+                return
+            div_id = dict(attrs).get('id')
+            if div_id and div_id.startswith(id_prefix):
+                self.parents[div_id] = next((i for i in reversed(self.stack) if i), None)
+            self.stack.append(div_id)
+
+        def handle_endtag(self, tag):
+            if tag == 'div' and self.stack:
+                self.stack.pop()
+
+    parser = Parser()
+    parser.feed(html)
+    return parser.parents
