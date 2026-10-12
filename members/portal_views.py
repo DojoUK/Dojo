@@ -6,12 +6,22 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 
 from billing.models import Invoice
+from dojo.mixins import require_features
+from organisations.features import stripe_configured
 from .models import Member
+
+
+def _portal_member(token, *features):
+    """The active member for a portal token, 404 unless the member portal and
+    any other given features are switched on for their organisation."""
+    member = get_object_or_404(Member.objects.select_related('organisation'), token=token, is_active=True)
+    require_features(member.organisation, ('member_portal',) + features)
+    return member
 
 
 class PortalView(View):
     def get(self, request, token):
-        member = get_object_or_404(Member, token=token, is_active=True)
+        member = _portal_member(token)
         org = member.organisation
 
         guardian = member.guardians.filter(email__gt='').first()
@@ -44,7 +54,7 @@ class PortalView(View):
 
         outstanding_total = sum(inv.amount for inv in outstanding)
 
-        stripe_enabled = bool(settings.STRIPE_PUBLIC_KEY and settings.STRIPE_SECRET_KEY)
+        stripe_enabled = org.has_feature('online_payments') and stripe_configured()
         subscription_enabled = stripe_enabled and bool(member.monthly_fee)
 
         return render(request, 'portal/index.html', {
@@ -68,7 +78,7 @@ class DownloadDataView(View):
     """Self-service subject access / portability export (Art. 15/20) — everything held on this member,
     except internal coach/admin notes, which are excluded here and available on request from the club."""
     def get(self, request, token):
-        member = get_object_or_404(Member, token=token, is_active=True)
+        member = _portal_member(token)
 
         from classes.models import Attendance
         from documents.models import Document, SignedWaiver
@@ -142,7 +152,7 @@ class CreateCheckoutView(View):
     def post(self, request, token, invoice_pk):
         import stripe
 
-        member = get_object_or_404(Member, token=token, is_active=True)
+        member = _portal_member(token, 'billing', 'online_payments')
         invoice = get_object_or_404(Invoice, pk=invoice_pk, member=member, status='unpaid')
 
         if not (settings.STRIPE_PUBLIC_KEY and settings.STRIPE_SECRET_KEY):
@@ -184,7 +194,7 @@ class CreateSubscriptionView(View):
     def post(self, request, token):
         import stripe
 
-        member = get_object_or_404(Member, token=token, is_active=True)
+        member = _portal_member(token, 'billing', 'online_payments')
 
         if not (settings.STRIPE_PUBLIC_KEY and settings.STRIPE_SECRET_KEY):
             return redirect('member_portal', token=token)
@@ -242,7 +252,7 @@ class BillingPortalView(View):
     def post(self, request, token):
         import stripe
 
-        member = get_object_or_404(Member, token=token, is_active=True)
+        member = _portal_member(token, 'billing', 'online_payments')
 
         if not member.stripe_customer_id or not settings.STRIPE_SECRET_KEY:
             return redirect('member_portal', token=token)
@@ -264,7 +274,7 @@ class CancelSubscriptionView(View):
     def post(self, request, token):
         import stripe
 
-        member = get_object_or_404(Member, token=token, is_active=True)
+        member = _portal_member(token, 'billing', 'online_payments')
 
         if not member.stripe_subscription_id:
             return redirect('member_portal', token=token)

@@ -93,6 +93,7 @@
     </div>
     {% endif %}
 
+    {% if 'billing' in org.enabled_features %}
     {% if outstanding %}
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-white border-bottom py-3">
@@ -147,8 +148,10 @@
         </div>
     </div>
     {% endif %}
+    {% endif %}
 
     <div class="row g-3 mb-4">
+        {% if 'grades' in org.enabled_features %}
         <div class="col-sm-6">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
@@ -167,6 +170,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
         <div class="col-sm-6">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body">
@@ -182,7 +186,7 @@
         </div>
     </div>
 
-    {% if progressions.count > 1 %}
+    {% if 'grades' in org.enabled_features and progressions.count > 1 %}
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-white border-bottom py-3">
             <h6 class="mb-0">Grade history</h6>
@@ -250,7 +254,7 @@
     </div>
     {% endif %}
 
-    {% if paid %}
+    {% if 'billing' in org.enabled_features and paid %}
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-white border-bottom py-3">
             <h6 class="mb-0">Payment history</h6>

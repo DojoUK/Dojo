@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
@@ -103,6 +104,9 @@ class MemberBulkActionView(OrgAdminMixin, View):
             messages.success(request, f'Email sent to {sent} member{"s" if sent != 1 else ""}.')
             return redirect('member_list', org_slug=org_slug)
 
+        if action in ('invoice', 'invoice_create') and not self.org.has_feature('billing'):
+            raise Http404
+
         if action == 'invoice':
             request.session['bulk_invoice_members'] = list(members.values_list('pk', flat=True))
             return redirect('member_list', org_slug=org_slug)
@@ -180,6 +184,8 @@ class MemberCreateView(OrgAdminMixin, CreateView):
     def _auto_assign_progression(self, member):
         from django.utils import timezone
         from progression.models import MemberProgression, ProgressionSystem
+        if not self.org.has_feature('grades'):
+            return
         today = timezone.localdate()
         for system in ProgressionSystem.objects.filter(organisation=self.org, assign_to_new_members=True):
             default_stage = system.stages.filter(is_default=True).first()
@@ -297,6 +303,8 @@ class MemberUpdateView(OrgAdminMixin, UpdateView):
 
 
 class MemberBillingPolicySetView(OrgAdminMixin, View):
+    required_feature = 'billing'
+
     def post(self, request, org_slug, pk):
         from billing.models import BillingPolicy
         member = get_object_or_404(Member, pk=pk, organisation=self.org)
@@ -344,6 +352,8 @@ class EraseMemberView(OrgAdminMixin, View):
 
 
 class RecordPromotionView(OrgAdminMixin, View):
+    required_feature = 'grades'
+
     def post(self, request, org_slug, pk):
         member = get_object_or_404(Member, pk=pk, organisation=self.org)
         from progression.models import MemberProgression, ProgressionStage
@@ -362,6 +372,8 @@ class RecordPromotionView(OrgAdminMixin, View):
 
 
 class DeleteProgressionView(OrgAdminMixin, View):
+    required_feature = 'grades'
+
     def post(self, request, org_slug, pk, prog_pk):
         member = get_object_or_404(Member, pk=pk, organisation=self.org)
         from progression.models import MemberProgression
@@ -372,6 +384,8 @@ class DeleteProgressionView(OrgAdminMixin, View):
 
 
 class ApplicationListView(OrgAdminMixin, View):
+    required_feature = 'applications'
+
     def get(self, request, org_slug):
         from django.shortcuts import render
         from .models import MemberApplication
@@ -388,6 +402,8 @@ class ApplicationListView(OrgAdminMixin, View):
 
 
 class ApproveApplicationView(OrgAdminMixin, View):
+    required_feature = 'applications'
+
     def post(self, request, org_slug, pk):
         from django.utils import timezone
         from .models import MemberApplication
@@ -436,13 +452,16 @@ class ApproveApplicationView(OrgAdminMixin, View):
                 except Exception:
                     pass  # Don't block approval if PDF stamping fails
 
-        from .emails import send_welcome_email
-        send_welcome_email(member)
+        if self.org.has_feature('member_portal'):
+            from .emails import send_welcome_email
+            send_welcome_email(member)
         messages.success(request, f'{member.name} approved and added as a member.')
         return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
 
 
 class RejectApplicationView(OrgAdminMixin, View):
+    required_feature = 'applications'
+
     def post(self, request, org_slug, pk):
         from django.utils import timezone
         from .models import MemberApplication
@@ -615,6 +634,8 @@ class MemberImportView(OrgAdminMixin, View):
 
 
 class SendWelcomeEmailView(OrgAdminMixin, View):
+    required_feature = 'member_portal'
+
     def post(self, request, org_slug, pk):
         member = get_object_or_404(Member, pk=pk, organisation=self.org)
         from .emails import send_welcome_email
@@ -631,6 +652,8 @@ class SendWelcomeEmailView(OrgAdminMixin, View):
 
 class RegeneratePortalTokenView(OrgAdminMixin, View):
     """Invalidates the member's existing portal link and issues a new one — use if a link may have leaked."""
+    required_feature = 'member_portal'
+
     def post(self, request, org_slug, pk):
         from django.utils import timezone
         from .models import generate_token

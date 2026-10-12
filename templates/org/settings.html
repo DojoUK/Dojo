@@ -40,6 +40,24 @@
             </div>
         </div>
 
+        {# Features #}
+        <div class="card mb-4" id="features">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Features</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">
+                    Switch off anything your club doesn't use and it disappears from Dojo. Nothing is deleted: switch a feature back on and its data is still there.
+                </p>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="features">
+                    {% include 'org/_feature_checkboxes.html' %}
+                    <button type="submit" class="btn btn-dark btn-sm mt-3">Save features</button>
+                </form>
+            </div>
+        </div>
+
         {# More settings #}
         <div class="card mb-4">
             <div class="card-header bg-white border-bottom py-3">
@@ -50,10 +68,12 @@
                     <div class="fw-semibold small">Custom member fields</div>
                     <div class="text-muted small">Add extra fields to member profiles.</div>
                 </a>
+                {% if 'grades' in org.enabled_features %}
                 <a href="{% url 'progression_settings' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3">
                     <div class="fw-semibold small">Progression &amp; grading</div>
                     <div class="text-muted small">Define belt systems, mon grades, or other progression tracks.</div>
                 </a>
+                {% endif %}
                 <a href="{% url 'org_staff' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3">
                     <div class="fw-semibold small">Staff &amp; coaches</div>
                     <div class="text-muted small">Manage who has access and what role they have.</div>

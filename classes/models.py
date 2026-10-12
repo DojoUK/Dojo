@@ -34,12 +34,17 @@ class Class(models.Model):
         return self.enrolments.count()
 
     @property
+    def has_capacity_limit(self):
+        """Capacity only applies while the club has waiting lists switched on."""
+        return self.max_capacity is not None and self.organisation.has_feature('waiting_lists')
+
+    @property
     def is_full(self):
-        return self.max_capacity is not None and self.enrolled_count >= self.max_capacity
+        return self.has_capacity_limit and self.enrolled_count >= self.max_capacity
 
     @property
     def spots_left(self):
-        if self.max_capacity is None:
+        if not self.has_capacity_limit:
             return None
         return max(0, self.max_capacity - self.enrolled_count)
 

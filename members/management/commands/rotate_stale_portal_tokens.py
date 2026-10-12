@@ -30,7 +30,9 @@ class Command(BaseCommand):
         from members import emails
 
         cutoff = timezone.now() - timedelta(days=options['days'])
-        candidates = Member.objects.filter(is_active=True, token_created_at__lt=cutoff)
+        candidates = Member.objects.filter(
+            is_active=True, token_created_at__lt=cutoff,
+        ).select_related('organisation')
 
         if not candidates.exists():
             self.stdout.write('No portal tokens past the rotation window.')
@@ -47,6 +49,11 @@ class Command(BaseCommand):
             member.token_created_at = timezone.now()
             member.save(update_fields=['token', 'token_created_at'])
             count += 1
+
+            if not member.organisation.has_feature('member_portal'):
+                # Still rotated, but a link to a switched-off portal is no use to them.
+                self.stdout.write(f'Rotated (member portal switched off, not emailed): {label}')
+                continue
 
             try:
                 ok, result = emails.send_portal_link_refreshed_email(member)

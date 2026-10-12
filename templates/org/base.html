@@ -201,31 +201,39 @@
                 <i class="bi bi-people"></i> Members
             </a>
         </li>
+        {% if 'applications' in org.enabled_features %}
         <li>
             <a href="{% url 'application_list' org_slug=org.slug %}" class="{% if 'application' in url_name %}active{% endif %}">
                 <i class="bi bi-person-plus"></i> Applications
             </a>
         </li>
+        {% endif %}
         <li>
             <a href="{% url 'class_list' org_slug=org.slug %}" class="{% if 'class' in url_name or 'session' in url_name or 'coach_class' in url_name %}active{% endif %}">
                 <i class="bi bi-calendar-week"></i> Classes
             </a>
         </li>
+        {% if 'billing' in org.enabled_features %}
         <li>
             <a href="{% url 'invoice_list' org_slug=org.slug %}" class="{% if 'invoice' in url_name or url_name == 'billing_export' %}active{% endif %}">
                 <i class="bi bi-receipt"></i> Billing
             </a>
         </li>
+        {% endif %}
+        {% if 'billing' in org.enabled_features %}
         <li>
             <a href="{% url 'billing_policies' org_slug=org.slug %}" class="{% if 'billing_polic' in url_name or 'billing_discount' in url_name or 'billing_term' in url_name %}active{% endif %}">
                 <i class="bi bi-tags"></i> Billing policies
             </a>
         </li>
+        {% endif %}
+        {% if 'inventory' in org.enabled_features %}
         <li>
             <a href="{% url 'inventory_list' org_slug=org.slug %}" class="{% if 'inventory' in url_name or 'product' in url_name or 'variant' in url_name %}active{% endif %}">
                 <i class="bi bi-box-seam"></i> Inventory
             </a>
         </li>
+        {% endif %}
         <li>
             <a href="{% url 'attendance_analytics' org_slug=org.slug %}" class="{% if 'attendance' in url_name %}active{% endif %}">
                 <i class="bi bi-bar-chart"></i> Attendance
@@ -236,16 +244,20 @@
                 <i class="bi bi-calendar3"></i> Calendar
             </a>
         </li>
+        {% if 'billing' in org.enabled_features %}
         <li>
             <a href="{% url 'org_finance' org_slug=org.slug %}" class="{% if url_name == 'org_finance' %}active{% endif %}">
                 <i class="bi bi-graph-up"></i> Finance
             </a>
         </li>
+        {% endif %}
+        {% if 'announcements' in org.enabled_features %}
         <li>
             <a href="{% url 'org_announcements' org_slug=org.slug %}" class="{% if url_name == 'org_announcements' %}active{% endif %}">
                 <i class="bi bi-megaphone"></i> Announcements
             </a>
         </li>
+        {% endif %}
     </ul>
 
     <div class="sidebar-section-label">Settings</div>
@@ -260,21 +272,25 @@
                 <i class="bi bi-tags"></i> Custom fields
             </a>
         </li>
+        {% if 'grades' in org.enabled_features %}
         <li>
             <a href="{% url 'progression_settings' org_slug=org.slug %}" class="{% if 'progression' in url_name %}active{% endif %}">
                 <i class="bi bi-award"></i> Progression
             </a>
         </li>
+        {% endif %}
         <li>
             <a href="{% url 'org_staff' org_slug=org.slug %}" class="{% if url_name == 'org_staff' %}active{% endif %}">
                 <i class="bi bi-person-badge"></i> Staff
             </a>
         </li>
+        {% if 'documents' in org.enabled_features %}
         <li>
             <a href="{% url 'waiver_list' org_slug=org.slug %}" class="{% if url_name == 'waiver_list' %}active{% endif %}">
                 <i class="bi bi-file-earmark-text"></i> Waivers
             </a>
         </li>
+        {% endif %}
         <li>
             <a href="{% url 'former_members' org_slug=org.slug %}" class="{% if url_name == 'former_members' %}active{% endif %}">
                 <i class="bi bi-person-slash"></i> Former members
@@ -306,16 +322,18 @@
                 <i class="bi bi-calendar3"></i> Calendar
             </a>
         </li>
+        {% if 'announcements' in org.enabled_features %}
         <li>
             <a href="{% url 'org_announcements' org_slug=org.slug %}" class="{% if url_name == 'org_announcements' %}active{% endif %}">
                 <i class="bi bi-megaphone"></i> Announcements
             </a>
         </li>
+        {% endif %}
     </ul>
 
     {% can 'manage_billing' as can_manage_billing %}
     {% can 'take_payments' as can_take_payments %}
-    {% if can_manage_billing or can_take_payments %}
+    {% if 'billing' in org.enabled_features %}{% if can_manage_billing or can_take_payments %}
     <div class="sidebar-section-label">Billing</div>
     <ul class="sidebar-nav">
         <li>
@@ -336,7 +354,7 @@
         </li>
         {% endif %}
     </ul>
-    {% endif %}
+    {% endif %}{% endif %}
 
     {% endif %}
     </div><!-- end dojo-sidebar-nav-scroll -->

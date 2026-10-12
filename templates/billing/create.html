@@ -75,7 +75,7 @@
                 </div>
             </div>
 
-            <div class="card border-0 shadow-sm mb-3" id="products-card">
+            <div class="card border-0 shadow-sm mb-3{% if 'inventory' not in org.enabled_features %} d-none{% endif %}" id="products-card"{% if 'inventory' not in org.enabled_features %} data-disabled="1"{% endif %}>
                 <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                     <h6 class="mb-0">Products <span class="text-muted fw-normal small">(optional)</span></h6>
                     <button type="button" class="btn btn-outline-secondary btn-sm" id="add-product-row">
@@ -146,7 +146,8 @@ function updateTargetUI() {
     const one = document.getElementById('target-one').checked;
     document.getElementById('member-select').classList.toggle('d-none', !one);
     document.getElementById('all-members-info').classList.toggle('d-none', one);
-    document.getElementById('products-card').classList.toggle('d-none', !one);
+    const productsCard = document.getElementById('products-card');
+    if (!productsCard.dataset.disabled) productsCard.classList.toggle('d-none', !one);
     if (!one) {
         document.getElementById('product-rows').innerHTML = '';
         updateTotals();

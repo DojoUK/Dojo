@@ -32,8 +32,10 @@ class SetupView(View):
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request):
+        from .features import FEATURES, default_enabled, feature_rows
         return render(request, self.template_name, {
             'demo_mode': request.GET.get('demo') == '1',
+            'feature_rows': feature_rows({f.key for f in FEATURES if default_enabled(f)}),
         })
 
     def post(self, request):
@@ -73,8 +75,12 @@ class SetupView(View):
         elif len(password) < 8:
             errors.append('Password must be at least 8 characters.')
 
+        from .features import choices_from_keys, effective_features, feature_rows
+        feature_choices = choices_from_keys(request.POST.getlist('features'))
+
         if errors:
             return render(request, self.template_name, {
+                'feature_rows': feature_rows(effective_features(feature_choices)),
                 'errors': errors,
                 'demo_mode': request.GET.get('demo') == '1',
                 'org_name': org_name,
@@ -91,6 +97,7 @@ class SetupView(View):
             email=request.POST.get('org_email', '').strip(),
             phone=request.POST.get('org_phone', '').strip(),
             website=request.POST.get('org_website', '').strip(),
+            features=feature_choices,
         )
         OrganisationMember.objects.create(user=user, organisation=org, role=OrganisationMember.Role.ORG_ADMIN)
 
@@ -211,7 +218,7 @@ class DashboardView(OrgMixin, TemplateView):
 
         pending_applications = MemberApplication.objects.filter(
             organisation=self.org, status=MemberApplication.Status.PENDING
-        ).count() if is_admin else 0
+        ).count() if is_admin and self.org.has_feature('applications') else 0
 
         thirty_days = today + timedelta(days=30)
         licences_expiring = active_members.filter(
@@ -239,7 +246,10 @@ class DashboardView(OrgMixin, TemplateView):
             has_member = member_count > 0
             has_class = self.org.classes.exists()
             has_coach = ClassCoach.objects.filter(assigned_class__organisation=self.org).exists() if has_class else False
-            has_invoice = Invoice.objects.filter(organisation=self.org).exists()
+            has_invoice = (
+                not self.org.has_feature('billing')
+                or Invoice.objects.filter(organisation=self.org).exists()
+            )
             if not (has_member and has_class and has_coach and has_invoice):
                 onboarding = {
                     'has_member': has_member,
@@ -249,7 +259,7 @@ class DashboardView(OrgMixin, TemplateView):
                 }
 
         unsigned_waivers_count = 0
-        if is_admin:
+        if is_admin and self.org.has_feature('documents'):
             from documents.models import SignedWaiver, WaiverTemplate
             required_templates = WaiverTemplate.objects.filter(
                 organisation=self.org, is_active=True, is_required=True
@@ -509,16 +519,28 @@ class OrgSettingsView(OrgAdminMixin, View):
         {'name': 'Teal',           'sidebar': '#134e4a', 'accent': '#14b8a6'},
     ]
 
-    def get(self, request, org_slug):
-        from django.shortcuts import render
-        return render(request, self.template_name, {
+    def _context(self):
+        from .features import feature_rows
+        return {
             'org': self.org,
             'org_membership': self.org_membership,
             'presets': self.PRESETS,
-        })
+            'feature_rows': feature_rows(self.org.enabled_features),
+        }
+
+    def get(self, request, org_slug):
+        from django.shortcuts import render
+        return render(request, self.template_name, self._context())
 
     def post(self, request, org_slug):
         action = request.POST.get('action', 'general')
+
+        if action == 'features':
+            from .features import choices_from_keys
+            self.org.set_features(choices_from_keys(request.POST.getlist('features')))
+            self.org.save(update_fields=['features'])
+            messages.success(request, 'Features saved.')
+            return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#features")
 
         if action == 'theme':
             sidebar_color = request.POST.get('sidebar_color', '#1E3A5F').strip()
@@ -562,11 +584,7 @@ class OrgSettingsView(OrgAdminMixin, View):
 
         if not name:
             messages.error(request, 'Organisation name is required.')
-            return render(request, self.template_name, {
-                'org': self.org,
-                'org_membership': self.org_membership,
-                'presets': self.PRESETS,
-            })
+            return render(request, self.template_name, self._context())
 
         self.org.name = name
         self.org.email = email
@@ -625,6 +643,8 @@ class AnnouncementListView(OrgMixin, View):
     coach unless granted `message_all_members`, which also unlocks sending
     to every active member.
     """
+    required_feature = 'announcements'
+
     def _sendable_classes(self):
         from classes.models import Class
         classes = Class.objects.filter(organisation=self.org)
@@ -791,6 +811,7 @@ class CalendarEventsView(OrgMixin, View):
 
 
 class FinancialReportView(CapabilityMixin, View):
+    required_feature = 'billing'
     required_capabilities = ('manage_billing',)
 
     def get(self, request, org_slug):

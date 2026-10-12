@@ -43,6 +43,7 @@
                             {{ form.joined_date }}
                             {% if form.joined_date.errors %}<div class="text-danger small mt-1">{{ form.joined_date.errors.0 }}</div>{% endif %}
                         </div>
+                        {% if 'monthly_fee' in form.fields %}
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold small">Monthly fee (£)</label>
                             {{ form.monthly_fee }}
@@ -55,6 +56,7 @@
                             {% if form.billing_policy.errors %}<div class="text-danger small mt-1">{{ form.billing_policy.errors.0 }}</div>{% endif %}
                             <div class="form-text">Override the class policy for this member.</div>
                         </div>
+                        {% endif %}
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold small">Licence number</label>
                             {{ form.licence_number }}

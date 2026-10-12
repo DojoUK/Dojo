@@ -55,9 +55,11 @@
                 <button type="submit" name="bulk_action" value="email" class="btn btn-sm btn-outline-secondary">
                     <i class="bi bi-envelope me-1"></i> Email
                 </button>
+                {% if 'billing' in org.enabled_features %}
                 <button type="submit" name="bulk_action" value="invoice" class="btn btn-sm btn-outline-secondary">
                     <i class="bi bi-receipt me-1"></i> Generate invoice
                 </button>
+                {% endif %}
                 <button type="submit" name="bulk_action" value="archive"
                         class="btn btn-sm btn-outline-danger"
                         onclick="return confirm('Archive all selected members?')">

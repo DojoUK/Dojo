@@ -12,6 +12,8 @@ from .pdf_utils import stamp_signature_on_pdf
 
 
 class DocumentUploadView(OrgAdminMixin, View):
+    required_feature = 'documents'
+
     def post(self, request, org_slug, member_pk):
         member = get_object_or_404(Member, pk=member_pk, organisation=self.org)
         f = request.FILES.get('file')
@@ -30,6 +32,8 @@ class DocumentUploadView(OrgAdminMixin, View):
 
 
 class DocumentDeleteView(OrgAdminMixin, View):
+    required_feature = 'documents'
+
     def post(self, request, org_slug, member_pk, pk):
         member = get_object_or_404(Member, pk=member_pk, organisation=self.org)
         doc = get_object_or_404(Document, pk=pk, member=member)
@@ -40,6 +44,8 @@ class DocumentDeleteView(OrgAdminMixin, View):
 
 
 class DocumentDownloadView(OrgAdminMixin, View):
+    required_feature = 'documents'
+
     def get(self, request, org_slug, member_pk, pk):
         member = get_object_or_404(Member, pk=member_pk, organisation=self.org)
         doc = get_object_or_404(Document, pk=pk, member=member)
@@ -52,6 +58,7 @@ class DocumentDownloadView(OrgAdminMixin, View):
 # ── Waiver templates ──────────────────────────────────────────────────────────
 
 class WaiverListView(OrgAdminMixin, View):
+    required_feature = 'documents'
     template_name = 'documents/waivers.html'
 
     def get(self, request, org_slug):
@@ -78,6 +85,8 @@ class WaiverListView(OrgAdminMixin, View):
 
 
 class WaiverDeleteView(OrgAdminMixin, View):
+    required_feature = 'documents'
+
     def post(self, request, org_slug, pk):
         waiver = get_object_or_404(WaiverTemplate, pk=pk, organisation=self.org)
         waiver.file.delete(save=False)
@@ -87,6 +96,8 @@ class WaiverDeleteView(OrgAdminMixin, View):
 
 
 class WaiverDownloadView(OrgAdminMixin, View):
+    required_feature = 'documents'
+
     def get(self, request, org_slug, pk):
         waiver = get_object_or_404(WaiverTemplate, pk=pk, organisation=self.org)
         try:
@@ -98,6 +109,8 @@ class WaiverDownloadView(OrgAdminMixin, View):
 # ── Signed waivers ────────────────────────────────────────────────────────────
 
 class SignedWaiverDownloadView(OrgAdminMixin, View):
+    required_feature = 'documents'
+
     def get(self, request, org_slug, pk):
         sw = get_object_or_404(SignedWaiver, pk=pk, template__organisation=self.org)
         try:
@@ -109,6 +122,8 @@ class SignedWaiverDownloadView(OrgAdminMixin, View):
 
 class SignedWaiverOfflineView(OrgAdminMixin, View):
     """Admin uploads a scanned paper waiver for an existing member."""
+    required_feature = 'documents'
+
     def post(self, request, org_slug, member_pk):
         member = get_object_or_404(Member, pk=member_pk, organisation=self.org)
         template_pk = request.POST.get('template_id')
@@ -127,6 +142,8 @@ class SignedWaiverOfflineView(OrgAdminMixin, View):
 
 
 class SignedWaiverDeleteView(OrgAdminMixin, View):
+    required_feature = 'documents'
+
     def post(self, request, org_slug, member_pk, pk):
         member = get_object_or_404(Member, pk=member_pk, organisation=self.org)
         sw = get_object_or_404(SignedWaiver, pk=pk, member=member)
