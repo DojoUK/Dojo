@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 from django.core.management.utils import get_random_secret_key
 from dotenv import load_dotenv
+from django.contrib.messages import constants as message_constants
 
 load_dotenv()
 
@@ -128,6 +129,9 @@ DOJO_LICENCE_KEY = os.environ.get('DOJO_LICENCE_KEY', '')
 DOJO_LICENCE_HOLDER = os.environ.get('DOJO_LICENCE_HOLDER', '')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Bootstrap has no .alert-error, so error messages rendered with no colour.
+MESSAGE_TAGS = {message_constants.ERROR: 'danger'}
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = '/'
