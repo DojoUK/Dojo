@@ -43,15 +43,19 @@
     padding: 20px 20px 16px;
     border-bottom: 1px solid rgba(255,255,255,.08);
 }
+/* Long club names wrap onto a second line; anything longer than that ends in "…". */
 .dojo-sidebar-brand .brand-name {
     font-size: 1.05rem;
     font-weight: 700;
     color: #fff;
     letter-spacing: -.01em;
-    display: block;
-    white-space: nowrap;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     overflow: hidden;
-    text-overflow: ellipsis;
+    overflow-wrap: anywhere;
 }
 .dojo-sidebar-brand .brand-sub {
     font-size: 0.72rem;
@@ -170,10 +174,11 @@
 
 <aside class="dojo-sidebar" id="sidebar">
     <div class="dojo-sidebar-brand">
-        <a href="{% url 'org_dashboard' org_slug=org.slug %}" style="text-decoration:none;display:flex;align-items:center;gap:10px;">
-            {% org_logo org org.theme.sidebar_color 36 72 %}
-            <div>
-                <span class="brand-name">{{ org.name }}</span>
+        {# The logo gets its own line, so the club's name has the sidebar's full width. #}
+        <a href="{% url 'org_dashboard' org_slug=org.slug %}" title="{{ org.name }}" style="text-decoration:none;display:flex;flex-direction:column;align-items:flex-start;gap:8px;">
+            {% org_logo org org.theme.sidebar_color 44 200 %}
+            <div style="max-width:100%;">
+                <span class="brand-name">{{ org.sidebar_name }}</span>
                 <span class="brand-sub">dojoapp.co.uk</span>
             </div>
         </a>

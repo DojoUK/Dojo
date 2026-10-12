@@ -131,3 +131,33 @@ class LogoUploadTests(TestCase):
         body = mail.outbox[-1].alternatives[0][0]
         self.assertIn(f'https://club.example{self.org.logo.url}', body)
         self.assertIn('background:#ffffff', body)  # black logo on the dark email header
+
+
+class SidebarNameTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.org = Organisation.objects.create(name='Mockingham Martial Arts Club', slug='test-club')
+        cls.admin = User.objects.create_user('admin', password='pw')
+        OrganisationMember.objects.create(user=cls.admin, organisation=cls.org, role='org_admin')
+
+    def setUp(self):
+        self.client.force_login(self.admin)
+        self.url = reverse('org_settings', kwargs={'org_slug': self.org.slug})
+
+    def sidebar(self):
+        html = self.client.get(self.url).content.decode()
+        return html[html.index('<div class="dojo-sidebar-brand">'):html.index('<div class="dojo-sidebar-nav-scroll">')]
+
+    def test_full_name_by_default_on_its_own_line_below_the_logo(self):
+        sidebar = self.sidebar()
+        self.assertIn('flex-direction:column', sidebar)
+        self.assertIn('<span class="brand-name">Mockingham Martial Arts Club</span>', sidebar)
+
+    def test_short_name_replaces_it_and_the_full_name_stays_as_a_tooltip(self):
+        self.client.post(self.url, {'action': 'general', 'name': self.org.name, 'short_name': 'Mockingham MA'})
+        sidebar = self.sidebar()
+        self.assertIn('<span class="brand-name">Mockingham MA</span>', sidebar)
+        self.assertIn('title="Mockingham Martial Arts Club"', sidebar)
+        self.client.post(self.url, {'action': 'general', 'name': self.org.name, 'short_name': ''})
+        self.org.refresh_from_db()
+        self.assertNotIn('short_name', self.org.settings)
