@@ -1,9 +1,12 @@
-django
-mysqlclient
-python-dotenv
-django-htmx
-django-auditlog
-stripe
-Pillow
-pypdf
-reportlab
+# Ranges, not exact versions: bug and security fixes still arrive on rebuild,
+# but a new major version (or Django feature release) waits until it's tested.
+# Django 6.1 needs MySQL 8.4+, so stay on 6.0.x while compose runs mysql:8.0.
+django>=6.0,<6.1
+mysqlclient>=2.2,<3
+python-dotenv>=1.2,<2
+django-htmx>=1.29,<2
+django-auditlog>=3.4,<4
+stripe>=16,<17
+Pillow>=12,<13
+pypdf>=6,<7
+reportlab>=5,<6
