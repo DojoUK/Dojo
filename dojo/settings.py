@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'billing',
     'documents',
     'inventory',
+    'accounts',
     'django_htmx',
     'auditlog',
 ]
@@ -67,6 +68,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'dojo.middleware.OrgSessionTimeoutMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'accounts.middleware.TwoFactorMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
     'auditlog.middleware.AuditlogMiddleware',

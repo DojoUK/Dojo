@@ -95,6 +95,37 @@
         </div>
 
 
+        {# Two-step sign-in #}
+        {% url 'account_settings' org_slug=org.slug as account_url %}
+        <div class="card mb-4" id="two-factor">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Two-step sign-in</h6>
+                {% if two_factor %}<span class="badge bg-success-subtle text-success">On</span>{% else %}<span class="badge bg-secondary-subtle text-secondary">Off</span>{% endif %}
+            </div>
+            <div class="card-body">
+                {% if two_factor %}
+                <p class="text-muted small mb-3">
+                    You sign in with your password and a code from your authenticator app.
+                    {{ two_factor.recovery_codes_left }} recovery code{{ two_factor.recovery_codes_left|pluralize }} left.
+                </p>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{% url 'two_factor_recovery_codes' %}?next={{ account_url|urlencode }}%23two-factor" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-list-ol me-1"></i> New recovery codes
+                    </a>
+                    {% if not two_factor_required %}
+                    <a href="{% url 'two_factor_disable' %}?next={{ account_url|urlencode }}%23two-factor" class="btn btn-outline-danger btn-sm">Turn off</a>
+                    {% endif %}
+                </div>
+                {% if two_factor_required %}<div class="form-text mt-2">Your club requires it. New phone? Ask an admin to reset it, then set it up again.</div>{% endif %}
+                {% else %}
+                <p class="text-muted small mb-3">Protect your account with a code from your phone as well as your password.</p>
+                <a href="{% url 'two_factor_setup' %}?next={{ account_url|urlencode }}%23two-factor" class="btn btn-dark btn-sm">
+                    <i class="bi bi-shield-lock me-1"></i> Set up
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
         {# Organisations #}
         <div class="card mb-4">
             <div class="card-header bg-white border-bottom py-3">

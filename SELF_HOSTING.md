@@ -131,7 +131,21 @@ Two things to back up:
 
 2. **The `media/` directory.** Uploaded member documents, signed waivers, and organisation logos live under `media/` in the project directory (bind-mounted into the container, so they're already on the host — just include the folder in whatever you use for filesystem backups).
 
-`.secret_key` is also worth keeping alongside your backups if you ever plan to restore onto a different host — without it, a restored instance would generate a new `SECRET_KEY`, which invalidates existing sessions and signed tokens (including member portal links).
+`.secret_key` is also worth keeping alongside your backups if you ever plan to restore onto a different host — without it, a restored instance would generate a new `SECRET_KEY`, which invalidates existing sessions and signed tokens (including member portal links), and makes staff's two-step sign-in recovery codes stop working.
+
+---
+
+## Two-step sign-in
+
+Staff can protect their accounts with a code from an authenticator app (Google Authenticator, Microsoft Authenticator, a password manager). Each club chooses in **Settings → Security** whether it's required for all staff, admins only, or optional. New clubs start with it required; clubs that existed before the feature start optional.
+
+A club admin can reset another person's two-step sign-in from the **Staff** page (for a new or lost phone). If the only admin has lost both their phone and their recovery codes, reset it from the server:
+
+```bash
+docker compose exec web python manage.py reset_two_factor <username>
+```
+
+If their club requires two-step sign-in, they're asked to set it up again the next time they sign in.
 
 ---
 

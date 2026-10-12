@@ -28,6 +28,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('setup/', organisations_views.SetupView.as_view(), name='setup'),
     path('login/', auth_views.LoginView.as_view(), name='login'),
+    path('2fa/', include('accounts.urls')),
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
     path('password-reset/', auth_views.PasswordResetView.as_view(), name='password_reset'),
     path('password-reset/done/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),

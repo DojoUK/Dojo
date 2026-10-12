@@ -19,6 +19,7 @@ from dojo.version import RELEASES_URL, get_version_info
 from .models import Announcement, Organisation, OrganisationMember, StaffHoliday
 from members.models import CustomField
 from .branding import email_branding
+from accounts.policy import device_for, two_factor_required
 
 
 class SetupView(View):
@@ -108,7 +109,8 @@ class SetupView(View):
             website=request.POST.get('org_website', '').strip(),
             features=feature_choices,
             optional_fields=optional_field_choices,
-            settings=labels,
+            # New clubs start with two-step sign-in required; Settings → Security can relax it.
+            settings={**labels, 'two_factor': Organisation.TWO_FACTOR_ALL},
         )
         OrganisationMember.objects.create(user=user, organisation=org, role=OrganisationMember.Role.ORG_ADMIN)
 
@@ -373,7 +375,7 @@ class StaffListView(OrgAdminMixin, View):
     def get(self, request, org_slug):
         staff = (
             OrganisationMember.objects.filter(organisation=self.org)
-            .select_related('user')
+            .select_related('user', 'user__two_factor')
             .order_by('user__first_name', 'user__username')
         )
         today = date.today()
@@ -391,6 +393,40 @@ class StaffListView(OrgAdminMixin, View):
             'thirty_days': today + timedelta(days=30),
             'holidays': holidays,
         })
+
+    def _account_action_refusal(self, user, name):
+        """Why the signed-in admin can't change `user`'s sign-in, or '' if they can."""
+        actor = self.request.user
+        if user == actor:
+            return 'Use your own account page to change your sign-in.'
+        if user.is_superuser and not actor.is_superuser:
+            return f'{name} is a site superuser; only another superuser can change their sign-in.'
+        if not actor.is_superuser and user.organisation_memberships.exclude(organisation=self.org).exists():
+            return f'{name} also works for another club on this Dojo, so only a site superuser can change their sign-in.'
+        return ''
+
+    def _send_password_reset(self, user):
+        from urllib.parse import urlsplit
+
+        from django.conf import settings as django_settings
+        from django.contrib.auth.forms import PasswordResetForm
+        from django.contrib.auth.tokens import default_token_generator
+        from django.utils.encoding import force_bytes
+        from django.utils.http import urlsafe_base64_encode
+        site = urlsplit(django_settings.SITE_URL)
+        context = {
+            'email': user.email,
+            'domain': site.netloc,
+            'site_name': self.org.name,
+            'uid': urlsafe_base64_encode(force_bytes(user.pk)),
+            'user': user,
+            'token': default_token_generator.make_token(user),
+            'protocol': site.scheme or 'https',
+        }
+        PasswordResetForm().send_mail(
+            'registration/password_reset_subject.txt', 'registration/password_reset_email.html',
+            context, None, user.email,
+        )
 
     def post(self, request, org_slug):
         action = request.POST.get('action')
@@ -452,6 +488,32 @@ class StaffListView(OrgAdminMixin, View):
             if fields:
                 om.save(update_fields=fields)
             messages.success(request, 'Details updated.')
+
+        elif action in ('reset_two_factor', 'send_password_reset', 'lock_account', 'unlock_account'):
+            om = get_object_or_404(OrganisationMember, pk=request.POST.get('member_pk'), organisation=self.org)
+            user = om.user
+            name = user.get_full_name() or user.username
+            refusal = self._account_action_refusal(user, name)
+            if refusal:
+                messages.error(request, refusal)
+            elif action == 'reset_two_factor':
+                from accounts.models import remove_two_factor
+                remove_two_factor(user)
+                messages.success(request, f'Two-step sign-in reset for {name}. They\'ll set it up again '
+                                          'next time they sign in if the club requires it.')
+            elif action == 'send_password_reset':
+                if not user.email:
+                    messages.error(request, f'{name} has no email address. Add one on their account first.')
+                else:
+                    self._send_password_reset(user)
+                    messages.success(request, f'Password reset link emailed to {name}.')
+            else:
+                # Inactive accounts can't sign in, and Django ends their open sessions on the next request.
+                user.is_active = action == 'unlock_account'
+                user.save(update_fields=['is_active'])
+                messages.success(request, f'{name} can sign in again.' if user.is_active
+                                 else f'{name} is locked out and signed out everywhere.')
+            return redirect(f"{reverse('org_staff', kwargs={'org_slug': self.org.slug})}")
 
         elif action == 'update_capabilities':
             member_pk = request.POST.get('member_pk')
@@ -563,6 +625,11 @@ class OrgSettingsView(OrgAdminMixin, View):
             'feature_rows': feature_rows(self.org.enabled_features),
             'field_groups': field_groups(self.org.enabled_fields, self.org.settings),
             'session_timeout_choices': Organisation.SESSION_TIMEOUT_CHOICES,
+            'two_factor_choices': Organisation.TWO_FACTOR_CHOICES,
+            'staff_without_two_factor': (
+                OrganisationMember.objects.filter(organisation=self.org, user__two_factor__isnull=True)
+                .select_related('user').order_by('user__first_name', 'user__username')
+            ),
         }
 
     def get(self, request, org_slug):
@@ -584,10 +651,14 @@ class OrgSettingsView(OrgAdminMixin, View):
                 minutes = int(request.POST.get('session_timeout_minutes', ''))
             except ValueError:
                 minutes = None
+            two_factor = request.POST.get('two_factor', self.org.two_factor_policy)
             if minutes not in {m for m, _ in Organisation.SESSION_TIMEOUT_CHOICES}:
                 messages.error(request, 'Choose one of the listed times.')
+            elif two_factor not in dict(Organisation.TWO_FACTOR_CHOICES):
+                messages.error(request, 'Choose who must use two-step sign-in.')
             else:
-                self.org.settings = {**(self.org.settings or {}), 'session_timeout_minutes': minutes}
+                self.org.settings = {**(self.org.settings or {}), 'session_timeout_minutes': minutes,
+                                     'two_factor': two_factor}
                 self.org.save(update_fields=['settings'])
                 messages.success(request, 'Security settings saved.')
             return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#security")
@@ -963,6 +1034,8 @@ class AccountView(OrgMixin, View):
             'memberships': request.user.organisation_memberships.select_related('organisation').order_by('organisation__name'),
             'holidays': holidays,
             'today': date.today(),
+            'two_factor': device_for(request.user),
+            'two_factor_required': two_factor_required(request.user),
         })
 
     def post(self, request, org_slug):

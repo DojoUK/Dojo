@@ -1,0 +1,9 @@
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    {% if error %}<div class="alert alert-danger py-2 small mb-3">{{ error }}</div>{% endif %}
+    <label for="code" class="form-label small fw-semibold">{{ label|default:"Code" }}</label>
+    <input type="text" name="code" id="code" class="form-control code-input mb-3" required autofocus
+           autocomplete="one-time-code" {% if digits_only %}inputmode="numeric" pattern="[0-9 ]*" maxlength="7"{% else %}maxlength="11"{% endif %}>
+    <button type="submit" class="btn btn-dark w-100 py-2">{{ button }}</button>
+</form>

@@ -82,6 +82,11 @@
                             {% endif %}
                         </div>
                         <div class="text-muted" style="font-size:0.75rem;">{{ om.user.username }}</div>
+                        <div class="d-flex flex-wrap gap-1 mt-1">
+                            {% if not om.user.is_active %}<span class="badge bg-danger-subtle text-danger" style="font-size:0.65rem;"><i class="bi bi-lock"></i> Locked out</span>{% endif %}
+                            {% if om.user.two_factor %}<span class="badge bg-success-subtle text-success" style="font-size:0.65rem;" title="Signs in with an authenticator app"><i class="bi bi-shield-check"></i> 2-step</span>
+                            {% elif om.user.is_active %}<span class="badge bg-warning-subtle text-warning-emphasis" style="font-size:0.65rem;" title="Hasn't set up two-step sign-in"><i class="bi bi-shield-exclamation"></i> No 2-step</span>{% endif %}
+                        </div>
                     </td>
                     <td class="py-2 small">
                         {% if om.user == request.user %}
@@ -260,6 +265,54 @@
                 </div>
             </form>
             {% endif %}
+            <div class="mt-3 pt-3 border-top">
+                <div class="small fw-semibold mb-1">Sign-in</div>
+                {% if om.user == request.user %}
+                <div class="text-muted" style="font-size:0.75rem;">Change your own password and two-step sign-in on <a href="{% url 'account_settings' org_slug=org.slug %}">your account page</a>.</div>
+                {% else %}
+                <div class="text-muted mb-2" style="font-size:0.75rem;">
+                    {% if om.user.two_factor %}Uses two-step sign-in.{% else %}Hasn't set up two-step sign-in.{% endif %}
+                    {% if not om.user.is_active %}Locked out: can't sign in.{% endif %}
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    {% with who=om.user.get_full_name|default:om.user.username %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="send_password_reset">
+                        <input type="hidden" name="member_pk" value="{{ om.pk }}">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary" {% if not om.user.email %}disabled title="No email address"{% endif %}>
+                            <i class="bi bi-envelope me-1"></i> Email password reset link
+                        </button>
+                    </form>
+                    {% if om.user.two_factor %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="reset_two_factor">
+                        <input type="hidden" name="member_pk" value="{{ om.pk }}">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                onclick="return confirm('Reset two-step sign-in for {{ who|escapejs }}? Their app and recovery codes stop working.')">
+                            <i class="bi bi-phone me-1"></i> Reset two-step sign-in
+                        </button>
+                    </form>
+                    {% endif %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="member_pk" value="{{ om.pk }}">
+                        {% if om.user.is_active %}
+                        <input type="hidden" name="action" value="lock_account">
+                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                onclick="return confirm('Lock {{ who|escapejs }} out? They\'ll be signed out and unable to sign in until unlocked.')">
+                            <i class="bi bi-lock me-1"></i> Lock out
+                        </button>
+                        {% else %}
+                        <input type="hidden" name="action" value="unlock_account">
+                        <button type="submit" class="btn btn-sm btn-outline-success"><i class="bi bi-unlock me-1"></i> Unlock</button>
+                        {% endif %}
+                    </form>
+                    {% endwith %}
+                </div>
+                {% endif %}
+            </div>
             {% if not om.is_org_admin %}
             <form method="post" class="mt-3 pt-3 border-top">
                 {% csrf_token %}
