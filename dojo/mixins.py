@@ -26,6 +26,15 @@ def _resolve_org_membership(view, request, kwargs):
     view._org_resolved = True
 
 
+def has_capability(org_membership, capability):
+    """
+    Whether the resolved membership holds a staff capability (see
+    OrganisationMember.CAPABILITIES). Superusers resolve to
+    org_membership=None and hold every capability.
+    """
+    return org_membership is None or org_membership.has_capability(capability)
+
+
 class OrgMixin(LoginRequiredMixin):
     """
     Grants access to any member of the organisation in the URL.
@@ -38,6 +47,20 @@ class OrgMixin(LoginRequiredMixin):
             return super().dispatch(request, *args, **kwargs)
         _resolve_org_membership(self, request, kwargs)
         return super().dispatch(request, *args, **kwargs)
+
+    @property
+    def is_org_admin(self):
+        return self.org_membership is None or self.org_membership.is_org_admin
+
+    def can(self, capability):
+        return has_capability(self.org_membership, capability)
+
+    def coached_class_ids(self):
+        """Ids of the classes in this org the current user is assigned to coach."""
+        from classes.models import ClassCoach
+        return ClassCoach.objects.filter(
+            user=self.request.user, assigned_class__organisation=self.org,
+        ).values_list('assigned_class_id', flat=True)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -57,6 +80,22 @@ class OrgAdminMixin(OrgMixin):
             return super().dispatch(request, *args, **kwargs)
         _resolve_org_membership(self, request, kwargs)
         if self.org_membership and self.org_membership.role != OrganisationMember.Role.ORG_ADMIN:
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
+
+class CapabilityMixin(OrgMixin):
+    """
+    Restricts access to Org Admins (and superusers) plus any staff member
+    granted at least one of `required_capabilities`.
+    """
+    required_capabilities = ()
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return super().dispatch(request, *args, **kwargs)
+        _resolve_org_membership(self, request, kwargs)
+        if not any(self.can(c) for c in self.required_capabilities):
             raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
 
