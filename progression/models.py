@@ -11,6 +11,11 @@ class ProgressionSystem(models.Model):
         default=False,
         help_text='Automatically assign new members to the default stage in this system.',
     )
+    uses_gradings = models.BooleanField(
+        default=False,
+        help_text='Promotions in this system happen at grading events, rather than being awarded '
+                  'by a coach whenever someone is ready.',
+    )
 
     def __str__(self):
         return f"{self.organisation} — {self.name}"
@@ -37,6 +42,9 @@ class ProgressionStage(models.Model):
     def organisation(self):
         return self.system.organisation
 
+    def next_stage(self):
+        return self.system.stages.filter(order__gt=self.order).order_by('order', 'name').first()
+
     class Meta:
         ordering = ['system', 'order', 'name']
         unique_together = ('system', 'name')
@@ -53,3 +61,80 @@ class MemberProgression(models.Model):
 
     class Meta:
         ordering = ['-achieved_date']
+
+
+class Grading(models.Model):
+    """
+    A grading in one progression system, run as one or more sessions. A
+    club that grades everyone together has a single session and never sees
+    the session level; a club that splits a grading weekend into groups
+    (often matching its weekly classes) adds a session per group.
+    """
+    organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='gradings')
+    name = models.CharField(max_length=255)
+    system = models.ForeignKey(ProgressionSystem, on_delete=models.PROTECT, related_name='gradings')
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.organisation} — {self.name}"
+
+    @property
+    def first_date(self):
+        first = self.sessions.order_by('date').first()
+        return first.date if first else None
+
+    class Meta:
+        ordering = ('-created_at',)
+
+
+class GradingSession(models.Model):
+    """One group within a grading, graded on a given date."""
+    grading = models.ForeignKey(Grading, on_delete=models.CASCADE, related_name='sessions')
+    name = models.CharField(
+        max_length=255, blank=True,
+        help_text='Optional, e.g. "Juniors" or "Saturday morning". Useful once a grading has several sessions.',
+    )
+    date = models.DateField()
+
+    def __str__(self):
+        return f"{self.grading.name} — {self.display_name}"
+
+    @property
+    def display_name(self):
+        return self.name or f"{self.date:%d %b %Y}"
+
+    class Meta:
+        ordering = ('date', 'name', 'pk')
+
+
+class GradingCandidate(models.Model):
+    """
+    A member being graded in a session. A pass creates one MemberProgression
+    (the member's grade history entry), linked here so changing the result
+    later updates or removes that same record.
+    """
+    class Result(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        PASSED = 'passed', 'Passed'
+        FAILED = 'failed', 'Failed'
+        ABSENT = 'absent', 'Absent'
+
+    session = models.ForeignKey(GradingSession, on_delete=models.CASCADE, related_name='candidates')
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='grading_candidacies')
+    target_stage = models.ForeignKey(
+        ProgressionStage, null=True, blank=True, on_delete=models.SET_NULL, related_name='+',
+        help_text='The grade they are going for.',
+    )
+    result = models.CharField(max_length=10, choices=Result.choices, default=Result.PENDING)
+    notes = models.TextField(blank=True, help_text="Examiner's notes.")
+    progression = models.OneToOneField(
+        MemberProgression, null=True, blank=True, on_delete=models.SET_NULL, related_name='grading_candidate',
+    )
+
+    def __str__(self):
+        return f"{self.member} — {self.session} ({self.get_result_display()})"
+
+    class Meta:
+        ordering = ('member__name',)
+        unique_together = ('session', 'member')

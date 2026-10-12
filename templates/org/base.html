@@ -209,10 +209,17 @@
         </li>
         {% endif %}
         <li>
-            <a href="{% url 'class_list' org_slug=org.slug %}" class="{% if 'class' in url_name or 'session' in url_name or 'coach_class' in url_name %}active{% endif %}">
+            <a href="{% url 'class_list' org_slug=org.slug %}" class="{% if 'grading' not in url_name %}{% if 'class' in url_name or 'session' in url_name or 'coach_class' in url_name %}active{% endif %}{% endif %}">
                 <i class="bi bi-calendar-week"></i> Classes
             </a>
         </li>
+        {% if 'gradings' in org.enabled_features %}
+        <li>
+            <a href="{% url 'grading_list' org_slug=org.slug %}" class="{% if 'grading' in url_name %}active{% endif %}">
+                <i class="bi bi-award"></i> Gradings
+            </a>
+        </li>
+        {% endif %}
         {% if 'billing' in org.enabled_features %}
         <li>
             <a href="{% url 'invoice_list' org_slug=org.slug %}" class="{% if 'invoice' in url_name or url_name == 'billing_export' %}active{% endif %}">
@@ -308,7 +315,7 @@
     <div class="sidebar-section-label">My classes</div>
     <ul class="sidebar-nav">
         <li>
-            <a href="{% url 'coach_class_list' org_slug=org.slug %}" class="{% if 'coach_class' in url_name or 'session' in url_name %}active{% endif %}">
+            <a href="{% url 'coach_class_list' org_slug=org.slug %}" class="{% if 'grading' not in url_name %}{% if 'coach_class' in url_name or 'session' in url_name %}active{% endif %}{% endif %}">
                 <i class="bi bi-calendar-week"></i> My classes
             </a>
         </li>
@@ -330,6 +337,17 @@
         </li>
         {% endif %}
     </ul>
+
+    {% can 'manage_gradings' as can_manage_gradings %}
+    {% if 'gradings' in org.enabled_features and can_manage_gradings %}
+    <ul class="sidebar-nav">
+        <li>
+            <a href="{% url 'grading_list' org_slug=org.slug %}" class="{% if 'grading' in url_name %}active{% endif %}">
+                <i class="bi bi-award"></i> Gradings
+            </a>
+        </li>
+    </ul>
+    {% endif %}
 
     {% can 'manage_billing' as can_manage_billing %}
     {% can 'take_payments' as can_take_payments %}

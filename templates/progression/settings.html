@@ -43,6 +43,16 @@
             </button>
         </form>
 
+        {% if 'gradings' in org.enabled_features %}
+        <form method="post" action="{% url 'progression_system_toggle_gradings' org_slug=org.slug pk=system.pk %}" class="d-flex align-items-center gap-2">
+            {% csrf_token %}
+            <span class="small text-muted">Promotions at grading events</span>
+            <button type="submit" class="btn btn-sm {% if system.uses_gradings %}btn-success{% else %}btn-outline-secondary{% endif %}" title="Toggle grading events for this system">
+                {% if system.uses_gradings %}<i class="bi bi-toggle-on"></i>{% else %}<i class="bi bi-toggle-off"></i>{% endif %}
+            </button>
+        </form>
+        {% endif %}
+
         <form method="post" action="{% url 'progression_system_delete' org_slug=org.slug pk=system.pk %}">
             {% csrf_token %}
             <button type="submit" class="btn btn-sm btn-outline-danger"

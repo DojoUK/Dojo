@@ -1,0 +1,58 @@
+{# Edit / add session / delete controls shared by the grading overview and a single-session grading's page. #}
+<div class="collapse mb-3" id="grading-settings">
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <h6 class="small fw-semibold">Grading details</h6>
+                    <form method="post" action="{% url 'grading_edit' org_slug=org.slug pk=grading.pk %}">
+                        {% csrf_token %}
+                        <div class="mb-2">
+                            <label class="form-label small">Name</label>
+                            <input type="text" name="name" value="{{ grading.name }}" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small">Notes</label>
+                            <textarea name="notes" rows="2" class="form-control form-control-sm">{{ grading.notes }}</textarea>
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-dark">Save</button>
+                    </form>
+                    {% if single %}
+                    <form method="post" action="{% url 'grading_session_edit' org_slug=org.slug pk=grading.pk session_pk=session.pk %}" class="row g-2 align-items-end mt-3 pt-3 border-top">
+                        {% csrf_token %}
+                        <input type="hidden" name="name" value="{{ session.name }}">
+                        <div class="col-7">
+                            <label class="form-label small">Date</label>
+                            <input type="date" name="date" value="{{ session.date|date:'Y-m-d' }}" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-5"><button type="submit" class="btn btn-sm btn-outline-secondary w-100">Change date</button></div>
+                    </form>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <h6 class="small fw-semibold">Add a session</h6>
+                    <p class="text-muted small mb-2">Split the grading into groups, e.g. one per class.</p>
+                    <form method="post" action="{% url 'grading_session_add' org_slug=org.slug pk=grading.pk %}" class="row g-2 align-items-end">
+                        {% csrf_token %}
+                        <div class="col-7">
+                            <label class="form-label small">Name</label>
+                            <input type="text" name="name" class="form-control form-control-sm" placeholder="e.g. Juniors">
+                        </div>
+                        <div class="col-5">
+                            <label class="form-label small">Date</label>
+                            <input type="date" name="date" value="{{ grading.first_date|date:'Y-m-d' }}" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-12"><button type="submit" class="btn btn-sm btn-outline-secondary">Add session</button></div>
+                    </form>
+                    <form method="post" action="{% url 'grading_delete' org_slug=org.slug pk=grading.pk %}" class="mt-4 pt-3 border-top">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                onclick="return confirm('Delete {{ grading.name|escapejs }} and all its sessions?')">
+                            <i class="bi bi-trash me-1"></i> Delete grading
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
