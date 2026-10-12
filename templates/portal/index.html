@@ -1,3 +1,4 @@
+{% load branding %}
 {% load static %}
 <!doctype html>
 <html lang="en">
@@ -35,9 +36,12 @@
 {% endif %}
 
 <header class="portal-header mb-4">
-    <div class="container">
-        <div class="org-name">{{ org.name }}</div>
-        <div class="member-name">{{ member.name }}</div>
+    <div class="container d-flex align-items-center gap-3">
+        {% org_logo org '#212529' 40 140 %}
+        <div>
+            <div class="org-name">{{ org.name }}</div>
+            <div class="member-name">{{ member.name }}</div>
+        </div>
     </div>
 </header>
 

@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load staff_permissions %}
+{% load staff_permissions branding %}
 
 {% block body_class %}{% endblock %}
 
@@ -171,9 +171,7 @@
 <aside class="dojo-sidebar" id="sidebar">
     <div class="dojo-sidebar-brand">
         <a href="{% url 'org_dashboard' org_slug=org.slug %}" style="text-decoration:none;display:flex;align-items:center;gap:10px;">
-            {% if org.logo %}
-            <img src="{{ org.logo.url }}" alt="{{ org.name }}" style="width:32px;height:32px;border-radius:8px;object-fit:cover;flex-shrink:0;">
-            {% endif %}
+            {% org_logo org org.theme.sidebar_color 36 72 %}
             <div>
                 <span class="brand-name">{{ org.name }}</span>
                 <span class="brand-sub">dojoapp.co.uk</span>

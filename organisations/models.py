@@ -91,6 +91,24 @@ class Organisation(models.Model):
         return self.field_label('coaching_licence')
 
     @property
+    def logo_luminance(self):
+        """How light (1) or dark (0) the logo is; measured on upload, or now for older logos."""
+        if not self.logo:
+            return None
+        stored = (self.settings or {}).get('logo_luminance')
+        if stored is not None:
+            return stored
+        from .branding import image_luminance
+        try:
+            with self.logo.open('rb') as file:
+                value = round(image_luminance(file), 3)
+        except (OSError, ValueError):
+            return None
+        self.settings = {**(self.settings or {}), 'logo_luminance': value}
+        Organisation.objects.filter(pk=self.pk).update(settings=self.settings)
+        return value
+
+    @property
     def session_timeout_minutes(self):
         value = (self.settings or {}).get('session_timeout_minutes', self.DEFAULT_SESSION_TIMEOUT)
         allowed = {minutes for minutes, _ in self.SESSION_TIMEOUT_CHOICES}

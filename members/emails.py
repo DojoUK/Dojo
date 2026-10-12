@@ -2,6 +2,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.urls import reverse
+from organisations.branding import email_branding
 
 
 def send_welcome_email(member):
@@ -25,6 +26,7 @@ def send_welcome_email(member):
     context = {
         'member': member,
         'org_name': org_name,
+        **email_branding(member.organisation),
         'org_email': member.organisation.email,
         'portal_url': portal_url,
         'has_guardians': has_guardians,
@@ -72,6 +74,7 @@ def send_portal_link_refreshed_email(member):
     context = {
         'member': member,
         'org_name': org_name,
+        **email_branding(member.organisation),
         'org_email': member.organisation.email,
         'portal_url': portal_url,
         'has_guardians': has_guardians,

@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from billing.emails import portal_url_for
 from billing.models import Invoice
+from organisations.branding import email_branding
 
 
 class Command(BaseCommand):
@@ -75,6 +76,7 @@ class Command(BaseCommand):
                 'member': member,
                 'invoice': invoice,
                 'org_name': org.name,
+                **email_branding(org),
                 'org_email': org.email or settings.DEFAULT_FROM_EMAIL,
                 'portal_url': portal_url,
                 'has_guardians': has_guardians,

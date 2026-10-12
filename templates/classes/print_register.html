@@ -1,3 +1,4 @@
+{% load branding %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -27,6 +28,7 @@
         </button>
     </div>
 
+    {% if org.logo %}<div style="float:right;">{% org_logo org '#ffffff' 48 160 %}</div>{% endif %}
     <h1>{{ cls.name }}</h1>
     <div class="meta">
         {{ session.date|date:"l d F Y" }} &mdash; {{ org.name }}
