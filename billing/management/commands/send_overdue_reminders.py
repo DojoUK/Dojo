@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from billing.emails import portal_url_for
 from billing.models import Invoice
+from billing.payments import options_for as payment_options
 from mailer import connection_for
 from organisations.branding import email_branding
 
@@ -80,6 +81,7 @@ class Command(BaseCommand):
                 **email_branding(org),
                 'org_email': org.email or settings.DEFAULT_FROM_EMAIL,
                 'portal_url': portal_url,
+                **payment_options(invoice),
                 'has_guardians': has_guardians,
             }
             html = render_to_string('emails/invoice_reminder.html', context)

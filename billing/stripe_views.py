@@ -1,4 +1,6 @@
 import json
+from decimal import Decimal
+
 import stripe
 from django.conf import settings
 from django.http import HttpResponse
@@ -15,15 +17,24 @@ class StripeWebhookView(View):
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)
 
-    def post(self, request):
+    def post(self, request, org_slug=None):
         payload = request.body
         sig_header = request.META.get('HTTP_STRIPE_SIGNATURE', '')
-        webhook_secret = settings.STRIPE_WEBHOOK_SECRET
+        # Each club's own endpoint is checked with its own signing secret (Settings → Payments);
+        # the plain endpoint is for keys set in the STRIPE_* environment variables.
+        self.organisation = None
+        if org_slug:
+            from organisations.models import Organisation
 
-        if not settings.STRIPE_SECRET_KEY:
-            return HttpResponse(status=400)
-
-        stripe.api_key = settings.STRIPE_SECRET_KEY
+            from .payments import stripe_keys
+            self.organisation = Organisation.objects.filter(slug=org_slug).first()
+            keys = stripe_keys(self.organisation) if self.organisation else None
+            webhook_secret = keys.webhook_secret if keys else ''
+        else:
+            if not settings.STRIPE_SECRET_KEY:
+                return HttpResponse(status=400)
+            stripe.api_key = settings.STRIPE_SECRET_KEY
+            webhook_secret = settings.STRIPE_WEBHOOK_SECRET
 
         if not webhook_secret:
             return HttpResponse(status=400)
@@ -57,13 +68,17 @@ class StripeWebhookView(View):
             invoice_pk = None
 
         if invoice_pk:
+            invoices = Invoice.objects.all()
+            if self.organisation is not None:
+                invoices = invoices.filter(organisation=self.organisation)
             try:
-                invoice = Invoice.objects.get(pk=invoice_pk)
+                invoice = invoices.get(pk=invoice_pk)
                 if invoice.status != 'paid':
+                    amount_total = getattr(session, 'amount_total', None)
                     Payment.objects.create(
                         invoice=invoice,
-                        amount=invoice.amount,
-                        method='Stripe',
+                        amount=(Decimal(amount_total) / 100) if amount_total is not None else invoice.balance_due,
+                        method=Payment.Method.STRIPE,
                         stripe_payment_id=getattr(session, 'payment_intent', ''),
                         notes=f"Stripe Checkout session {session.id}",
                         paid_at=timezone.now(),

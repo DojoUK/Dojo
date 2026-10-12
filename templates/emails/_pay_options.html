@@ -1,0 +1,40 @@
+{# Ways to pay an invoice. Context from billing.payments.options_for; `button_colour` sets the button. #}
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
+  <tr>
+    <td align="center">
+      <a href="{{ pay_url }}"
+         style="display:inline-block;background:{{ button_colour|default:'#212529' }};color:#fff;font-size:15px;font-weight:600;padding:14px 32px;border-radius:6px;text-decoration:none;">
+        {% if card_payments %}Pay £{{ invoice.balance_due|floatformat:2 }} now{% else %}How to pay{% endif %}
+      </a>
+    </td>
+  </tr>
+</table>
+
+{% if bank_transfer %}
+<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;margin-bottom:16px;">
+  <tr><td style="padding:16px 20px;">
+    <p style="color:#111827;font-size:14px;font-weight:600;margin:0 0 8px;">{% if card_payments %}Or pay by bank transfer{% else %}Pay by bank transfer{% endif %}</p>
+    <table cellpadding="0" cellspacing="0" style="font-size:13px;color:#374151;">
+      <tr><td style="color:#6b7280;padding:2px 16px 2px 0;">Account name</td><td>{{ bank_transfer.account_name }}</td></tr>
+      <tr><td style="color:#6b7280;padding:2px 16px 2px 0;">Sort code</td><td style="font-family:monospace;">{{ bank_transfer.sort_code }}</td></tr>
+      <tr><td style="color:#6b7280;padding:2px 16px 2px 0;">Account number</td><td style="font-family:monospace;">{{ bank_transfer.account_number }}</td></tr>
+      <tr><td style="color:#6b7280;padding:2px 16px 2px 0;">Reference</td><td style="font-family:monospace;font-weight:700;">{{ payment_reference }}</td></tr>
+    </table>
+    <p style="color:#6b7280;font-size:12px;margin:8px 0 0;">Please use the reference exactly, so we can match your payment.</p>
+  </td></tr>
+</table>
+{% endif %}
+
+{% if cash_payments %}
+<p style="color:#374151;font-size:13px;margin:0 0 16px;">{% if card_payments or bank_transfer %}You can also pay{% else %}Please pay{% endif %} in person at the club, quoting reference <strong>{{ payment_reference }}</strong>.</p>
+{% endif %}
+
+{% if payment_instructions %}
+<p style="color:#6b7280;font-size:13px;margin:0 0 16px;white-space:pre-line;">{{ payment_instructions }}</p>
+{% endif %}
+
+{% if portal_url %}
+<p style="color:#6b7280;font-size:12px;text-align:center;margin:0 0 24px;">
+  See all your invoices in the <a href="{{ portal_url }}" style="color:#6b7280;">member portal</a>.
+</p>
+{% endif %}

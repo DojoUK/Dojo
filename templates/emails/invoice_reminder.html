@@ -42,22 +42,7 @@
   </tr>
 </table>
 
-{% if portal_url %}
-<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
-  <tr>
-    <td align="center">
-      <a href="{{ portal_url }}"
-         style="display:inline-block;background:#dc2626;color:#fff;font-size:15px;font-weight:600;padding:14px 32px;border-radius:6px;text-decoration:none;">
-        Pay now
-      </a>
-    </td>
-  </tr>
-</table>
-
-<p style="color:#6b7280;font-size:12px;text-align:center;margin:0 0 24px;">
-  Or copy this link: <a href="{{ portal_url }}" style="color:#6b7280;">{{ portal_url }}</a>
-</p>
-{% endif %}
+{% include 'emails/_pay_options.html' with button_colour='#dc2626' %}
 
 <p style="color:#6b7280;font-size:13px;margin:0 0 24px;">
   If you've already paid, please ignore this message — it may have crossed in the post. If you have any questions, please get in touch with us at {{ org_email }}.

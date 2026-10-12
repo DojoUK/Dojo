@@ -6,8 +6,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 
 from billing.models import Invoice
+from billing.payments import stripe_keys
 from dojo.mixins import require_features
-from organisations.features import stripe_configured
+
 from .models import Member
 
 
@@ -54,7 +55,7 @@ class PortalView(View):
 
         outstanding_total = sum(inv.amount for inv in outstanding)
 
-        stripe_enabled = org.has_feature('online_payments') and stripe_configured()
+        stripe_enabled = org.has_feature('online_payments') and stripe_keys(org) is not None
         subscription_enabled = stripe_enabled and bool(member.monthly_fee)
 
         return render(request, 'portal/index.html', {
@@ -155,16 +156,15 @@ class CreateCheckoutView(View):
         member = _portal_member(token, 'billing', 'online_payments')
         invoice = get_object_or_404(Invoice, pk=invoice_pk, member=member, status='unpaid')
 
-        if not (settings.STRIPE_PUBLIC_KEY and settings.STRIPE_SECRET_KEY):
+        keys = stripe_keys(member.organisation)
+        if keys is None:
             return redirect('member_portal', token=token)
-
-        stripe.api_key = settings.STRIPE_SECRET_KEY
 
         site_url = settings.SITE_URL.rstrip('/')
         portal_url = f"{site_url}/p/{token}/"
 
         session = stripe.checkout.Session.create(
-            payment_method_types=['card'],
+            api_key=keys.secret,
             line_items=[{
                 'price_data': {
                     'currency': 'gbp',
@@ -196,12 +196,9 @@ class CreateSubscriptionView(View):
 
         member = _portal_member(token, 'billing', 'online_payments')
 
-        if not (settings.STRIPE_PUBLIC_KEY and settings.STRIPE_SECRET_KEY):
+        keys = stripe_keys(member.organisation)
+        if keys is None or not member.monthly_fee:
             return redirect('member_portal', token=token)
-        if not member.monthly_fee:
-            return redirect('member_portal', token=token)
-
-        stripe.api_key = settings.STRIPE_SECRET_KEY
 
         site_url = settings.SITE_URL.rstrip('/')
         portal_url = f"{site_url}/p/{token}/"
@@ -216,6 +213,7 @@ class CreateSubscriptionView(View):
                 else member.email or None
             )
             customer = stripe.Customer.create(
+                api_key=keys.secret,
                 email=customer_email,
                 name=member.name,
                 metadata={'member_pk': str(member.pk)},
@@ -225,6 +223,7 @@ class CreateSubscriptionView(View):
             customer_id = customer.id
 
         session = stripe.checkout.Session.create(
+            api_key=keys.secret,
             customer=customer_id,
             payment_method_types=['card'],
             line_items=[{
@@ -254,15 +253,15 @@ class BillingPortalView(View):
 
         member = _portal_member(token, 'billing', 'online_payments')
 
-        if not member.stripe_customer_id or not settings.STRIPE_SECRET_KEY:
+        keys = stripe_keys(member.organisation)
+        if not member.stripe_customer_id or keys is None:
             return redirect('member_portal', token=token)
-
-        stripe.api_key = settings.STRIPE_SECRET_KEY
 
         site_url = settings.SITE_URL.rstrip('/')
         portal_url = f"{site_url}/p/{token}/"
 
         session = stripe.billing_portal.Session.create(
+            api_key=keys.secret,
             customer=member.stripe_customer_id,
             return_url=portal_url,
         )
@@ -276,12 +275,13 @@ class CancelSubscriptionView(View):
 
         member = _portal_member(token, 'billing', 'online_payments')
 
-        if not member.stripe_subscription_id:
+        keys = stripe_keys(member.organisation)
+        if not member.stripe_subscription_id or keys is None:
             return redirect('member_portal', token=token)
 
-        stripe.api_key = settings.STRIPE_SECRET_KEY
         stripe.Subscription.modify(
             member.stripe_subscription_id,
+            api_key=keys.secret,
             cancel_at_period_end=True,
         )
         member.subscription_status = 'cancelling'

@@ -1,0 +1,72 @@
+{# How members pay: the setup wizard and Settings → Payments. Context from billing.payment_forms.form_context. #}
+<div class="form-check mb-2">
+    <input class="form-check-input pay-method" type="checkbox" name="pay_bank_transfer" id="pay-bank" value="1" data-panel="pay-bank-panel" {% if pay_ticked.bank_transfer %}checked{% endif %}>
+    <label class="form-check-label small" for="pay-bank"><span class="fw-semibold">Bank transfer</span>
+        <span class="d-block text-muted">Invoices show your bank details and a reference to quote.</span></label>
+</div>
+<div class="border rounded p-3 mb-3 bg-light{% if not pay_ticked.bank_transfer %} d-none{% endif %}" id="pay-bank-panel">
+    <div class="row g-2">
+        <div class="col-sm-6">
+            <label class="form-label small fw-semibold" for="pay-account-name">Account name</label>
+            <input type="text" name="pay_bank_account_name" id="pay-account-name" value="{{ pay_values.bank_account_name }}" class="form-control form-control-sm" placeholder="Your club's name">
+        </div>
+        <div class="col-6 col-sm-3">
+            <label class="form-label small fw-semibold" for="pay-sort-code">Sort code</label>
+            <input type="text" name="pay_bank_sort_code" id="pay-sort-code" value="{{ pay_values.bank_sort_code }}" class="form-control form-control-sm" inputmode="numeric" placeholder="12-34-56">
+        </div>
+        <div class="col-6 col-sm-3">
+            <label class="form-label small fw-semibold" for="pay-account-number">Account number</label>
+            <input type="text" name="pay_bank_account_number" id="pay-account-number" value="{{ pay_values.bank_account_number }}" class="form-control form-control-sm" inputmode="numeric" maxlength="9">
+        </div>
+    </div>
+</div>
+
+<div class="form-check mb-2">
+    <input class="form-check-input pay-method" type="checkbox" name="pay_card" id="pay-card" value="1" data-panel="pay-card-panel" {% if pay_ticked.card %}checked{% endif %}>
+    <label class="form-check-label small" for="pay-card"><span class="fw-semibold">Card online</span>
+        <span class="d-block text-muted">A "Pay now" button for card, Apple Pay and Google Pay, through your own Stripe account.</span></label>
+</div>
+<div class="border rounded p-3 mb-3 bg-light{% if not pay_ticked.card %} d-none{% endif %}" id="pay-card-panel">
+    <p class="small text-muted">From <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener">Stripe → Developers → API keys</a>. Use test keys (<code>pk_test_</code>, <code>sk_test_</code>) to try it out first.</p>
+    <div class="row g-2">
+        <div class="col-sm-6">
+            <label class="form-label small fw-semibold" for="pay-pk">Publishable key</label>
+            <input type="text" name="pay_stripe_publishable_key" id="pay-pk" value="{{ pay_values.stripe_publishable_key }}" class="form-control form-control-sm font-monospace" autocomplete="off" placeholder="pk_live_…">
+        </div>
+        <div class="col-sm-6">
+            <label class="form-label small fw-semibold" for="pay-sk">Secret key</label>
+            <input type="password" name="pay_stripe_secret_key" id="pay-sk" class="form-control form-control-sm font-monospace" autocomplete="off"
+                   placeholder="{% if pay_saved.stripe_secret_key %}Saved: leave blank to keep{% else %}sk_live_…{% endif %}">
+        </div>
+        <div class="col-sm-6">
+            <label class="form-label small fw-semibold" for="pay-whsec">Webhook signing secret <span class="text-muted fw-normal">(optional)</span></label>
+            <input type="password" name="pay_stripe_webhook_secret" id="pay-whsec" class="form-control form-control-sm font-monospace" autocomplete="off"
+                   placeholder="{% if pay_saved.stripe_webhook_secret %}Saved: leave blank to keep{% else %}whsec_…{% endif %}">
+            <div class="form-text">Lets Dojo mark invoices paid the moment Stripe takes the payment. {% if payments_settings_page %}Use <strong>Set up automatically</strong> below{% else %}You can set this up automatically later in Settings → Payments{% endif %}.</div>
+        </div>
+    </div>
+</div>
+
+<div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" name="pay_cash" id="pay-cash" value="1" {% if pay_ticked.cash %}checked{% endif %}>
+    <label class="form-check-label small" for="pay-cash"><span class="fw-semibold">In person</span>
+        <span class="d-block text-muted">Cash or card at the club. Admins mark the invoice paid.</span></label>
+</div>
+
+<div class="row g-2">
+    <div class="col-sm-4">
+        <label class="form-label small fw-semibold" for="pay-prefix">Reference starts with</label>
+        <input type="text" name="pay_reference_prefix" id="pay-prefix" value="{{ pay_values.reference_prefix }}" class="form-control form-control-sm text-uppercase" maxlength="10">
+        <div class="form-text">Then the invoice number, e.g. <code>{{ pay_values.reference_prefix|default:"INV" }}1234</code>.</div>
+    </div>
+    <div class="col-sm-8">
+        <label class="form-label small fw-semibold" for="pay-instructions">Anything else members should know <span class="text-muted fw-normal">(optional)</span></label>
+        <textarea name="pay_instructions" id="pay-instructions" rows="2" class="form-control form-control-sm" placeholder="e.g. Struggling to pay? Speak to a coach in confidence.">{{ pay_values.instructions }}</textarea>
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('.pay-method').forEach(box => {
+    box.addEventListener('change', () => document.getElementById(box.dataset.panel).classList.toggle('d-none', !box.checked));
+});
+</script>
