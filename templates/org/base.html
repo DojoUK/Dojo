@@ -381,7 +381,7 @@
         <a href="{% url 'account_settings' org_slug=org.slug %}" class="user-name" title="My account">
             <i class="bi bi-person-circle me-1"></i>{{ request.user.get_full_name|default:request.user.username }}
         </a>
-        <form method="post" action="{% url 'logout' %}">
+        <form method="post" action="{% url 'logout' %}" id="logout-form">
             {% csrf_token %}
             <button type="submit" class="btn btn-sm w-100" style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.15);font-size:0.8rem;">
                 <i class="bi bi-box-arrow-right me-1"></i> Log out
@@ -457,5 +457,60 @@ function closeSidebar() {
     document.getElementById('sidebarOverlay').classList.remove('open');
 }
 </script>
+
+{% if org.session_timeout_minutes %}
+<div id="idle-warning" class="alert alert-warning shadow d-none align-items-center gap-3 mb-0" role="alertdialog" aria-live="assertive"
+     style="position:fixed;bottom:1rem;right:1rem;z-index:1080;max-width:min(420px, calc(100vw - 2rem));">
+    <span class="small">You'll be logged out in a minute because you haven't been active.</span>
+    <button type="button" class="btn btn-sm btn-dark text-nowrap" id="idle-stay">Stay logged in</button>
+</div>
+<script>
+// Inactivity logout (Settings → Security). The server restarts the clock on
+// every request to this organisation, so activity on the page pings it now
+// and then; timers count from the last time the server heard from us.
+(function () {
+    var limit = {{ org.session_timeout_minutes }} * 60 * 1000;
+    var warnBefore = Math.min(60 * 1000, limit / 4);
+    var pingAfter = limit / 4;
+    var keepAliveUrl = '{% url 'org_keep_alive' org_slug=org.slug %}';
+    var form = document.getElementById('logout-form');
+    var warning = document.getElementById('idle-warning');
+    var lastServerTouch = Date.now();
+    var lastScheduled = 0;
+    var warnTimer, logoutTimer;
+
+    function schedule() {
+        clearTimeout(warnTimer);
+        clearTimeout(logoutTimer);
+        var deadline = lastServerTouch + limit;
+        warnTimer = setTimeout(showWarning, deadline - warnBefore - Date.now());
+        logoutTimer = setTimeout(function () { if (form) form.submit(); }, deadline - Date.now());
+    }
+    function ping() {
+        lastServerTouch = Date.now();
+        var token = form && form.querySelector('[name=csrfmiddlewaretoken]');
+        fetch(keepAliveUrl, {
+            method: 'POST', credentials: 'same-origin',
+            headers: token ? {'X-CSRFToken': token.value} : {},
+        });
+        schedule();
+    }
+    function showWarning() { warning.classList.remove('d-none'); warning.classList.add('d-flex'); }
+    function hideWarning() { warning.classList.add('d-none'); warning.classList.remove('d-flex'); }
+    function activity() {
+        if (Date.now() - lastScheduled < 5000) return;
+        lastScheduled = Date.now();
+        hideWarning();
+        if (Date.now() - lastServerTouch > pingAfter) ping();
+    }
+
+    document.getElementById('idle-stay').addEventListener('click', function () { hideWarning(); ping(); });
+    ['mousedown', 'keydown', 'scroll', 'touchstart'].forEach(function (evt) {
+        document.addEventListener(evt, activity, {passive: true});
+    });
+    schedule();
+})();
+</script>
+{% endif %}
 
 {% endblock %}

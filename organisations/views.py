@@ -8,7 +8,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import PermissionDenied
 from django.core.management import call_command
 from django.db.models import Q, Sum
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views import View
@@ -542,6 +542,7 @@ class OrgSettingsView(OrgAdminMixin, View):
             'presets': self.PRESETS,
             'feature_rows': feature_rows(self.org.enabled_features),
             'field_groups': field_groups(self.org.enabled_fields, self.org.settings),
+            'session_timeout_choices': Organisation.SESSION_TIMEOUT_CHOICES,
         }
 
     def get(self, request, org_slug):
@@ -557,6 +558,19 @@ class OrgSettingsView(OrgAdminMixin, View):
             self.org.save(update_fields=['features'])
             messages.success(request, 'Features saved.')
             return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#features")
+
+        if action == 'security':
+            try:
+                minutes = int(request.POST.get('session_timeout_minutes', ''))
+            except ValueError:
+                minutes = None
+            if minutes not in {m for m, _ in Organisation.SESSION_TIMEOUT_CHOICES}:
+                messages.error(request, 'Choose one of the listed times.')
+            else:
+                self.org.settings = {**(self.org.settings or {}), 'session_timeout_minutes': minutes}
+                self.org.save(update_fields=['settings'])
+                messages.success(request, 'Security settings saved.')
+            return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#security")
 
         if action == 'fields':
             from .optional_fields import choices_from_keys as field_choices
@@ -996,6 +1010,13 @@ class AccountView(OrgMixin, View):
         user.save(update_fields=['first_name', 'last_name', 'email'])
         messages.success(request, 'Account details updated.')
         return redirect('account_settings', org_slug=self.org.slug)
+
+
+class KeepAliveView(OrgMixin, View):
+    """Pinged by the page while someone is active, so the inactivity timer restarts."""
+
+    def post(self, request, org_slug):
+        return HttpResponse(status=204)
 
 
 class AccountPasswordChangeView(OrgMixin, PasswordChangeView):
