@@ -2,7 +2,7 @@ import os
 import subprocess
 import sys
 
-from django.test import SimpleTestCase, override_settings
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 
 
@@ -36,7 +36,8 @@ class TrustProxyHttpsSettingTests(SimpleTestCase):
 
 
 @override_settings(SECURE_SSL_REDIRECT=True, ALLOWED_HOSTS=['testserver'])
-class BehindProxyRequestTests(SimpleTestCase):
+# A TestCase, because the login page may look up the club (to show its logo).
+class BehindProxyRequestTests(TestCase):
     def test_without_trust_the_https_redirect_loops(self):
         response = self.client.get(reverse('login'), HTTP_X_FORWARDED_PROTO='https')
         self.assertEqual(response.status_code, 301)
