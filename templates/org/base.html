@@ -131,6 +131,22 @@
 .dojo-page-title { font-size: 1.1rem; font-weight: 700; margin: 0; color: var(--dojo-text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dojo-topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
 .dojo-content { padding: 28px; flex: 1; }
+/* Action button groups in the top bar wrap onto a second line rather than run off the edge. */
+.dojo-topbar-actions > .d-flex { flex-wrap: wrap; justify-content: flex-end; }
+
+/* ── Tablet: sidebar showing, so the top bar has little room ── */
+@media (min-width: 768px) and (max-width: 1199.98px) {
+    .dojo-topbar {
+        height: auto;
+        min-height: 60px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        flex-wrap: wrap;
+        row-gap: 8px;
+    }
+    .dojo-topbar > p { flex-shrink: 1; min-width: 0; }
+    .dojo-topbar-actions { flex-shrink: 1; max-width: 100%; }
+}
 
 /* ── Mobile ──────────────────────────────────────── */
 @media (max-width: 767px) {
