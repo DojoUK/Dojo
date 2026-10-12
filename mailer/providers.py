@@ -57,7 +57,7 @@ PROVIDERS = (
         'Nothing is sent. Each email is printed in the web container\'s log, so you can set up sending later.',
     ),
     Provider(
-        'dojo_mail', 'Send from this server',
+        'dojo_mail', 'Built-in mail server',
         'Dojo delivers emails itself, straight from this server, using its built-in mail container. Free, but '
         'your server must be allowed to send on port 25 (many hosts block it until you ask: use Check connection '
         'below), and you add a few DNS records so mail isn\'t marked as spam.',

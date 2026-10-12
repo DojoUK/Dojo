@@ -56,7 +56,7 @@ Nothing here is required for a basic instance — everything has a sane default.
 | `ALLOWED_HOSTS` | `*` (all hosts accepted) | Comma-separated list, e.g. `dojo.yourclub.com`. Tightening this is optional today — the codebase notes a browser-configurable allow-list is planned to replace setting it via the environment |
 | `SITE_URL` | `http://localhost:8000` | Used to build links in emails and Stripe redirects. **Also controls security headers** — see below |
 | `EMAIL_*` | console backend | **Fallback only.** Each club chooses how its email is sent in the setup wizard or **Settings → Email** (see [Sending email](#sending-email)). These variables are used only by clubs that haven't chosen yet. Leave them unset to print that mail to `docker compose logs -f web` |
-| `MAIL_HOSTNAME` | `localhost` | For **Send from this server**: the name the `mail` container introduces itself as, e.g. `mail.yourclub.org.uk`. Set it, and your server's reverse DNS, to a name that points at your server |
+| `MAIL_HOSTNAME` | `localhost` | For **Built-in mail server**: the name the `mail` container introduces itself as, e.g. `mail.yourclub.org.uk`. Set it, and your server's reverse DNS, to a name that points at your server |
 | `DOJO_MAIL_HOST` / `DOJO_MAIL_PORT` | `mail` / `25` | Where Dojo finds its mail container. Only change these if you run your own relay instead of the bundled container |
 | `STRIPE_PUBLIC_KEY` / `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | unset | Only needed if you want online payments; get these from your Stripe dashboard |
 | `DOJO_BUILD_REPO` / `DOJO_BUILD_COMMIT` / `DOJO_BUILD_TAG` | unset (read from `.git`) | The version shown under Settings → General. Dojo reads it from the `.git` folder; set these only if your image is built without one. A repository other than `DojoUK/Dojo` shows as "Unofficial Dojo fork" |
@@ -143,7 +143,7 @@ Choose how Dojo sends email (welcome emails, invoices, reminders, announcements)
 
 | Option | Good for |
 |---|---|
-| **Send from this server** | Sending straight from your server, free. Needs outgoing port 25 open (many hosts block it until you ask) and a few DNS records, which Settings → Email lists and checks for you |
+| **Built-in mail server** | Sending straight from your server, free. Needs outgoing port 25 open (many hosts block it until you ask) and a few DNS records, which Settings → Email lists and checks for you |
 | **Brevo**, **Mailgun**, **Postmark**, **Resend** | Sending services with web APIs. They work even where your host blocks email ports |
 | **Amazon SES** | Cheap at volume. Uses SES SMTP credentials |
 | **Gmail / Google Workspace**, **Microsoft 365** | Sending from a club mailbox. Google and Microsoft limit how many emails a day they'll send |
@@ -152,7 +152,7 @@ Choose how Dojo sends email (welcome emails, invoices, reminders, announcements)
 
 Passwords and API keys are stored encrypted with a key derived from `SECRET_KEY`. If `SECRET_KEY` changes (for example, restoring without `.secret_key`), re-enter them in Settings → Email.
 
-**Send from this server** uses the `mail` container (Postfix). Dojo signs each email with your domain's DKIM key and hands it over; Postfix queues it and delivers it, retrying if a receiving server is busy. No ports are opened to the internet. For good delivery:
+**Built-in mail server** uses the `mail` container (Postfix). Dojo signs each email with your domain's DKIM key and hands it over; Postfix queues it and delivers it, retrying if a receiving server is busy. No ports are opened to the internet. For good delivery:
 
 1. Ask your host to allow outgoing port 25 if they block it.
 2. Set `MAIL_HOSTNAME` in `.env` to a name that points at your server (e.g. `mail.yourclub.org.uk`), and ask your host to set your server's reverse DNS to the same name.

@@ -146,7 +146,7 @@ DOJO_FALLBACK_EMAIL_BACKEND = os.environ.get(
     'EMAIL_BACKEND',
     'django.core.mail.backends.console.EmailBackend',
 )
-# "Send from this server" email option (the `mail` container in docker-compose.yml).
+# "Built-in mail server" email option (the `mail` container in docker-compose.yml).
 DOJO_MAIL_HOST = os.environ.get('DOJO_MAIL_HOST', 'mail')
 DOJO_MAIL_PORT = int(os.environ.get('DOJO_MAIL_PORT', '25'))
 EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
