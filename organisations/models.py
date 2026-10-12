@@ -91,6 +91,11 @@ class Organisation(models.Model):
         return self.field_label('coaching_licence')
 
     @property
+    def sidebar_name(self):
+        """The short name from Settings → General, or the full name."""
+        return (self.settings or {}).get('short_name') or self.name
+
+    @property
     def logo_luminance(self):
         """How light (1) or dark (0) the logo is; measured on upload, or now for older logos."""
         if not self.logo:
