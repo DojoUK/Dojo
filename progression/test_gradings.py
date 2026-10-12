@@ -249,6 +249,7 @@ class GradingAccessTests(GradingTestBase):
             ('get', self.url('grading_detail', pk=self.grading.pk)),
             ('post', self.url('grading_edit', pk=self.grading.pk)),
             ('post', self.url('grading_session_add', pk=self.grading.pk)),
+            ('get', self.session_url('grading_session')),
             ('post', self.session_url('grading_session_edit')),
             ('post', self.session_url('grading_candidates_add')),
             ('post', self.session_url('grading_results_save')),
