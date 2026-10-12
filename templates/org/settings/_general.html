@@ -18,6 +18,11 @@
         <input type="text" name="name" value="{{ org.name }}" class="form-control" required autofocus>
     </div>
     <div class="mb-3">
+        <label class="form-label small fw-semibold" for="short-name">Short name <span class="text-muted fw-normal">(optional)</span></label>
+        <input type="text" name="short_name" id="short-name" value="{{ org.settings.short_name|default:'' }}" class="form-control" maxlength="40" placeholder="e.g. {{ org.name|truncatechars:20 }}">
+        <div class="form-text">Shown at the top of the sidebar instead of the full name, if your club's name is long.</div>
+    </div>
+    <div class="mb-3">
         <label class="form-label small fw-semibold">Contact email</label>
         <input type="email" name="email" value="{{ org.email }}" class="form-control" placeholder="e.g. secretary@sportclub.co.uk">
         <div class="form-text">Shown to members on the portal as the contact address.</div>

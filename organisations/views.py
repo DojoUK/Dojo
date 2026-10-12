@@ -660,7 +660,11 @@ class OrgSettingsView(OrgAdminMixin, View):
         self.org.email = email
         self.org.phone = phone
         self.org.website = website
-        self.org.save(update_fields=['name', 'email', 'phone', 'website'])
+        short_name = request.POST.get('short_name', '').strip()[:40]
+        self.org.settings = {k: v for k, v in (self.org.settings or {}).items() if k != 'short_name'}
+        if short_name:
+            self.org.settings['short_name'] = short_name
+        self.org.save(update_fields=['name', 'email', 'phone', 'website', 'settings'])
         messages.success(request, 'Settings saved.')
         return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#general")
 
