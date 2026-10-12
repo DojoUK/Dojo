@@ -28,5 +28,18 @@
     <dt class="col-sm-4 text-muted fw-normal">Plan</dt>
     <dd class="col-sm-8">Free - Self Hosted</dd>
     <dt class="col-sm-4 text-muted fw-normal">Created</dt>
-    <dd class="col-sm-8 mb-0">{{ org.created_at|date:"d M Y" }}</dd>
+    <dd class="col-sm-8">{{ org.created_at|date:"d M Y" }}</dd>
+    <dt class="col-sm-4 text-muted fw-normal">Version</dt>
+    <dd class="col-sm-8 mb-0">
+        <span class="badge {% if version.kind == 'release' %}bg-success-subtle text-success border border-success-subtle{% elif version.kind == 'beta' %}bg-primary-subtle text-primary border border-primary-subtle{% elif version.kind == 'fork' %}bg-warning-subtle text-warning-emphasis border border-warning-subtle{% else %}bg-secondary-subtle text-secondary border{% endif %}">{{ version.label }}</span>
+        {% if version.kind == 'beta' and version.tag %}<span class="text-muted ms-1">after {{ version.tag }}</span>{% endif %}
+        <div class="text-muted mt-1">
+            {% if version.repo %}<a href="https://github.com/{{ version.repo }}" target="_blank" rel="noopener noreferrer">{{ version.repo }}</a>{% endif %}
+            {% if version.short_commit %}<span class="ms-1">@ <code>{{ version.short_commit }}</code></span>{% endif %}
+            {% if version.kind == 'unknown' %}Couldn't read this installation's version.{% endif %}
+        </div>
+        {% if version.kind == 'fork' %}
+        <div class="text-muted mt-1">This is a modified copy of Dojo, not an official build. <a href="{{ releases_url }}" target="_blank" rel="noopener noreferrer">Official releases</a></div>
+        {% endif %}
+    </dd>
 </dl>
