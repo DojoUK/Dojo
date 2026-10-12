@@ -40,6 +40,16 @@ if SITE_URL.startswith('https://'):
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+    CSRF_TRUSTED_ORIGINS = [SITE_URL.rstrip('/')]
+
+# Behind a reverse proxy that terminates TLS (Caddy, nginx), requests reach
+# Django over plain HTTP, so with an https:// SITE_URL the redirect above
+# loops and form posts fail the CSRF origin check. TRUST_PROXY_HTTPS makes
+# Django believe the proxy's X-Forwarded-Proto header instead. Only switch it
+# on when a proxy that sets (and overwrites) that header is in front:
+# without one, any client could claim to be on HTTPS.
+if os.environ.get('TRUST_PROXY_HTTPS', '').strip().lower() in ('1', 'true', 'yes', 'on'):
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
