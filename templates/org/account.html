@@ -43,6 +43,45 @@
             </div>
         </div>
 
+        {# Emergency contacts #}
+        {% if org_membership %}{% if 'staff_emergency_contact' in org.enabled_fields or 'staff_emergency_contact_2' in org.enabled_fields %}
+        <div class="card mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">My emergency contacts</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">Who the club should contact if something happens to you at a session.</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_emergency_contacts">
+                    <div class="row g-3">
+                        {% if 'staff_emergency_contact' in org.enabled_fields %}
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Contact name</label>
+                            <input type="text" name="emergency_contact_name" value="{{ org_membership.emergency_contact_name }}" class="form-control">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Contact phone</label>
+                            <input type="tel" name="emergency_contact_phone" value="{{ org_membership.emergency_contact_phone }}" class="form-control">
+                        </div>
+                        {% endif %}
+                        {% if 'staff_emergency_contact_2' in org.enabled_fields %}
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Second contact name</label>
+                            <input type="text" name="emergency_contact_2_name" value="{{ org_membership.emergency_contact_2_name }}" class="form-control">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Second contact phone</label>
+                            <input type="tel" name="emergency_contact_2_phone" value="{{ org_membership.emergency_contact_2_phone }}" class="form-control">
+                        </div>
+                        {% endif %}
+                    </div>
+                    <button type="submit" class="btn btn-dark btn-sm mt-3">Save contacts</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}{% endif %}
+
         {# Password #}
         <div class="card mb-4">
             <div class="card-header bg-white border-bottom py-3">

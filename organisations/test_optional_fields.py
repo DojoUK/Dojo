@@ -17,7 +17,7 @@ class EffectiveFieldsTests(TestCase):
         self.assertEqual(
             effective_fields({}),
             {'date_of_birth', 'phone', 'address', 'emergency_contact_2', 'medical_info',
-             'joined_date', 'guardians', 'staff_emergency_contact'},
+             'joined_date', 'guardians', 'staff_emergency_contact', 'staff_emergency_contact_2'},
         )
 
     def test_unknown_field_is_an_error(self):
@@ -296,4 +296,5 @@ class UpgradeBackfillTests(TestCase):
     def test_backfill_covers_every_field_that_existed(self):
         from importlib import import_module
         migration = import_module('organisations.migrations.0010_organisation_optional_fields')
-        self.assertEqual(set(migration.EXISTING_FIELDS), set(OPTIONAL_FIELDS_BY_KEY))
+        added_since = {'staff_emergency_contact_2'}  # default on, so existing clubs get it anyway
+        self.assertEqual(set(migration.EXISTING_FIELDS), set(OPTIONAL_FIELDS_BY_KEY) - added_since)
