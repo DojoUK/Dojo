@@ -54,7 +54,7 @@ class EmailSettings(models.Model):
     def sending_domain(self):
         return self.from_email.rpartition('@')[2].lower()
 
-    # DKIM, for Dojo's own mail service.
+    # DKIM, for sending from this server.
     def dkim_private_key(self, create=False):
         secrets = self.get_secrets()
         if not secrets.get('dkim_private_key') and create:
@@ -64,7 +64,7 @@ class EmailSettings(models.Model):
         return secrets.get('dkim_private_key', '')
 
     def dns_records(self):
-        """The DNS records to add for Dojo's own mail service, as (type, name, value, purpose)."""
+        """The DNS records to add for sending from this server, as (type, name, value, purpose)."""
         domain = self.sending_domain
         key = self.dkim_private_key()
         if not domain or not key:

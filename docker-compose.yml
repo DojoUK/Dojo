@@ -29,7 +29,7 @@ services:
     depends_on:
       - db
 
-  # Dojo's own mail service: used when a club chooses it in Settings → Email.
+  # Mail container for the "Send from this server" option in Settings → Email.
   # Dojo signs each email (DKIM) and hands it here; Postfix queues and delivers
   # it on port 25, retrying if a receiving server is busy. No ports are published:
   # only Dojo can reach it.

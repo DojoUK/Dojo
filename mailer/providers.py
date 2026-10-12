@@ -57,10 +57,10 @@ PROVIDERS = (
         'Nothing is sent. Each email is printed in the web container\'s log, so you can set up sending later.',
     ),
     Provider(
-        'dojo_mail', 'Dojo\'s own mail service',
-        'Dojo sends directly from your server using its built-in mail container. Free, but your server must be '
-        'allowed to send on port 25 (many hosts block it until you ask), and you add a few DNS records so '
-        'mail isn\'t marked as spam.',
+        'dojo_mail', 'Send from this server',
+        'Dojo delivers emails itself, straight from this server, using its built-in mail container. Free, but '
+        'your server must be allowed to send on port 25 (many hosts block it until you ask: use Check connection '
+        'below), and you add a few DNS records so mail isn\'t marked as spam.',
     ),
     Provider(
         'brevo', 'Brevo',

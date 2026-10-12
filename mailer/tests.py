@@ -38,7 +38,7 @@ def capture_api_calls():
     def fake_urlopen(request, timeout):
         calls.append(request)
         return FakeResponse(b'{}')
-    patcher = mock.patch('mailer.backends.urllib.request.urlopen', side_effect=fake_urlopen)
+    patcher = mock.patch('urllib.request.urlopen', side_effect=fake_urlopen)
     return patcher, calls
 
 
@@ -307,3 +307,51 @@ class SetupWizardTests(TestCase):
         org.save()
         response = self.client.get(reverse('org_settings', kwargs={'org_slug': org.slug}))
         self.assertContains(response, "hasn't chosen yet, so Dojo is printing emails")
+
+
+class ConnectionCheckTests(MailerTestCase):
+    def results(self, **kwargs):
+        from mailer import connectivity
+        return connectivity.check(EmailSettings.objects.get())
+
+    def test_send_from_this_server_checks_the_container_and_port_25(self):
+        self.configure('dojo_mail')
+        with mock.patch('mailer.connectivity._first_mx', return_value='mx.example'), \
+                mock.patch('mailer.connectivity._read_banner', side_effect=['220 mail ESMTP', OSError('timed out')]) as banner:
+            results = self.results()
+        self.assertEqual([ok for _, ok, _ in results], [True, False])
+        self.assertIn('Port 25 looks blocked', results[1][2])
+        self.assertEqual(banner.call_args_list[1].args, ('mx.example', 25))
+
+    def test_smtp_login_is_tried_with_the_saved_details(self):
+        import smtplib
+        self.configure('smtp', host='smtp.x.example', port='587', security='starttls', username='u', password='p')
+        with mock.patch('mailer.connectivity.smtplib.SMTP') as smtp:
+            self.assertTrue(self.results()[0][1])
+            smtp.return_value.login.assert_called_once_with('u', 'p')
+            smtp.return_value.login.side_effect = smtplib.SMTPAuthenticationError(535, b'bad')
+            _label, ok, detail = self.results()[0]
+        self.assertFalse(ok)
+        self.assertIn('didn\'t accept the username and password', detail)
+
+    def test_api_key_is_checked_without_sending(self):
+        import urllib.error
+        self.configure('brevo', api_key='k')
+        patcher, calls = capture_api_calls()
+        with patcher:
+            self.assertTrue(self.results()[0][1])
+        self.assertEqual(calls[0].full_url, 'https://api.brevo.com/v3/account')
+        self.assertEqual(calls[0].get_method(), 'GET')
+        refused = urllib.error.HTTPError('u', 401, 'no', {}, io.BytesIO(b''))
+        with mock.patch('mailer.connectivity.urllib.request.urlopen', side_effect=refused):
+            self.assertIn('didn\'t accept the key', self.results()[0][2])
+
+    def test_button_on_the_email_tab(self):
+        self.configure('brevo', api_key='k')
+        self.client.force_login(self.admin)
+        url = reverse('org_settings', kwargs={'org_slug': self.org.slug})
+        self.assertContains(self.client.get(url), 'Check connection')
+        patcher, _ = capture_api_calls()
+        with patcher:
+            response = self.client.get(url + '?check_connection=1')
+        self.assertContains(response, 'Connected, and the key was accepted.')

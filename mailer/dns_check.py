@@ -1,4 +1,4 @@
-"""Look up whether a club's DNS records for Dojo's own mail service are in place."""
+"""Look up whether a club's DNS records for sending from this server are in place."""
 import dns.exception
 import dns.resolver
 

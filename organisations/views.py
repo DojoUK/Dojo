@@ -638,6 +638,9 @@ class OrgSettingsView(OrgAdminMixin, View):
                 'printing emails to the server log instead of sending them' if fallback.endswith('console.EmailBackend')
                 else f'using the server\'s email settings from .env ({django_settings.EMAIL_HOST or fallback})'
             )
+        if email_settings and self.request.GET.get('check_connection'):
+            from mailer import connectivity
+            context['email_connection_check'] = connectivity.check(email_settings)
         if email_settings and email_settings.provider == 'dojo_mail':
             context['email_dns_records'] = email_settings.dns_records()
             if self.request.GET.get('check_dns'):
