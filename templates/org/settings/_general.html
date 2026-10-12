@@ -1,0 +1,32 @@
+{# Club details and account info. #}
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="general">
+    <div class="mb-3">
+        <label class="form-label small fw-semibold">Organisation name</label>
+        <input type="text" name="name" value="{{ org.name }}" class="form-control" required autofocus>
+    </div>
+    <div class="mb-3">
+        <label class="form-label small fw-semibold">Contact email</label>
+        <input type="email" name="email" value="{{ org.email }}" class="form-control" placeholder="e.g. secretary@sportclub.co.uk">
+        <div class="form-text">Shown to members on the portal as the contact address.</div>
+    </div>
+    <div class="mb-3">
+        <label class="form-label small fw-semibold">Phone</label>
+        <input type="text" name="phone" value="{{ org.phone }}" class="form-control" placeholder="e.g. 07700 900000">
+    </div>
+    <div class="mb-3">
+        <label class="form-label small fw-semibold">Website</label>
+        <input type="url" name="website" value="{{ org.website }}" class="form-control" placeholder="https://...">
+    </div>
+    <button type="submit" class="btn btn-dark btn-sm">Save changes</button>
+</form>
+<hr class="my-4">
+<dl class="row small mb-0">
+    <dt class="col-sm-4 text-muted fw-normal">Web address name</dt>
+    <dd class="col-sm-8"><code>{{ org.slug }}</code></dd>
+    <dt class="col-sm-4 text-muted fw-normal">Plan</dt>
+    <dd class="col-sm-8">Free - Self Hosted</dd>
+    <dt class="col-sm-4 text-muted fw-normal">Created</dt>
+    <dd class="col-sm-8 mb-0">{{ org.created_at|date:"d M Y" }}</dd>
+</dl>

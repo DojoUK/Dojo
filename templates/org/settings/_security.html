@@ -1,0 +1,12 @@
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="security">
+    <label class="form-label small fw-semibold" for="session-timeout">Log staff out after inactivity</label>
+    <select name="session_timeout_minutes" id="session-timeout" class="form-select form-select-sm" style="max-width:280px;">
+        {% for minutes, label in session_timeout_choices %}
+        <option value="{{ minutes }}" {% if org.session_timeout_minutes == minutes %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <div class="form-text">Protects member data if Dojo is left open on a shared computer. Staff get a warning a minute before.</div>
+    <button type="submit" class="btn btn-dark btn-sm mt-3">Save</button>
+</form>

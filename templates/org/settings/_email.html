@@ -1,0 +1,7 @@
+<p class="small text-muted mb-3">Send a test email to your account address to verify your email settings are working.</p>
+<form method="post" action="{% url 'org_test_email' org_slug=org.slug %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-envelope me-1"></i> Send test email
+    </button>
+</form>
