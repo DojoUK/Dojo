@@ -211,7 +211,11 @@ class AutoPaySetupView(View):
         portal_url = request.build_absolute_uri(reverse('member_portal', kwargs={'token': token}))
         if not autopay.methods_for(member.organisation):
             return redirect('member_portal', token=token)
-        return redirect(autopay.start_setup(member, portal_url))
+        import stripe
+        try:
+            return redirect(autopay.start_setup(member, portal_url))
+        except stripe.error.StripeError:
+            return redirect(reverse('member_portal', kwargs={'token': token}) + '?payment_error=1')
 
 
 class AutoPayOffView(View):

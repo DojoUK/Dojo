@@ -270,3 +270,15 @@ class PortalTests(AutoPayTestCase):
         response = self.client.get(url)
         self.assertContains(response, 'Paying automatically')
         self.assertContains(response, 'Visa ending 4242')
+
+
+class StripeDownTests(AutoPayTestCase):
+    def test_a_stripe_error_sends_the_member_back_with_a_message(self):
+        invoice = self.invoice()
+        token = payments.pay_token(invoice)
+        down = stripe.error.APIConnectionError('Could not connect')
+        with mock.patch('stripe.checkout.Session.create', side_effect=down):
+            response = self.client.post(reverse('invoice_pay_card', kwargs={'token': token}), follow=True)
+            self.assertContains(response, "Card payments aren't working right now")
+            response = self.client.post(reverse('invoice_pay_autopay', kwargs={'token': token}), follow=True)
+            self.assertContains(response, "Card payments aren't working right now")

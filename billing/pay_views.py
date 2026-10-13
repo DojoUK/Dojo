@@ -2,6 +2,7 @@
 The page a member reaches from "Pay now" in an invoice email. It needs no
 login: the link itself is signed, so it can't be guessed or changed.
 """
+import logging
 from decimal import Decimal
 
 from django.http import Http404
@@ -10,6 +11,8 @@ from django.urls import reverse
 from django.views import View
 
 from . import payments
+
+log = logging.getLogger(__name__)
 
 
 def _invoice_or_404(token):
@@ -48,6 +51,7 @@ class InvoicePayView(View):
             'first_name': invoice.member.name.split(' ')[0],
             'balance_due': invoice.balance_due,
             'just_paid': request.GET.get('paid') == '1',
+            'payment_error': request.GET.get('payment_error') == '1',
             'token': token,
             **payments.options_for(invoice),
         })
@@ -65,7 +69,15 @@ class InvoiceCardPaymentView(View):
         balance = invoice.balance_due
         if keys is None or balance <= 0:
             return redirect(page)
-        session = stripe.checkout.Session.create(
+        try:
+            session = self._checkout(stripe, keys, invoice, org, balance, page)
+        except stripe.error.StripeError:
+            log.exception('Stripe refused a card payment for invoice %s', invoice.pk)
+            return redirect(page + '?payment_error=1')
+        return redirect(session.url, permanent=False)
+
+    def _checkout(self, stripe, keys, invoice, org, balance, page):
+        return stripe.checkout.Session.create(
             api_key=keys.secret,
             mode='payment',
             line_items=[{
@@ -86,7 +98,6 @@ class InvoiceCardPaymentView(View):
             metadata={'invoice_pk': str(invoice.pk), 'organisation': org.slug},
             payment_intent_data={'metadata': {'invoice_pk': str(invoice.pk), 'organisation': org.slug}},
         )
-        return redirect(session.url, permanent=False)
 
 
 class InvoiceAutoPaySetupView(View):
@@ -98,4 +109,9 @@ class InvoiceAutoPaySetupView(View):
         page = request.build_absolute_uri(reverse('invoice_pay', kwargs={'token': token}))
         if not autopay.methods_for(invoice.organisation):
             return redirect(page)
-        return redirect(autopay.start_setup(invoice.member, page, invoice=invoice))
+        import stripe
+        try:
+            return redirect(autopay.start_setup(invoice.member, page, invoice=invoice))
+        except stripe.error.StripeError:
+            log.exception('Stripe refused to start automatic payment setup for member %s', invoice.member_id)
+            return redirect(page + '?payment_error=1')

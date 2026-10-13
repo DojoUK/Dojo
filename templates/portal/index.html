@@ -47,6 +47,9 @@
 
 <div class="container pb-5" style="max-width: 680px;">
 
+    {% if request.GET.payment_error %}
+    <div class="alert alert-warning small"><i class="bi bi-exclamation-triangle me-1"></i> Card payments aren't working right now. Please try again later or contact the club.</div>
+    {% endif %}
     {% if autopay_just_set_up %}
     <div class="alert alert-success small"><i class="bi bi-check-circle me-1"></i> Automatic payments are set up with your {{ autopay_just_set_up.label }}.</div>
     {% elif request.GET.autopay_off %}

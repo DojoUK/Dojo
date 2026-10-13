@@ -22,6 +22,9 @@
                     {% if balance_due == 0 %}<span class="badge bg-success-subtle text-success">Paid</span>{% endif %}
                 </div>
 
+                {% if payment_error %}
+                <div class="alert alert-warning small"><i class="bi bi-exclamation-triangle me-1"></i> Card payments aren't working right now. Please use another way to pay below, or try again later.</div>
+                {% endif %}
                 {% if autopay_just_set_up %}
                 <div class="alert alert-success small"><i class="bi bi-check-circle me-1"></i> Automatic payments are set up with your {{ autopay_just_set_up.label }}. Future invoices will be paid automatically.</div>
                 {% endif %}
