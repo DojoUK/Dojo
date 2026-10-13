@@ -239,8 +239,6 @@ class PaymentSettings(models.Model):
         ENCOURAGED = 'encouraged', 'Expected: members are asked to set it up'
 
     auto_pay = models.CharField(max_length=12, choices=AutoPayPolicy.choices, default=AutoPayPolicy.OFF)
-    auto_pay_card = models.BooleanField(default=True)
-    auto_pay_direct_debit = models.BooleanField(default=False)
     # The Stripe secret key and webhook signing secret, encrypted (see mailer.crypto).
     secrets = models.TextField(blank=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -281,14 +279,10 @@ class PaymentSettings(models.Model):
 
 class AutoPay(models.Model):
     """A member's saved card or Direct Debit, charged when an invoice is made for them."""
-    class Method(models.TextChoices):
-        CARD = 'card', 'Card'
-        DIRECT_DEBIT = 'bacs_debit', 'Direct Debit'
-
     member = models.OneToOneField(Member, on_delete=models.CASCADE, related_name='autopay')
     payment_method_id = models.CharField(max_length=255)
     mandate_id = models.CharField(max_length=255, blank=True)
-    method_type = models.CharField(max_length=12, choices=Method.choices)
+    method_type = models.CharField(max_length=32, help_text='Stripe payment method type, e.g. card or bacs_debit')
     label = models.CharField(max_length=100, help_text='e.g. Visa ending 4242')
     active = models.BooleanField(default=True)
     set_up_at = models.DateTimeField(auto_now=True)

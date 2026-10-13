@@ -28,11 +28,6 @@ def form_context(payment_settings=None, post=None):
             'stripe_publishable_key': value('stripe_publishable_key'),
             'auto_pay': value('auto_pay', 'off') or 'off',
         },
-        'pay_auto_methods': {
-            'card': bool(post.get('pay_auto_pay_card')) if post is not None else (ps.auto_pay_card if ps else True),
-            'direct_debit': (bool(post.get('pay_auto_pay_direct_debit')) if post is not None
-                             else bool(ps and ps.auto_pay_direct_debit)),
-        },
         'pay_auto_pay_choices': _auto_pay_choices(),
         'pay_saved': {
             'stripe_secret_key': bool(secrets.get('stripe_secret_key')),
@@ -85,21 +80,14 @@ def apply_post(ps, post):
         if webhook_secret and not webhook_secret.startswith('whsec_'):
             errors.append('Card payments: the webhook signing secret starts with whsec_.')
     auto_pay = get('auto_pay') or 'off'
-    auto_card = bool(post.get('pay_auto_pay_card'))
-    auto_direct_debit = bool(post.get('pay_auto_pay_direct_debit'))
     if auto_pay not in dict(_auto_pay_choices()):
         errors.append('Choose whether members can pay automatically.')
-    elif auto_pay != 'off':
-        if not accept['card']:
-            errors.append('Paying automatically needs card payments (Stripe) switched on.')
-        if not (auto_card or auto_direct_debit):
-            errors.append('Paying automatically: tick card, Direct Debit or both.')
+    elif auto_pay != 'off' and not accept['card']:
+        errors.append('Paying automatically needs card payments (Stripe) switched on.')
     if errors:
         return errors
 
     ps.auto_pay = auto_pay
-    ps.auto_pay_card = auto_card
-    ps.auto_pay_direct_debit = auto_direct_debit
     ps.accept_bank_transfer = accept['bank_transfer']
     ps.accept_card = accept['card']
     ps.accept_cash = accept['cash']
