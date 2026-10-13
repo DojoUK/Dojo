@@ -18,6 +18,17 @@ class StripeKeys:
     webhook_secret: str
 
 
+def field(obj, key, default=None):
+    """obj[key] for a dict or a Stripe object (which has no .get()), or `default` if missing or empty."""
+    if obj is None:
+        return default
+    try:
+        value = obj[key]
+    except (KeyError, TypeError, AttributeError):
+        return default
+    return default if value is None else value
+
+
 def settings_for(org):
     """The club's PaymentSettings, or None if it hasn't set any (older clubs)."""
     from .models import PaymentSettings

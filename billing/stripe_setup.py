@@ -18,8 +18,9 @@ def check_connection(secret_key):
         return False, 'Stripe didn\'t accept the secret key.'
     except stripe.error.StripeError as error:
         return False, f'Stripe replied: {error.user_message or error}'
-    name = ((account.get('settings') or {}).get('dashboard') or {}).get('display_name') \
-        or (account.get('business_profile') or {}).get('name') or account.get('id')
+    from .payments import field
+    name = (field(field(field(account, 'settings'), 'dashboard'), 'display_name')
+            or field(field(account, 'business_profile'), 'name') or field(account, 'id'))
     mode = 'test mode' if secret_key.startswith(('sk_test_', 'rk_test_')) else 'live mode'
     return True, f'Connected to {name} ({mode}).'
 
