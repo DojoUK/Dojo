@@ -1,9 +1,14 @@
 {# Ways to pay an invoice. Context from billing.payments.options_for; `button_colour` sets the button. #}
+{% if invoice.balance_due == 0 %}
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;margin-bottom:24px;">
+  <tr><td style="padding:14px 18px;color:#166534;font-size:14px;"><strong>Paid, thank you.</strong> There's nothing more to pay on this invoice.</td></tr>
+</table>
+{% else %}
 <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;">
   <tr>
     <td align="center">
       <a href="{{ pay_url }}"
-         style="display:inline-block;background:{{ button_colour|default:'#212529' }};color:#fff;font-size:15px;font-weight:600;padding:14px 32px;border-radius:6px;text-decoration:none;">
+         style="display:inline-block;background:{{ button_colour|default:brand_accent|default:'#212529' }};color:#fff;font-size:15px;font-weight:600;padding:14px 32px;border-radius:6px;text-decoration:none;">
         {% if card_payments %}Pay £{{ invoice.balance_due|floatformat:2 }} now{% else %}How to pay{% endif %}
       </a>
     </td>
@@ -37,4 +42,5 @@
 <p style="color:#6b7280;font-size:12px;text-align:center;margin:0 0 24px;">
   See all your invoices in the <a href="{{ portal_url }}" style="color:#6b7280;">member portal</a>.
 </p>
+{% endif %}
 {% endif %}

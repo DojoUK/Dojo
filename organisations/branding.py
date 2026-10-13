@@ -79,8 +79,17 @@ def absolute_logo_url(org):
 
 
 def email_branding(org):
-    """Template context for the logo in the email header (dark #1a1a1a background)."""
+    """Template context for the email layout: the club's logo, colours and contact details."""
+    from django.templatetags.static import static
+    theme = org.theme()
+    luminance = org.logo_luminance if org.logo else None
     return {
         'org_logo_url': absolute_logo_url(org),
-        'org_logo_backdrop': backdrop_style(org.logo_luminance, '#1a1a1a') if org.logo else '',
+        # A backing behind the logo when it would blend into the header (the club's colour).
+        'org_logo_backdrop': backdrop_style(luminance, theme['sidebar_color']),
+        'brand_colour': theme['sidebar_color'],
+        'brand_accent': theme['accent_color'],
+        'club_email': org.email,
+        'club_website': org.website,
+        'dojo_wordmark_url': settings.SITE_URL.rstrip('/') + static('img/dojo-wordmark.png'),
     }
