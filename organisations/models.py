@@ -113,6 +113,27 @@ class Organisation(models.Model):
         Organisation.objects.filter(pk=self.pk).update(settings=self.settings)
         return value
 
+    # Settings → Security: who must use two-step sign-in (an authenticator app).
+    TWO_FACTOR_ALL = 'all'
+    TWO_FACTOR_ADMINS = 'admins'
+    TWO_FACTOR_OPTIONAL = 'optional'
+    TWO_FACTOR_CHOICES = (
+        (TWO_FACTOR_ALL, 'Required for all staff'),
+        (TWO_FACTOR_ADMINS, 'Required for admins only'),
+        (TWO_FACTOR_OPTIONAL, 'Optional: each person chooses'),
+    )
+
+    @property
+    def two_factor_policy(self):
+        # Clubs made before two-step sign-in existed stay optional until an admin chooses;
+        # new clubs are set to required at setup.
+        value = (self.settings or {}).get('two_factor', self.TWO_FACTOR_OPTIONAL)
+        return value if value in dict(self.TWO_FACTOR_CHOICES) else self.TWO_FACTOR_OPTIONAL
+
+    def requires_two_factor(self, membership):
+        policy = self.two_factor_policy
+        return policy == self.TWO_FACTOR_ALL or (policy == self.TWO_FACTOR_ADMINS and membership.is_org_admin)
+
     @property
     def session_timeout_minutes(self):
         value = (self.settings or {}).get('session_timeout_minutes', self.DEFAULT_SESSION_TIMEOUT)
