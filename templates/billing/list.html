@@ -14,6 +14,9 @@
     <a href="{% url 'invoice_create' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-plus-lg me-1"></i> Single invoice
     </a>
+    <a href="{% url 'billing_automatic' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-calendar-check me-1"></i> Automatic invoices
+    </a>
     <a href="{% url 'billing_export' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-download me-1"></i> Export CSV
     </a>

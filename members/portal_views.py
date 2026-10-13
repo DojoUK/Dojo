@@ -30,7 +30,8 @@ class PortalView(View):
         guardian = member.guardians.filter(email__gt='').first()
         has_guardians = member.guardians.exists()
 
-        invoices = member.invoices.order_by('-created_at')
+        # Invoices an admin hasn't checked and sent yet stay hidden.
+        invoices = member.invoices.exclude(run__status='awaiting_review').order_by('-created_at')
         outstanding = [inv for inv in invoices if inv.status != 'paid']
         # Each invoice's button opens its payment page: card, bank transfer and in-person options.
         for inv in outstanding:

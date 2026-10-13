@@ -627,6 +627,10 @@ class BulkInvoiceView(BillingManagerMixin, View):
 class SendInvoiceEmailView(BillingManagerMixin, View):
     def post(self, request, org_slug, pk):
         invoice = get_object_or_404(Invoice, pk=pk, organisation=self.org)
+        if invoice.run_id and invoice.run.status == 'awaiting_review':
+            messages.error(request, 'This invoice is part of an automatic batch waiting to be checked. '
+                                    'Send the whole batch from Automatic invoices.')
+            return redirect('invoice_detail', org_slug=self.org.slug, pk=pk)
         from .emails import send_invoice_email
         try:
             ok, result = send_invoice_email(invoice, request=request)

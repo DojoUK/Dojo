@@ -1,0 +1,158 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Automatic invoices{% endblock %}
+{% block page_title %}Automatic invoices{% endblock %}
+{% block page_subtitle %}Dojo makes each plan's invoices on schedule{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'invoice_list' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Invoices</a>
+{% endblock %}
+
+{% block main_content %}
+{% if any_enabled and not scheduler_running %}
+<div class="alert alert-warning small"><i class="bi bi-exclamation-triangle me-1"></i> Automatic invoices are made by Dojo's <code>scheduler</code> container, which hasn't run recently. Start it with <code>docker compose up -d scheduler</code>.</div>
+{% endif %}
+
+{% if held_runs %}
+<div class="card mb-4 border-warning">
+    <div class="card-header bg-warning-subtle border-bottom py-3"><h6 class="mb-0"><i class="bi bi-hourglass-split me-1"></i> Waiting for you to check</h6></div>
+    <div class="list-group list-group-flush">
+        {% for run in held_runs %}
+        <a href="{% url 'invoice_run' org_slug=org.slug pk=run.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center gap-2 py-3">
+            <span><span class="fw-semibold small">{{ run.schedule.policy.name }}: {{ run.period }}</span>
+                <span class="d-block text-muted" style="font-size:0.78rem;">{{ run.invoice_count }} invoice{{ run.invoice_count|pluralize }}, £{{ run.total|floatformat:2 }} · made {{ run.created_at|date:"j M" }} · not sent to members yet</span></span>
+            <span class="btn btn-sm btn-dark text-nowrap">Check and send</span>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        {% for plan in plans %}
+        {% with policy=plan.policy schedule=plan.schedule %}
+        <div class="card mb-3" id="plan-{{ policy.pk }}">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                <div>
+                    <h6 class="mb-0">{{ policy.name }}</h6>
+                    <div class="text-muted" style="font-size:0.78rem;">{{ policy.get_billing_cycle_display }} · {{ policy.display_amount }}</div>
+                </div>
+                {% if schedule.enabled %}<span class="badge bg-success-subtle text-success">Automatic</span>{% else %}<span class="badge bg-light text-secondary border">Manual</span>{% endif %}
+            </div>
+            <div class="card-body">
+                {% if policy.billing_cycle == 'custom' %}
+                <p class="small text-muted mb-0">This plan is "Custom / Manual", so it has no schedule. Change its billing cycle on the <a href="{% url 'billing_policies' org_slug=org.slug %}">Billing policies</a> page to make its invoices automatically.</p>
+                {% else %}
+                {% if schedule.enabled and plan.next %}
+                <div class="alert alert-light border small py-2 mb-3"><i class="bi bi-calendar-event me-1"></i> <strong>Next: {{ plan.next.0|date:"j M Y" }}</strong> for {{ plan.next.1 }}. About {{ plan.count }} invoice{{ plan.count|pluralize }} (£{{ plan.total|floatformat:2 }}) at today's prices.</div>
+                {% elif schedule.enabled and policy.billing_cycle == 'termly' %}
+                <div class="alert alert-warning small py-2 mb-3">No upcoming terms. Add your term dates on the <a href="{% url 'billing_policies' org_slug=org.slug %}">Billing policies</a> page.</div>
+                {% endif %}
+                <form method="post" class="row g-2 align-items-end">
+                    {% csrf_token %}
+                    <input type="hidden" name="policy" value="{{ policy.pk }}">
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" name="enabled" id="enabled-{{ policy.pk }}" value="1" {% if schedule.enabled %}checked{% endif %}>
+                            <label class="form-check-label small fw-semibold" for="enabled-{{ policy.pk }}">Make these invoices automatically</label>
+                        </div>
+                    </div>
+                    {% if policy.billing_cycle == 'monthly' %}
+                    <div class="col-sm-4">
+                        <label class="form-label small" for="day-{{ policy.pk }}">On day of the month</label>
+                        <select name="day_of_month" id="day-{{ policy.pk }}" class="form-select form-select-sm">
+                            {% for day in days %}<option value="{{ day }}" {% if schedule.day_of_month == day %}selected{% endif %}>{{ day }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    {% elif policy.billing_cycle == 'termly' %}
+                    <div class="col-sm-4">
+                        <label class="form-label small" for="before-{{ policy.pk }}">Days before each term</label>
+                        <input type="number" name="days_before_term" id="before-{{ policy.pk }}" min="0" max="90" value="{{ schedule.days_before_term }}" class="form-control form-control-sm">
+                    </div>
+                    {% elif policy.billing_cycle == 'annual' %}
+                    <div class="col-6 col-sm-3">
+                        <label class="form-label small" for="aday-{{ policy.pk }}">Each year on</label>
+                        <select name="annual_day" id="aday-{{ policy.pk }}" class="form-select form-select-sm">
+                            {% for day in days %}<option value="{{ day }}" {% if schedule.annual_day == day %}selected{% endif %}>{{ day }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-6 col-sm-4">
+                        <label class="form-label small visually-hidden" for="amonth-{{ policy.pk }}">Month</label>
+                        <select name="annual_month" id="amonth-{{ policy.pk }}" class="form-select form-select-sm">
+                            {% for number, name in months %}<option value="{{ number }}" {% if schedule.annual_month == number %}selected{% endif %}>{{ name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+                    <div class="col-sm-4">
+                        <label class="form-label small" for="due-{{ policy.pk }}">Due after (days)</label>
+                        <input type="number" name="due_after_days" id="due-{{ policy.pk }}" min="0" max="90" value="{{ schedule.due_after_days }}" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-12">
+                        <div class="d-flex flex-wrap gap-3 mt-1">
+                            {% for value, label in schedule.SendMode.choices %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="send_mode" id="mode-{{ policy.pk }}-{{ value }}" value="{{ value }}" {% if schedule.send_mode == value %}checked{% endif %}>
+                                <label class="form-check-label small" for="mode-{{ policy.pk }}-{{ value }}">{{ label }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="form-text">"Check first" makes the invoices but sends nothing until you press Send. Members on automatic payments are charged when invoices are sent.</div>
+                    </div>
+                    <div class="col-12"><button type="submit" class="btn btn-dark btn-sm">Save</button></div>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endwith %}
+        {% empty %}
+        <div class="card"><div class="card-body text-muted small">No billing plans yet. Add one on the <a href="{% url 'billing_policies' org_slug=org.slug %}">Billing policies</a> page.</div></div>
+        {% endfor %}
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header bg-white border-bottom py-3"><h6 class="mb-0">Overdue reminders</h6></div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="reminders">
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" role="switch" name="enabled" id="reminders-on" value="1" {% if reminders.enabled %}checked{% endif %}>
+                        <label class="form-check-label small fw-semibold" for="reminders-on">Send reminders automatically</label>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label small" for="after-days">Days overdue</label>
+                            <input type="number" name="after_days" id="after-days" min="1" max="90" value="{{ reminders.after_days }}" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small" for="repeat-days">Then every (days)</label>
+                            <input type="number" name="repeat_days" id="repeat-days" min="1" max="90" value="{{ reminders.repeat_days }}" class="form-control form-control-sm">
+                        </div>
+                    </div>
+                    <div class="form-text mb-2">Uses the Payment reminder email (Settings → Email → Customise emails). Invoices being paid automatically aren't chased.</div>
+                    <button type="submit" class="btn btn-dark btn-sm">Save</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-white border-bottom py-3"><h6 class="mb-0">History</h6></div>
+            {% if history %}
+            <div class="list-group list-group-flush">
+                {% for run in history %}
+                <a href="{% url 'invoice_run' org_slug=org.slug pk=run.pk %}" class="list-group-item list-group-item-action py-2">
+                    <div class="d-flex justify-content-between small"><span class="fw-semibold">{{ run.period }}</span>
+                        {% if run.status == 'sent' %}<span class="text-success">Sent</span>{% elif run.status == 'cancelled' %}<span class="text-muted">Cancelled</span>{% else %}<span class="text-warning-emphasis">To check</span>{% endif %}</div>
+                    <div class="text-muted" style="font-size:0.75rem;">{{ run.schedule.policy.name }} · {{ run.invoice_count }} invoice{{ run.invoice_count|pluralize }} · £{{ run.total|floatformat:2 }} · {{ run.created_at|date:"j M Y" }}</div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="card-body small text-muted">Nothing made automatically yet.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

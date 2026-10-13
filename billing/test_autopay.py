@@ -273,12 +273,12 @@ class SchedulerTests(AutoPayTestCase):
             call_command('run_scheduler', '--once', stdout=StringIO())
         self.assertEqual(self.refresh(invoice).status, 'paid')
         self.assertTrue(is_running())
-        self.assertEqual(JobRun.objects.get().last_error, '')
+        self.assertEqual(JobRun.objects.get(name='collect_automatic_payments').last_error, '')
 
     def test_a_failing_job_is_recorded_not_fatal(self):
         with mock.patch('billing.autopay.collect_due', side_effect=RuntimeError('boom')):
             call_command('run_scheduler', '--once', stdout=StringIO())
-        self.assertIn('RuntimeError: boom', JobRun.objects.get().last_error)
+        self.assertIn('RuntimeError: boom', JobRun.objects.get(name='collect_automatic_payments').last_error)
 
 
 class PortalTests(AutoPayTestCase):

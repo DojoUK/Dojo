@@ -138,6 +138,8 @@ def turn_off(member):
 
 def mark_due(invoice):
     """Called when an invoice is created: queue it for collection if the member pays automatically."""
+    if invoice.run_id and invoice.run.status == 'awaiting_review':
+        return  # held for an admin to check first; queued when they send it (billing.schedule.release)
     if invoice.status == 'unpaid' and enabled(invoice.organisation) and active_autopay(invoice.member):
         type(invoice).objects.filter(pk=invoice.pk).update(autopay_status='due')
 

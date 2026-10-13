@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 def _invoice_or_404(token):
     invoice = payments.invoice_from_token(token)
-    if invoice is None:
+    if invoice is None or (invoice.run_id and invoice.run.status == 'awaiting_review'):
         raise Http404('Payment link not recognised.')
     return invoice
 
