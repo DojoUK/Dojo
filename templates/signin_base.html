@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load static branding %}
+{# Login, password reset and two-step sign-in pages. On a single-club install they use that club's colours and logo; "Powered by Dojo" keeps it clear what this is. #}
+
+{% block body %}
+{% only_organisation as club %}
+<style>
+    {% if club %}{% with t=club.theme %}
+    :root {
+        --dojo-sidebar: {{ t.sidebar_color }};
+        --dojo-sidebar-dark: {{ t.sidebar_color_dark }};
+        --dojo-accent: {{ t.accent_color }};
+        --dojo-accent-hover: {{ t.accent_hover }};
+    }
+    {% endwith %}{% endif %}
+    body { background: linear-gradient(135deg, var(--dojo-sidebar) 0%, var(--dojo-sidebar-dark) 100%); min-height: 100vh; }
+    .signin-card { border: none !important; box-shadow: 0 20px 60px rgba(0,0,0,.3) !important; }
+    .signin-footer { color: rgba(255,255,255,.7); font-size: 0.8rem; }
+    .signin-footer .signin-licence { color: rgba(255,255,255,.4); font-size: 0.7rem; }
+    .signin-footer a { color: inherit; text-decoration: none; }
+    .signin-footer a:hover { color: #fff; }
+    .signin-footer .dojo-mark { height: 22px; filter: brightness(0) invert(1); opacity: .9; }
+    {% block signin_style %}{% endblock %}
+</style>
+<div class="min-vh-100 d-flex flex-column align-items-center justify-content-center px-3 py-4">
+    <div class="w-100" style="max-width: {% block width %}400px{% endblock %};">
+
+        <div class="text-center mb-4">
+            {% if club %}
+            {% if club.logo %}<div class="mb-3">{% org_logo club club.theme.sidebar_color 72 240 %}</div>{% endif %}
+            <p class="mb-0" style="color:#fff;font-weight:600;font-size:1.1rem;">{{ club.name }}</p>
+            {% else %}
+            <img src="{% static 'img/dojo-wordmark.png' %}" alt="Dojo" style="height:44px;filter:brightness(0) invert(1);opacity:0.9;margin-bottom:12px;">
+            <p style="color:rgba(255,255,255,.55);font-size:0.85rem;margin:0;">Club &amp; class management</p>
+            {% endif %}
+        </div>
+
+        <div class="card signin-card">
+            <div class="card-body p-4">
+                {% block card %}{% endblock %}
+            </div>
+        </div>
+
+        {% block after_card %}{% endblock %}
+
+        <div class="signin-footer text-center mt-4">
+            {% if club %}
+            <a href="https://github.com/DojoUK/Dojo" target="_blank" rel="noopener" class="d-inline-flex align-items-center gap-2 mb-2" title="Dojo: open-source club management">
+                <span>Powered by</span><img src="{% static 'img/dojo-wordmark.png' %}" alt="Dojo" class="dojo-mark">
+            </a>
+            <br>
+            {% endif %}
+            <a href="https://github.com/DojoUK/Dojo" target="_blank" rel="noopener" class="signin-licence">AGPL-3.0 &middot; source available</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
