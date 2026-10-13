@@ -62,9 +62,22 @@ services:
     volumes:
       - mail_queue:/var/spool/postfix
 
+  # Local testing only (docker compose --profile dev up -d). Catches every email
+  # Dojo sends and shows it at http://localhost:8025 instead of delivering it.
+  # Point Settings → Email at it: "Another SMTP server", server mailpit, port
+  # 1025, security None.
+  mailpit:
+    image: axllent/mailpit:v1.31.2
+    profiles: ["dev"]
+    ports:
+      - "127.0.0.1:8025:8025"
+
+  # Forwards Stripe test-mode events to Dojo. Set STRIPE_FORWARD_TO to a club's
+  # own webhook address (http://web:8000/stripe/webhook/<club>/) to test card and
+  # automatic payments set up in Settings → Payments.
   stripe:
     image: stripe/stripe-cli:latest
-    command: listen --forward-to http://web:8000/stripe/webhook/ --skip-verify
+    command: listen --forward-to ${STRIPE_FORWARD_TO:-http://web:8000/stripe/webhook/} --skip-verify
     environment:
       - STRIPE_API_KEY=${STRIPE_SECRET_KEY}
     depends_on:

@@ -200,6 +200,20 @@ If their club requires two-step sign-in, they're asked to set it up again the ne
 
 ---
 
+## Testing emails and payments locally
+
+**Emails:** start Mailpit with `docker compose --profile dev up -d mailpit`, then in Settings → Email choose **Another SMTP server** with server `mailpit`, port `1025` and security **None**. Every email Dojo sends (invoices, reminders, welcomes, password resets, tests) appears at http://localhost:8025 instead of being delivered, so you can check how each one looks.
+
+**Card and automatic payments,** with Stripe's test mode (no real money):
+
+1. In your Stripe dashboard, switch to **test mode** (or a sandbox) and copy the test keys from Developers → API keys.
+2. In Settings → Payments, tick **Card online**, paste the `pk_test_…` and `sk_test_…` keys, and set **Pay automatically** if you want to try it. Save.
+3. In `.env`, set `STRIPE_SECRET_KEY` to the same `sk_test_…` key (the `stripe` container uses it to listen) and `STRIPE_FORWARD_TO=http://web:8000/stripe/webhook/<your-club>/`, then run `docker compose up -d stripe`.
+4. Copy the signing secret from `docker compose logs stripe` (it starts `whsec_`) into Settings → Payments → Webhook signing secret, and save.
+5. Open an invoice's payment page (its "Pay now" link, e.g. from an email in Mailpit) and pay with test card `4242 4242 4242 4242`, any future date and any CVC. For Direct Debit, use sort code `10-88-00` and account number `00012345`.
+
+---
+
 ## Troubleshooting
 
 - **Stuck on "waiting for database"** — `entrypoint.sh` retries for up to 60 seconds. If it still times out, check `docker compose logs db` for a MySQL startup failure (bad `DB_ROOT_PASSWORD` on an existing volume is a common cause after changing `.env`).
