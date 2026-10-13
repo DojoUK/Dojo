@@ -119,6 +119,59 @@
         </div>
         {% endif %}
 
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Coaches</h6>
+                {% if available_coaches %}
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#add-coach-form">
+                    <i class="bi bi-person-plus me-1"></i> Add coach
+                </button>
+                {% endif %}
+            </div>
+
+            {% if available_coaches %}
+            <div class="collapse" id="add-coach-form">
+                <div class="card-body border-bottom bg-light">
+                    <form method="post" action="{% url 'class_coach_add' org_slug=org.slug pk=cls.pk %}" class="d-flex gap-2">
+                        {% csrf_token %}
+                        <select name="user_id" class="form-select form-select-sm">
+                            {% for om in available_coaches %}
+                            <option value="{{ om.user.pk }}">{{ om.user.get_full_name|default:om.user.username }} ({{ om.get_role_display }})</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-dark text-nowrap">Add</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if coaches %}
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        {% for coach in coaches %}
+                        <tr>
+                            <td class="ps-3 py-2 small fw-semibold">{{ coach.user.get_full_name|default:coach.user.username }}</td>
+                            <td class="text-end pe-3 py-2">
+                                <form method="post" action="{% url 'class_coach_remove' org_slug=org.slug pk=cls.pk coach_pk=coach.pk %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                </div>
+            </div>
+            {% else %}
+            <div class="card-body">
+                <p class="text-muted small mb-0">No coaches assigned.</p>
+            </div>
+            {% endif %}
+        </div>
+
     </div>
 
     <!-- Sessions column -->
@@ -197,59 +250,6 @@
             {% else %}
             <div class="card-body">
                 <p class="text-muted small mb-0">No sessions yet — use Generate above.</p>
-            </div>
-            {% endif %}
-        </div>
-
-        <div class="card border-0 shadow-sm mb-3">
-            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">Coaches</h6>
-                {% if available_coaches %}
-                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#add-coach-form">
-                    <i class="bi bi-person-plus me-1"></i> Add coach
-                </button>
-                {% endif %}
-            </div>
-
-            {% if available_coaches %}
-            <div class="collapse" id="add-coach-form">
-                <div class="card-body border-bottom bg-light">
-                    <form method="post" action="{% url 'class_coach_add' org_slug=org.slug pk=cls.pk %}" class="d-flex gap-2">
-                        {% csrf_token %}
-                        <select name="user_id" class="form-select form-select-sm">
-                            {% for om in available_coaches %}
-                            <option value="{{ om.user.pk }}">{{ om.user.get_full_name|default:om.user.username }} ({{ om.get_role_display }})</option>
-                            {% endfor %}
-                        </select>
-                        <button type="submit" class="btn btn-sm btn-dark text-nowrap">Add</button>
-                    </form>
-                </div>
-            </div>
-            {% endif %}
-
-            {% if coaches %}
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                <table class="table table-sm mb-0">
-                    <tbody>
-                        {% for coach in coaches %}
-                        <tr>
-                            <td class="ps-3 py-2 small fw-semibold">{{ coach.user.get_full_name|default:coach.user.username }}</td>
-                            <td class="text-end pe-3 py-2">
-                                <form method="post" action="{% url 'class_coach_remove' org_slug=org.slug pk=cls.pk coach_pk=coach.pk %}" class="d-inline">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-                </div>
-            </div>
-            {% else %}
-            <div class="card-body">
-                <p class="text-muted small mb-0">No coaches assigned.</p>
             </div>
             {% endif %}
         </div>
