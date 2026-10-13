@@ -295,3 +295,64 @@ class PortalPayButtonTests(PaymentsTestCase):
         response = self.client.get(self.url)
         self.assertContains(response, f'href="{self.pay_page}"')
         self.assertRegex(response.content.decode(), r'text-nowrap">\s*Pay\s*</a>')
+
+
+class CheckoutDetailsTests(PaymentsTestCase):
+    """What the member sees on Stripe's payment page."""
+
+    def setUp(self):
+        from billing.models import BillingPolicy, InvoiceItem
+        from inventory.models import Product, ProductVariant
+        policy = BillingPolicy.objects.create(organisation=self.org, name='Kids Termly', billing_cycle='termly', amount=50)
+        gi = ProductVariant.objects.create(product=Product.objects.create(organisation=self.org, name='Judo Gi'),
+                                           size='150cm', price=Decimal('25.00'))
+        # £45 membership after a £5 discount, plus two gis at £25: £95 in all.
+        self.kit_invoice = Invoice.objects.create(organisation=self.org, member=self.member, billing_policy=policy,
+                                                  amount=Decimal('95.00'), discount_amount=Decimal('5.00'),
+                                                  period='Autumn 2026', due_date=date(2026, 9, 30))
+        InvoiceItem.objects.create(invoice=self.kit_invoice, variant=gi, quantity=2, unit_price=Decimal('25.00'))
+
+    @staticmethod
+    def total(lines):
+        return sum(line['price_data']['unit_amount'] * line['quantity'] for line in lines)
+
+    def test_itemised_with_plan_discount_and_kit(self):
+        lines = payments.checkout_line_items(self.kit_invoice)
+        names = [(line['price_data']['product_data']['name'], line['price_data']['unit_amount'], line['quantity']) for line in lines]
+        self.assertEqual(names, [('Kids Termly: Autumn 2026', 4500, 1), ('Judo Gi — 150cm', 2500, 2)])
+        self.assertIn('For Ann Lee', lines[0]['price_data']['product_data']['description'])
+        self.assertIn(f'reference INV{self.kit_invoice.pk}', lines[0]['price_data']['product_data']['description'])
+        self.assertIn('includes a £5.00 discount', lines[0]['price_data']['product_data']['description'])
+        self.assertEqual(self.total(lines), 9500)
+
+    def test_part_paid_invoices_show_what_is_left(self):
+        Payment.objects.create(invoice=self.kit_invoice, amount=Decimal('30.00'), paid_at=timezone.now())
+        lines = payments.checkout_line_items(self.kit_invoice)
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(lines[0]['price_data']['product_data']['name'], 'Autumn 2026: remaining balance')
+        self.assertIn('£30.00 of £95.00 already paid', lines[0]['price_data']['product_data']['description'])
+        self.assertEqual(self.total(lines), 6500)
+
+    def test_plain_invoice(self):
+        lines = payments.checkout_line_items(self.invoice)
+        self.assertEqual([(line['price_data']['product_data']['name'], line['price_data']['unit_amount']) for line in lines],
+                         [('October 2026', 4500)])
+
+    @override_settings(SITE_URL='https://club.example')
+    def test_logo_shown_only_where_stripe_can_fetch_it(self):
+        with mock.patch('organisations.branding.absolute_logo_url', return_value='https://club.example/media/logo.png'):
+            lines = payments.checkout_line_items(self.invoice)
+        self.assertEqual(lines[0]['price_data']['product_data']['images'], ['https://club.example/media/logo.png'])
+        with mock.patch('organisations.branding.absolute_logo_url', return_value='http://localhost:8000/media/logo.png'):
+            self.assertNotIn('images', payments.checkout_line_items(self.invoice)[0]['price_data']['product_data'])
+
+    def test_checkout_gets_the_lines_and_a_note(self):
+        self.configure(**CARD)
+        token = payments.pay_token(self.kit_invoice)
+        with mock.patch('stripe.checkout.Session.create', return_value=mock.Mock(url='https://checkout.stripe.test/s')) as create:
+            self.client.post(reverse('invoice_pay_card', kwargs={'token': token}))
+        kwargs = create.call_args.kwargs
+        self.assertEqual(self.total(kwargs['line_items']), 9500)
+        self.assertEqual(kwargs['custom_text']['submit']['message'],
+                         f'You\'re paying Test Club for Ann: Autumn 2026 (reference INV{self.kit_invoice.pk}). '
+                         'Questions? Email hello@testclub.example.')
