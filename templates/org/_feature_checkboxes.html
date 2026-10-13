@@ -1,5 +1,5 @@
 {# Feature switches, shared by the setup wizard and Settings → Features. Expects `feature_rows`. #}
-<div class="d-flex flex-column gap-2" data-feature-switches>
+<div data-feature-switches style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.6rem 1.5rem;">
     {% for row in feature_rows %}
     <div class="form-check">
         <input class="form-check-input" type="checkbox" name="features" value="{{ row.key }}"

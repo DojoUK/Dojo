@@ -1,0 +1,16 @@
+<div class="list-group">
+    <a href="{% url 'org_custom_fields' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3">
+        <div class="fw-semibold small">Custom member fields</div>
+        <div class="text-muted small">Add extra fields to member profiles.</div>
+    </a>
+    {% if 'grades' in org.enabled_features %}
+    <a href="{% url 'progression_settings' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3">
+        <div class="fw-semibold small">Progression &amp; grading</div>
+        <div class="text-muted small">Define belt systems, mon grades, or other progression tracks.</div>
+    </a>
+    {% endif %}
+    <a href="{% url 'org_staff' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3">
+        <div class="fw-semibold small">Staff &amp; coaches</div>
+        <div class="text-muted small">Manage who has access and what role they have.</div>
+    </a>
+</div>

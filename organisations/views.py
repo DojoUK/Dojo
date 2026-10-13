@@ -533,10 +533,24 @@ class OrgSettingsView(OrgAdminMixin, View):
         {'name': 'Teal',           'sidebar': '#134e4a', 'accent': '#14b8a6'},
     ]
 
+    # (key, label, Bootstrap icon, help) for each settings tab; templates/org/settings/_<key>.html.
+    SECTIONS = (
+        ('general', 'General', 'building', 'Your club\'s name and contact details.'),
+        ('appearance', 'Appearance', 'palette', 'Colours and logo for your club\'s Dojo.'),
+        ('features', 'Features', 'toggles', 'Switch off anything your club doesn\'t use and it disappears from Dojo. '
+                                            'Nothing is deleted: switch a feature back on and its data is still there.'),
+        ('fields', 'Fields', 'input-cursor-text', 'Which built-in details Dojo records. Switched-off fields are hidden '
+                                                  'everywhere, but anything already recorded is kept.'),
+        ('security', 'Security', 'shield-lock', ''),
+        ('email', 'Email', 'envelope', ''),
+        ('more', 'More', 'three-dots', 'Other settings pages.'),
+    )
+
     def _context(self):
         from .features import feature_rows
         from .optional_fields import field_groups
         return {
+            'settings_sections': self.SECTIONS,
             'org': self.org,
             'org_membership': self.org_membership,
             'presets': self.PRESETS,
@@ -613,7 +627,7 @@ class OrgSettingsView(OrgAdminMixin, View):
                 self.org.save(update_fields=['custom_css'])
 
             messages.success(request, 'Theme saved.')
-            return redirect('org_settings', org_slug=self.org.slug)
+            return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#appearance")
 
         # General settings
         name = request.POST.get('name', '').strip()
@@ -631,7 +645,7 @@ class OrgSettingsView(OrgAdminMixin, View):
         self.org.website = website
         self.org.save(update_fields=['name', 'email', 'phone', 'website'])
         messages.success(request, 'Settings saved.')
-        return redirect('org_settings', org_slug=self.org.slug)
+        return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#general")
 
 
 class CustomFieldSettingsView(OrgAdminMixin, View):

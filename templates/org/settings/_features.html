@@ -1,0 +1,6 @@
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="features">
+    {% include 'org/_feature_checkboxes.html' %}
+    <button type="submit" class="btn btn-dark btn-sm mt-3">Save features</button>
+</form>
