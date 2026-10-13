@@ -1,24 +1,19 @@
-{% extends 'base.html' %}
+{% extends 'signin_base.html' %}
 
-{% block body %}
-<style>
-    body { background: linear-gradient(135deg, #1E3A5F 0%, #0f2139 100%); min-height: 100vh; }
+{% block signin_style %}
     .code-input { font-size: 1.4rem; letter-spacing: .25em; text-align: center; font-variant-numeric: tabular-nums; }
-</style>
-<div class="min-vh-100 d-flex align-items-center justify-content-center px-3 py-4">
-    <div class="w-100" style="max-width: {% block width %}400px{% endblock %};">
-        <div class="card" style="border:none!important;box-shadow:0 20px 60px rgba(0,0,0,.3)!important;">
-            <div class="card-body p-4">
-                {% if messages %}{% for message in messages %}
-                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} py-2 small">{{ message }}</div>
-                {% endfor %}{% endif %}
-                {% block card %}{% endblock %}
-            </div>
-        </div>
-        <form method="post" action="{% url 'logout' %}" class="text-center mt-3">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-link btn-sm" style="color:rgba(255,255,255,.5);">Sign out</button>
-        </form>
-    </div>
-</div>
+{% endblock %}
+
+{% block card %}
+{% if messages %}{% for message in messages %}
+<div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} py-2 small">{{ message }}</div>
+{% endfor %}{% endif %}
+{% block page %}{% endblock %}
+{% endblock %}
+
+{% block after_card %}
+<form method="post" action="{% url 'logout' %}" class="text-center mt-3">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-link btn-sm" style="color:rgba(255,255,255,.6);">Sign out</button>
+</form>
 {% endblock %}
