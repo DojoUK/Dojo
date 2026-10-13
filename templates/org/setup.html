@@ -75,6 +75,16 @@
                     <hr class="my-4">
 
                     <div class="mb-2">
+                        <span class="text-uppercase text-muted" style="font-size:0.7rem;letter-spacing:.05em;">How do members pay?</span>
+                    </div>
+                    <p class="text-muted small">Tick any that apply. If you use Billing, every invoice email links to a page showing these. You can change them under Settings → Payments.</p>
+                    <div class="mb-3">
+                        {% include 'billing/_payment_fields.html' %}
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="mb-2">
                         <span class="text-uppercase text-muted" style="font-size:0.7rem;letter-spacing:.05em;">How will Dojo send email?</span>
                     </div>
                     <p class="text-muted small">Welcome emails, invoices and reminders. Not sure yet? Leave it on "Not yet" and choose later under Settings → Email.</p>

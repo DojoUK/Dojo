@@ -4,6 +4,8 @@ from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
 from organisations.branding import email_branding
+
+from .payments import options_for as payment_options
 from mailer import connection_for
 
 
@@ -43,6 +45,7 @@ def send_invoice_email(invoice, request=None):
         'org_email': invoice.organisation.email,
         'member': member,
         'portal_url': portal_url,
+        **payment_options(invoice),
         'has_guardians': has_guardians,
     }
     html_body = render_to_string('emails/invoice.html', context)
@@ -92,6 +95,7 @@ def send_reminder_email(invoice, request=None):
         'org_email': org.email or settings.DEFAULT_FROM_EMAIL,
         'member': member,
         'portal_url': portal_url,
+        **payment_options(invoice),
         'has_guardians': has_guardians,
     }
     html_body = render_to_string('emails/invoice_reminder.html', context)

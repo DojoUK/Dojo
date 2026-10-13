@@ -59,7 +59,7 @@ Nothing here is required for a basic instance — everything has a sane default.
 | `EMAIL_*` | console backend | **Fallback only.** Each club chooses how its email is sent in the setup wizard or **Settings → Email** (see [Sending email](#sending-email)). These variables are used only by clubs that haven't chosen yet. Leave them unset to print that mail to `docker compose logs -f web` |
 | `MAIL_HOSTNAME` | `localhost` | For **Built-in mail server**: the name the `mail` container introduces itself as, e.g. `mail.yourclub.org.uk`. Set it, and your server's reverse DNS, to a name that points at your server |
 | `DOJO_MAIL_HOST` / `DOJO_MAIL_PORT` | `mail` / `25` | Where Dojo finds its mail container. Only change these if you run your own relay instead of the bundled container |
-| `STRIPE_PUBLIC_KEY` / `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | unset | Only needed if you want online payments; get these from your Stripe dashboard |
+| `STRIPE_PUBLIC_KEY` / `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | unset | **Fallback only.** Each club enters its own Stripe keys in the setup wizard or **Settings → Payments** (see [Taking payments](#taking-payments)). These apply only to clubs that haven't |
 | `DOJO_BUILD_REPO` / `DOJO_BUILD_COMMIT` / `DOJO_BUILD_TAG` | unset (read from `.git`) | The version shown under Settings → General. Dojo reads it from the `.git` folder; set these only if your image is built without one. A repository other than `DojoUK/Dojo` shows as "Unofficial Dojo fork" |
 | `DOJO_LICENCE_KEY` / `DOJO_LICENCE_HOLDER` | unset | Self-hosters on the default AGPL-3.0 licence leave both blank |
 
@@ -167,6 +167,18 @@ Passwords and API keys are stored encrypted with a key derived from `SECRET_KEY`
 3. Add the DKIM, SPF and DMARC records shown under Settings → Email, then press **Check DNS**.
 
 To see what the mail service is doing: `docker compose logs -f mail`.
+
+---
+
+## Taking payments
+
+Each club chooses how members pay in the setup wizard, and changes it under **Settings → Payments**:
+
+- **Bank transfer:** invoices show your account name, sort code, account number and a reference (e.g. `INV1234`) to quote.
+- **Card online:** a "Pay now" button for card, Apple Pay and Google Pay, through the club's own Stripe account. Paste the publishable and secret keys from Stripe → Developers → API keys, then press **Set up webhook automatically** so card payments mark invoices paid straight away. That needs Dojo to be reachable from the internet at `SITE_URL`; each club's webhook address is `SITE_URL/stripe/webhook/<club>/`.
+- **In person:** cash or card at the club, marked paid by an admin.
+
+Every invoice and reminder email links to a payment page (`SITE_URL/pay/...`) showing the amount still due and the ways to pay. The link is signed, so it can't be guessed or altered. Stripe keys are stored encrypted, like email passwords.
 
 ---
 

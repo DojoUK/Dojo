@@ -21,6 +21,7 @@ from members.models import CustomField
 from .branding import email_branding
 from accounts.policy import device_for, two_factor_required
 from mailer.forms import provider_rows as email_provider_rows
+from billing.payment_forms import form_context as payment_form_context
 from mailer import connection_for
 
 
@@ -44,6 +45,7 @@ class SetupView(View):
             'feature_rows': feature_rows({f.key for f in FEATURES if default_enabled(f)}),
             'field_groups': field_groups(effective_fields({})),
             **email_provider_rows(),
+            **payment_form_context(),
         })
 
     def post(self, request):
@@ -93,6 +95,10 @@ class SetupView(View):
         from mailer.models import EmailSettings
         email_settings = EmailSettings()
         errors += apply_post(email_settings, request.POST)
+        from billing.models import PaymentSettings
+        from billing.payment_forms import apply_post as apply_payment_post
+        payment_settings = PaymentSettings()
+        errors += apply_payment_post(payment_settings, request.POST)
 
         if errors:
             return render(request, self.template_name, {
@@ -107,6 +113,7 @@ class SetupView(View):
                 'org_phone': request.POST.get('org_phone', '').strip(),
                 'org_website': request.POST.get('org_website', '').strip(),
                 **email_provider_rows(post=request.POST),
+                **payment_form_context(post=request.POST),
             })
 
         user = User.objects.create_superuser(username=username, email=admin_email, password=password)
@@ -127,6 +134,8 @@ class SetupView(View):
             email_settings.save()
         if email_settings.provider == 'dojo_mail':
             email_settings.dkim_private_key(create=True)
+        payment_settings.organisation = org
+        payment_settings.save()
 
         login(request, user)
         return redirect('org_dashboard', org_slug=org.slug)
@@ -622,9 +631,22 @@ class OrgSettingsView(OrgAdminMixin, View):
         ('fields', 'Fields', 'input-cursor-text', 'Which built-in details Dojo records. Switched-off fields are hidden '
                                                   'everywhere, but anything already recorded is kept.'),
         ('security', 'Security', 'shield-lock', ''),
+        ('payments', 'Payments', 'credit-card', 'How members pay their invoices. Every invoice email links to a page '
+                                                'showing the ways you choose here.'),
         ('email', 'Email', 'envelope', 'How Dojo sends emails to members and staff.'),
         ('more', 'More', 'three-dots', 'Other settings pages.'),
     )
+
+    def _payments_context(self):
+        from billing.payment_forms import form_context
+        from billing.payments import settings_for
+        from billing.stripe_setup import check_connection, webhook_url
+        payment_settings = settings_for(self.org)
+        context = {**form_context(payment_settings), 'payment_settings': payment_settings,
+                   'stripe_webhook_url': webhook_url(self.org)}
+        if payment_settings and payment_settings.accept_card and self.request.GET.get('check_stripe'):
+            context['stripe_check'] = check_connection(payment_settings.stripe_secret_key)
+        return context
 
     def _email_context(self):
         from mailer.forms import provider_rows
@@ -652,7 +674,8 @@ class OrgSettingsView(OrgAdminMixin, View):
         from .features import feature_rows
         from .optional_fields import field_groups
         return {
-            'settings_sections': self.SECTIONS,
+            'settings_sections': [section for section in self.SECTIONS
+                                  if section[0] != 'payments' or self.org.has_feature('billing')],
             'version': get_version_info(),
             'org_url': self.request.build_absolute_uri(reverse('org_dashboard', kwargs={'org_slug': self.org.slug})),
             'org_url_display': self.request.get_host() + reverse('org_dashboard', kwargs={'org_slug': self.org.slug}),
@@ -665,6 +688,7 @@ class OrgSettingsView(OrgAdminMixin, View):
             'session_timeout_choices': Organisation.SESSION_TIMEOUT_CHOICES,
             'two_factor_choices': Organisation.TWO_FACTOR_CHOICES,
             **self._email_context(),
+            **self._payments_context(),
             'staff_without_two_factor': (
                 OrganisationMember.objects.filter(organisation=self.org, user__two_factor__isnull=True)
                 .select_related('user').order_by('user__first_name', 'user__username')
@@ -684,6 +708,38 @@ class OrgSettingsView(OrgAdminMixin, View):
             self.org.save(update_fields=['features'])
             messages.success(request, 'Features saved.')
             return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#features")
+
+        if action == 'payments':
+            from billing.models import PaymentSettings
+            from billing.payment_forms import apply_post
+            payment_settings = (PaymentSettings.objects.filter(organisation=self.org).first()
+                                or PaymentSettings(organisation=self.org))
+            errors = apply_post(payment_settings, request.POST)
+            for error in errors:
+                messages.error(request, error)
+            if not errors:
+                payment_settings.save()
+                messages.success(request, 'Payment settings saved.')
+            return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#payments")
+
+        if action == 'stripe_webhook':
+            import stripe
+
+            from billing.payments import settings_for
+            from billing.stripe_setup import create_webhook
+            payment_settings = settings_for(self.org)
+            if not (payment_settings and payment_settings.stripe_secret_key):
+                messages.error(request, 'Save your Stripe keys first.')
+            else:
+                try:
+                    secret = create_webhook(self.org, payment_settings.stripe_secret_key)
+                except stripe.error.StripeError as error:
+                    messages.error(request, f'Stripe couldn\'t set up the webhook: {error.user_message or error}')
+                else:
+                    payment_settings.set_secrets({**payment_settings.get_secrets(), 'stripe_webhook_secret': secret})
+                    payment_settings.save(update_fields=['secrets'])
+                    messages.success(request, 'Webhook set up: invoices paid by card will now be marked paid automatically.')
+            return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#payments")
 
         if action == 'email':
             from mailer.forms import apply_post

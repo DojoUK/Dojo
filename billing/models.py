@@ -129,6 +129,26 @@ class Invoice(models.Model):
         return self.status == self.Status.UNPAID and self.due_date < date.today()
 
     @property
+    def amount_paid(self):
+        from decimal import Decimal
+        return sum((payment.amount for payment in self.payments.all()), Decimal('0'))
+
+    @property
+    def balance_due(self):
+        """What's left to pay: the amount less any payments already recorded."""
+        from decimal import Decimal
+        if self.status == self.Status.PAID:
+            return Decimal('0')
+        return max(Decimal(self.amount) - self.amount_paid, Decimal('0'))
+
+    @property
+    def payment_reference(self):
+        """The reference members quote on a bank transfer, e.g. INV1234."""
+        settings = getattr(self.organisation, 'payment_settings', None)
+        prefix = settings.reference_prefix if settings else 'INV'
+        return f'{prefix}{self.pk}'
+
+    @property
     def items_total(self):
         from decimal import Decimal
         return sum((item.line_total for item in self.items.all()), Decimal('0'))
@@ -184,3 +204,47 @@ class Payment(models.Model):
 
     class Meta:
         ordering = ['-paid_at']
+
+
+class PaymentSettings(models.Model):
+    """How members can pay: chosen in the setup wizard, changed in Settings → Payments."""
+    organisation = models.OneToOneField(Organisation, on_delete=models.CASCADE, related_name='payment_settings')
+    accept_bank_transfer = models.BooleanField(default=False)
+    accept_card = models.BooleanField(default=False)
+    accept_cash = models.BooleanField(default=False)
+    bank_account_name = models.CharField(max_length=100, blank=True)
+    bank_sort_code = models.CharField(max_length=8, blank=True)
+    bank_account_number = models.CharField(max_length=8, blank=True)
+    reference_prefix = models.CharField(max_length=10, default='INV',
+                                        help_text='Payment references are this followed by the invoice number.')
+    instructions = models.TextField(blank=True, help_text='Anything else members should know, shown with every invoice.')
+    stripe_publishable_key = models.CharField(max_length=255, blank=True)
+    # The Stripe secret key and webhook signing secret, encrypted (see mailer.crypto).
+    secrets = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = 'payment settings'
+
+    def __str__(self):
+        return f'Payments for {self.organisation}'
+
+    def get_secrets(self):
+        from mailer import crypto
+        return crypto.decrypt_dict(self.secrets)
+
+    def set_secrets(self, values):
+        from mailer import crypto
+        self.secrets = crypto.encrypt_dict({k: v for k, v in values.items() if v})
+
+    @property
+    def stripe_secret_key(self):
+        return self.get_secrets().get('stripe_secret_key', '')
+
+    @property
+    def stripe_webhook_secret(self):
+        return self.get_secrets().get('stripe_webhook_secret', '')
+
+    @property
+    def stripe_test_mode(self):
+        return self.stripe_publishable_key.startswith('pk_test_')
