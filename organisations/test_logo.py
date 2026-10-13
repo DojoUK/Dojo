@@ -102,7 +102,8 @@ class LogoUploadTests(TestCase):
         self.org.refresh_from_db()
         self.assertFalse(self.org.logo)
         self.assertNotIn('logo_luminance', self.org.settings)
-        self.assertEqual(email_branding(self.org), {'org_logo_url': '', 'org_logo_backdrop': ''})
+        branding = email_branding(self.org)
+        self.assertEqual((branding['org_logo_url'], branding['org_logo_backdrop']), ('', ''))
 
     def test_older_logo_is_measured_when_first_shown(self):
         self.upload(image_file('white'))

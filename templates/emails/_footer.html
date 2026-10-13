@@ -1,0 +1,17 @@
+{# Shared email footer: who sent it, how to get in touch, and a small Powered by Dojo. #}
+<tr>
+  <td align="center" style="padding:24px 32px 8px;">
+    <p style="color:#64748b;font-size:12px;line-height:1.6;margin:0;">
+      Sent by {{ org_name }}{% if club_email %}. Questions? Just reply, or email <a href="mailto:{{ club_email }}" style="color:#64748b;">{{ club_email }}</a>{% endif %}.
+      {% if club_website %}<br><a href="{{ club_website }}" style="color:#64748b;">{{ club_website|cut:"https://"|cut:"http://" }}</a>{% endif %}
+    </p>
+  </td>
+</tr>
+<tr>
+  <td align="center" style="padding:12px 32px 0;">
+    <a href="https://github.com/DojoUK/Dojo" style="color:#94a3b8;font-size:11px;text-decoration:none;">
+      <span style="vertical-align:middle;">Powered by</span>
+      {% if dojo_wordmark_url %}<img src="{{ dojo_wordmark_url }}" alt="Dojo" height="14" style="height:14px;width:auto;border:0;vertical-align:middle;opacity:.55;margin-left:4px;">{% else %}<strong style="vertical-align:middle;">Dojo</strong>{% endif %}
+    </a>
+  </td>
+</tr>
