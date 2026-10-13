@@ -9,6 +9,7 @@ from dojo.mixins import OrgAdminMixin, OrgMixin
 from members.models import Member
 from .models import Document, SignedWaiver, WaiverTemplate
 from .pdf_utils import stamp_signature_on_pdf
+from members.navigation import redirect_to_member
 
 
 class DocumentUploadView(OrgAdminMixin, View):
@@ -22,13 +23,13 @@ class DocumentUploadView(OrgAdminMixin, View):
         notes = request.POST.get('notes', '').strip()
         if not f:
             messages.error(request, 'No file selected.')
-            return redirect('member_detail', org_slug=org_slug, pk=member_pk)
+            return redirect_to_member(org_slug, member_pk, 'documents')
         Document.objects.create(
             member=member, name=name, category=category,
             file=f, uploaded_by=request.user, notes=notes,
         )
         messages.success(request, f'"{name}" uploaded.')
-        return redirect('member_detail', org_slug=org_slug, pk=member_pk)
+        return redirect_to_member(org_slug, member_pk, 'documents')
 
 
 class DocumentDeleteView(OrgAdminMixin, View):
@@ -40,7 +41,7 @@ class DocumentDeleteView(OrgAdminMixin, View):
         doc.file.delete(save=False)
         doc.delete()
         messages.success(request, 'Document deleted.')
-        return redirect('member_detail', org_slug=org_slug, pk=member_pk)
+        return redirect_to_member(org_slug, member_pk, 'documents')
 
 
 class DocumentDownloadView(OrgAdminMixin, View):
@@ -130,7 +131,7 @@ class SignedWaiverOfflineView(OrgAdminMixin, View):
         f = request.FILES.get('file')
         if not template_pk or not f:
             messages.error(request, 'Template and file are required.')
-            return redirect('member_detail', org_slug=org_slug, pk=member_pk)
+            return redirect_to_member(org_slug, member_pk, 'documents')
         template = get_object_or_404(WaiverTemplate, pk=template_pk, organisation=self.org)
         SignedWaiver.objects.create(
             member=member, template=template,
@@ -138,7 +139,7 @@ class SignedWaiverOfflineView(OrgAdminMixin, View):
             signed_at=timezone.now(), offline=True,
         )
         messages.success(request, 'Offline waiver recorded.')
-        return redirect('member_detail', org_slug=org_slug, pk=member_pk)
+        return redirect_to_member(org_slug, member_pk, 'documents')
 
 
 class SignedWaiverDeleteView(OrgAdminMixin, View):
@@ -150,4 +151,4 @@ class SignedWaiverDeleteView(OrgAdminMixin, View):
         sw.signed_pdf.delete(save=False)
         sw.delete()
         messages.success(request, 'Signed waiver removed.')
-        return redirect('member_detail', org_slug=org_slug, pk=member_pk)
+        return redirect_to_member(org_slug, member_pk, 'documents')

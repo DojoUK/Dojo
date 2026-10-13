@@ -6,6 +6,7 @@ from django.views.generic import CreateView, DetailView, ListView, UpdateView
 from dojo.mixins import OrgAdminMixin
 from .forms import GuardianFormSet, MemberForm, build_custom_field_widgets, extract_custom_field_values
 from .models import Member
+from .navigation import redirect_to_member
 
 
 class MemberListView(OrgAdminMixin, ListView):
@@ -328,7 +329,7 @@ class MemberBillingPolicySetView(OrgAdminMixin, View):
             member.billing_policy = None
         member.save(update_fields=['billing_policy'])
         messages.success(request, f'Billing policy updated for {member.name}.')
-        return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
+        return redirect_to_member(self.org.slug, member.pk, 'billing')
 
 
 class MemberArchiveView(OrgAdminMixin, View):
@@ -381,7 +382,7 @@ class RecordPromotionView(OrgAdminMixin, View):
             notes=notes,
         )
         messages.success(request, f'{member.name} promoted to {stage.name}.')
-        return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
+        return redirect_to_member(self.org.slug, member.pk, 'grades')
 
 
 class DeleteProgressionView(OrgAdminMixin, View):
@@ -398,10 +399,10 @@ class DeleteProgressionView(OrgAdminMixin, View):
                 request,
                 f'This grade was awarded at {candidate.session.grading.name}. Change the result there instead.',
             )
-            return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
+            return redirect_to_member(self.org.slug, member.pk, 'grades')
         prog.delete()
         messages.success(request, 'Progression record removed.')
-        return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
+        return redirect_to_member(self.org.slug, member.pk, 'grades')
 
 
 class ApplicationListView(OrgAdminMixin, View):
@@ -501,7 +502,7 @@ class AddMemberNoteView(OrgAdminMixin, View):
         if body:
             from .models import MemberNote
             MemberNote.objects.create(member=member, author=request.user, body=body)
-        return redirect('member_detail', org_slug=self.org.slug, pk=pk)
+        return redirect_to_member(self.org.slug, pk, 'notes')
 
 
 class DeleteMemberNoteView(OrgAdminMixin, View):
@@ -510,7 +511,7 @@ class DeleteMemberNoteView(OrgAdminMixin, View):
         from .models import MemberNote
         note = get_object_or_404(MemberNote, pk=note_pk, member=member)
         note.delete()
-        return redirect('member_detail', org_slug=self.org.slug, pk=pk)
+        return redirect_to_member(self.org.slug, pk, 'notes')
 
 
 class MemberExportView(OrgAdminMixin, View):
