@@ -169,6 +169,9 @@ class PayPageTests(PaymentsTestCase):
         Invoice.objects.filter(pk=self.invoice.pk).update(status='paid')
         self.assertContains(self.client.get(self.url()), 'This invoice is paid')
 
+    def test_the_same_invoice_always_gets_the_same_link(self):
+        self.assertEqual(payments.pay_token(self.invoice), payments.pay_token(Invoice.objects.get(pk=self.invoice.pk)))
+
     def test_links_cannot_be_guessed_or_changed(self):
         token = payments.pay_token(self.invoice)
         self.assertEqual(self.client.get(reverse('invoice_pay', kwargs={'token': token[:-2] + 'xx'})).status_code, 404)
