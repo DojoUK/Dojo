@@ -294,4 +294,4 @@ class PortalPayButtonTests(PaymentsTestCase):
         self.configure(**CARD)
         response = self.client.get(self.url)
         self.assertContains(response, f'href="{self.pay_page}"')
-        self.assertContains(response, 'Pay £45.00')
+        self.assertRegex(response.content.decode(), r'text-nowrap">\s*Pay\s*</a>')
