@@ -27,6 +27,7 @@ class InsufficientStockError(Exception):
 
 class BillingManagerMixin(CapabilityMixin):
     """Org-wide billing: org admins and staff granted `manage_billing`."""
+    required_feature = 'billing'
     required_capabilities = ('manage_billing',)
 
 
@@ -35,6 +36,7 @@ class InvoiceAccessMixin(CapabilityMixin):
     Viewing invoices and taking payments. Staff with only `take_payments`
     are limited to invoices for members enrolled in a class they coach.
     """
+    required_feature = 'billing'
     required_capabilities = ('manage_billing', 'take_payments')
 
     def invoice_queryset(self):
@@ -80,6 +82,8 @@ class InvoiceListView(InvoiceAccessMixin, ListView):
 
 class InvoiceCreateView(BillingManagerMixin, View):
     def _products_context(self):
+        if not self.org.has_feature('inventory'):
+            return Product.objects.none()
         products = (
             Product.objects.filter(organisation=self.org, is_active=True)
             .prefetch_related('variants')
@@ -105,7 +109,8 @@ class InvoiceCreateView(BillingManagerMixin, View):
 
     def _parse_items(self, request, errors):
         """Read the product-line-item rows from POST. Returns a list of (ProductVariant, quantity)."""
-        variant_ids = request.POST.getlist('item_variant_id')
+        # Product lines only exist while inventory is switched on.
+        variant_ids = request.POST.getlist('item_variant_id') if self.org.has_feature('inventory') else []
         quantities = request.POST.getlist('item_quantity')
         item_rows = []
         for variant_id_raw, quantity_raw in zip(variant_ids, quantities):

@@ -59,12 +59,17 @@ def _class_form_class(org=None):
             super().__init__(*args, **kwargs)
             for field in self.fields.values():
                 field.widget.attrs['class'] = 'form-control'
-            if org:
-                self.fields['billing_policy'].queryset = BillingPolicy.objects.filter(
-                    organisation=org, is_active=True
-                )
-            self.fields['billing_policy'].required = False
-            self.fields['billing_policy'].empty_label = '— No policy —'
+            if org and not org.has_feature('waiting_lists'):
+                del self.fields['max_capacity']
+            if org and not org.has_feature('billing'):
+                del self.fields['billing_policy']
+            if 'billing_policy' in self.fields:
+                if org:
+                    self.fields['billing_policy'].queryset = BillingPolicy.objects.filter(
+                        organisation=org, is_active=True
+                    )
+                self.fields['billing_policy'].required = False
+                self.fields['billing_policy'].empty_label = '— No policy —'
 
     return ClassForm
 
@@ -185,7 +190,10 @@ class ClassDetailView(OrgAdminMixin, DetailView):
         )
         context['sessions'] = self.object.sessions.order_by('-date')[:10]
         context['days'] = DAYS
-        context['waiting_list'] = self.object.waiting_list.select_related('member')
+        context['waiting_list'] = (
+            self.object.waiting_list.select_related('member')
+            if self.org.has_feature('waiting_lists') else []
+        )
         return context
 
 
@@ -260,6 +268,8 @@ class UnenrolMemberView(OrgAdminMixin, View):
 
 
 class RemoveFromWaitingListView(OrgAdminMixin, View):
+    required_feature = 'waiting_lists'
+
     def post(self, request, org_slug, pk, member_pk):
         cls = get_object_or_404(Class, pk=pk, organisation=self.org)
         WaitingList.objects.filter(assigned_class=cls, member_id=member_pk).delete()
@@ -301,6 +311,8 @@ class AttendanceRegisterView(ClassCoachMixin, View):
 
     def _unsigned_waiver_ids(self, enrolled):
         from documents.models import SignedWaiver, WaiverTemplate
+        if not self.org.has_feature('documents'):
+            return set()
         has_required_waivers = WaiverTemplate.objects.filter(
             organisation=self.org, is_active=True, is_required=True
         ).exists()

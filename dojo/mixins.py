@@ -1,5 +1,6 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.http import Http404
 from organisations.models import Organisation, OrganisationMember
 
 
@@ -35,17 +36,31 @@ def has_capability(org_membership, capability):
     return org_membership is None or org_membership.has_capability(capability)
 
 
+def require_features(org, features):
+    """404 unless every feature key in `features` is switched on for the org."""
+    if isinstance(features, str):
+        features = (features,)
+    if not all(org.has_feature(f) for f in features):
+        raise Http404
+
+
 class OrgMixin(LoginRequiredMixin):
     """
     Grants access to any member of the organisation in the URL.
     Sets self.org and self.org_membership on the view.
     URL must include an org_slug kwarg.
+
+    Set `required_feature` (a feature key, or a tuple of keys) to 404 the
+    view when the organisation has that optional feature switched off.
     """
+    required_feature = None
 
     def dispatch(self, request, *args, **kwargs):
         if not request.user.is_authenticated:
             return super().dispatch(request, *args, **kwargs)
         _resolve_org_membership(self, request, kwargs)
+        if self.required_feature:
+            require_features(self.org, self.required_feature)
         return super().dispatch(request, *args, **kwargs)
 
     @property

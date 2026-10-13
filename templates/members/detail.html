@@ -19,6 +19,7 @@
     <a href="{% url 'member_edit' org_slug=org.slug pk=member.pk %}" class="btn btn-dark btn-sm">
         <i class="bi bi-pencil me-1"></i> Edit
     </a>
+    {% if 'member_portal' in org.enabled_features %}
     <form method="post" action="{% url 'member_send_welcome' org_slug=org.slug pk=member.pk %}" class="d-inline">
         {% csrf_token %}
         <button type="submit" class="btn btn-outline-secondary btn-sm">
@@ -33,6 +34,7 @@
             <i class="bi bi-key me-1"></i> Reset portal link
         </button>
     </form>
+    {% endif %}
     <form method="post" action="{% url 'member_archive' org_slug=org.slug pk=member.pk %}" class="d-inline">
         {% csrf_token %}
         {% if member.is_active %}
@@ -247,6 +249,7 @@
 
     <div class="col-lg-4">
 
+        {% if 'grades' in org.enabled_features %}
         <div class="card border-0 shadow-sm mb-3">
             <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                 <h6 class="mb-0">
@@ -340,6 +343,7 @@
             </div>
             {% endif %}
         </div>
+        {% endif %}
 
         <div class="card border-0 shadow-sm mb-3">
             <div class="card-header bg-white border-bottom py-3">
@@ -363,6 +367,7 @@
             {% endif %}
         </div>
 
+        {% if 'billing' in org.enabled_features %}
         <div class="card border-0 shadow-sm mb-3">
             <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                 <div class="d-flex align-items-center gap-2">
@@ -473,6 +478,7 @@
             </div>
             {% endif %}
         </div>
+        {% endif %}
 
         <div class="card border-0 shadow-sm mb-3">
             <div class="card-header bg-white border-bottom py-3">
@@ -515,6 +521,7 @@
         </div>
 
         {# ── Signed waivers ── #}
+        {% if 'documents' in org.enabled_features %}
         {% if waiver_templates %}
         <div class="card border-0 shadow-sm mb-3 {% if missing_waivers %}border-danger{% endif %}" {% if missing_waivers %}style="border-width:2px!important;"{% endif %}>
             <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
@@ -597,7 +604,9 @@
             {% endif %}
         </div>
         {% endif %}
+        {% endif %}
 
+        {% if 'documents' in org.enabled_features %}
         <div class="card border-0 shadow-sm mb-3">
             <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                 <h6 class="mb-0">Documents</h6>
@@ -672,6 +681,7 @@
             </div>
             {% endif %}
         </div>
+        {% endif %}
 
     </div>
 

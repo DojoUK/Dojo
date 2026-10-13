@@ -5,6 +5,17 @@ from django.urls import reverse
 from django.utils import timezone
 
 
+def portal_url_for(member, request=None):
+    """Absolute link to the member's portal, or None when the club has the portal switched off."""
+    if not member.organisation.has_feature('member_portal'):
+        return None
+    portal_path = reverse('member_portal', kwargs={'token': member.token})
+    if request:
+        return request.build_absolute_uri(portal_path)
+    site_url = getattr(settings, 'SITE_URL', 'http://localhost:8000')
+    return f"{site_url.rstrip('/')}{portal_path}"
+
+
 def send_invoice_email(invoice, request=None):
     member = invoice.member
     has_guardians = member.guardians.exists()
@@ -18,12 +29,7 @@ def send_invoice_email(invoice, request=None):
     if not recipient:
         return False, 'No email address on file for this member or their guardian.'
 
-    portal_path = reverse('member_portal', kwargs={'token': member.token})
-    if request:
-        portal_url = request.build_absolute_uri(portal_path)
-    else:
-        site_url = getattr(settings, 'SITE_URL', 'http://localhost:8000')
-        portal_url = f"{site_url.rstrip('/')}{portal_path}"
+    portal_url = portal_url_for(member, request)
 
     org_name = invoice.organisation.name
     subject = f'Invoice from {org_name} — {invoice.period}'
@@ -45,7 +51,8 @@ def send_invoice_email(invoice, request=None):
     )
     if invoice.notes:
         text_body += f"\n{invoice.notes}\n"
-    text_body += f"\nView and pay your invoice: {portal_url}\n"
+    if portal_url:
+        text_body += f"\nView and pay your invoice: {portal_url}\n"
 
     msg = EmailMultiAlternatives(
         subject=subject,
@@ -71,12 +78,7 @@ def send_reminder_email(invoice, request=None):
     if not recipient:
         return False, 'No email address on file.'
 
-    portal_path = reverse('member_portal', kwargs={'token': member.token})
-    if request:
-        portal_url = request.build_absolute_uri(portal_path)
-    else:
-        site_url = getattr(settings, 'SITE_URL', 'http://localhost:8000')
-        portal_url = f"{site_url.rstrip('/')}{portal_path}"
+    portal_url = portal_url_for(member, request)
 
     org = invoice.organisation
     context = {
@@ -91,9 +93,10 @@ def send_reminder_email(invoice, request=None):
     subject = f"Payment reminder — {invoice.period} ({org.name})"
     text_body = (
         f"This is a reminder that your invoice for {invoice.period} "
-        f"(£{invoice.amount:.2f}, due {invoice.due_date.strftime('%d %b %Y')}) is overdue.\n\n"
-        f"Pay here: {portal_url}\n"
+        f"(£{invoice.amount:.2f}, due {invoice.due_date.strftime('%d %b %Y')}) is overdue.\n"
     )
+    if portal_url:
+        text_body += f"\nPay here: {portal_url}\n"
     msg = EmailMultiAlternatives(
         subject=subject, body=text_body,
         from_email=settings.DEFAULT_FROM_EMAIL, to=[recipient],

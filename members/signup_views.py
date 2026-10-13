@@ -3,19 +3,32 @@ from datetime import date
 from django.shortcuts import get_object_or_404, render, redirect
 from django.views import View
 
+from dojo.mixins import require_features
 from organisations.models import Organisation
 from .models import MemberApplication
 
 
+def _signup_org(org_slug):
+    org = get_object_or_404(Organisation, slug=org_slug)
+    require_features(org, 'applications')
+    return org
+
+
+def _active_waivers(org):
+    if not org.has_feature('documents'):
+        return org.waiver_templates.none()
+    return org.waiver_templates.filter(is_active=True)
+
+
 class SignupView(View):
     def get(self, request, org_slug):
-        org = get_object_or_404(Organisation, slug=org_slug)
-        waivers = org.waiver_templates.filter(is_active=True)
+        org = _signup_org(org_slug)
+        waivers = _active_waivers(org)
         return render(request, 'members/signup.html', {'org': org, 'waivers': waivers})
 
     def post(self, request, org_slug):
-        org = get_object_or_404(Organisation, slug=org_slug)
-        waivers = org.waiver_templates.filter(is_active=True)
+        org = _signup_org(org_slug)
+        waivers = _active_waivers(org)
         name = request.POST.get('name', '').strip()
         errors = []
 

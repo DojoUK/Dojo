@@ -35,10 +35,12 @@
                     {% if onboarding.has_coach %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-circle text-muted"></i>{% endif %}
                     Assign a coach to a class
                 </a>
+                {% if 'billing' in org.enabled_features %}
                 <a href="{% url 'invoice_create' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-2 {% if onboarding.has_invoice %}text-muted{% endif %}">
                     {% if onboarding.has_invoice %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-circle text-muted"></i>{% endif %}
                     Generate your first invoice
                 </a>
+                {% endif %}
             </div>
             <div class="modal-footer">
                 <form method="post" action="{% url 'org_onboarding_dismiss' org_slug=org.slug %}" class="d-inline">
@@ -92,7 +94,7 @@
             </div>
         </div>
     </div>
-    {% if is_admin %}
+    {% if is_admin and 'billing' in org.enabled_features %}
     <div class="col-sm-6 col-lg-3">
         <a href="{% url 'invoice_list' org_slug=org.slug %}" class="text-decoration-none">
         <div class="card h-100" style="background:linear-gradient(135deg,#059669,#047857);border:none!important;">

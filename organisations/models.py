@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils.text import slugify
 from django.utils import timezone
+from django.utils.functional import cached_property
 
 
 class Organisation(models.Model):
@@ -11,6 +12,10 @@ class Organisation(models.Model):
     phone = models.CharField(max_length=30, blank=True)
     website = models.URLField(blank=True)
     settings = models.JSONField(default=dict, blank=True)
+    features = models.JSONField(
+        default=dict, blank=True,
+        help_text='Optional features switched on or off, {key: bool}. See organisations/features.py.',
+    )
     logo = models.ImageField(upload_to='logos/', null=True, blank=True)
     custom_css = models.TextField(blank=True)
     subscription_tier = models.CharField(max_length=50, default='free')
@@ -24,6 +29,24 @@ class Organisation(models.Model):
             'accent_color': s.get('accent_color', '#2563EB'),
             'accent_hover': s.get('accent_hover', '#1d4ed8'),
         }
+
+    @cached_property
+    def enabled_features(self):
+        """Keys of the optional features switched on. In templates:
+        {% if 'billing' in org.enabled_features %}"""
+        from .features import effective_features
+        return effective_features(self.features)
+
+    def has_feature(self, key):
+        from .features import FEATURES_BY_KEY
+        if key not in FEATURES_BY_KEY:
+            raise ValueError(f'Unknown feature: {key}')
+        return key in self.enabled_features
+
+    def set_features(self, choices):
+        """Store {key: bool} choices and drop the cached effective set."""
+        self.features = dict(choices)
+        self.__dict__.pop('enabled_features', None)
 
     def save(self, *args, **kwargs):
         if not self.slug:

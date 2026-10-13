@@ -26,10 +26,10 @@
                 <div>
                     <h6 class="mb-0">
                         Enrolled members
-                        <span class="badge bg-secondary-subtle text-secondary ms-1">{{ enrolled|length }}{% if cls.max_capacity %}/{{ cls.max_capacity }}{% endif %}</span>
+                        <span class="badge bg-secondary-subtle text-secondary ms-1">{{ enrolled|length }}{% if cls.has_capacity_limit %}/{{ cls.max_capacity }}{% endif %}</span>
                         {% if cls.is_full %}<span class="badge bg-danger-subtle text-danger ms-1">Full</span>{% endif %}
                     </h6>
-                    {% if cls.max_capacity and cls.spots_left is not None %}
+                    {% if cls.spots_left is not None %}
                     <div class="text-muted" style="font-size:0.75rem;">
                         {% if cls.spots_left == 0 %}No spots left{% elif cls.spots_left == 1 %}1 spot left{% else %}{{ cls.spots_left }} spots left{% endif %}
                     </div>

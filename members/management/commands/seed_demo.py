@@ -87,6 +87,7 @@ class Command(BaseCommand):
     # ── Organisation ───────────────────────────────────────────────────────────
 
     def _create_org(self):
+        from organisations.features import FEATURES_BY_KEY
         from organisations.models import Organisation
         org, _ = Organisation.objects.get_or_create(
             slug='mockingham-martial-arts',
@@ -95,6 +96,8 @@ class Command(BaseCommand):
                 'email': 'secretary@mockingham-ma.example',
                 'phone': '01632 960123',
                 'website': 'https://www.mockingham-ma.example',
+                # The demo shows everything off.
+                'features': {key: True for key in FEATURES_BY_KEY},
                 'settings': {
                     'sidebar_color': '#1E3A5F',
                     'sidebar_color_dark': '#162d4a',

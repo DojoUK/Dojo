@@ -74,6 +74,10 @@ class MemberForm(forms.ModelForm):
             else:
                 field.widget.attrs['class'] = 'form-control'
         self.fields['name'].widget.attrs['autofocus'] = True
+        if org and not org.has_feature('billing'):
+            del self.fields['monthly_fee']
+            del self.fields['billing_policy']
+            return
         self.fields['billing_policy'].required = False
         self.fields['billing_policy'].empty_label = '— No policy —'
         if org:

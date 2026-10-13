@@ -4,9 +4,9 @@ from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.core.management.base import BaseCommand
 from django.template.loader import render_to_string
-from django.urls import reverse
 from django.utils import timezone
 
+from billing.emails import portal_url_for
 from billing.models import Invoice
 
 
@@ -52,6 +52,8 @@ class Command(BaseCommand):
         for invoice in invoices:
             member = invoice.member
             org = invoice.organisation
+            if not org.has_feature('billing'):
+                continue
             recipient = None
             has_guardians = False
 
@@ -67,9 +69,7 @@ class Command(BaseCommand):
                 self.stdout.write(f'  SKIP {member.name} — no email address')
                 continue
 
-            portal_url = settings.SITE_URL.rstrip('/') + reverse(
-                'member_portal', kwargs={'token': member.token}
-            )
+            portal_url = portal_url_for(member)
 
             context = {
                 'member': member,
@@ -88,7 +88,10 @@ class Command(BaseCommand):
 
             msg = EmailMultiAlternatives(
                 subject=subject,
-                body=f"Payment reminder for {invoice.period}. Please visit {portal_url} to pay.",
+                body=(
+                    f"Payment reminder for {invoice.period}. Please visit {portal_url} to pay."
+                    if portal_url else f"Payment reminder for {invoice.period}."
+                ),
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 to=[recipient],
             )
