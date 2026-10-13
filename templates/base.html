@@ -48,6 +48,8 @@
             .card-header.d-flex { flex-wrap: wrap; gap: 8px !important; }
             .card-header.d-flex h6 { min-width: 0; }
             /* dl label/value pairs stack on mobile */
+            /* The row's negative gutter margins would pull the now-unpadded text to the card's edge. */
+            dl.row { margin-left: 0; margin-right: 0; }
             dl.row dt, dl.row dd { float: none; width: 100%; max-width: 100%; padding: 0; margin: 0; }
             dl.row dd { color: #0f172a; padding-bottom: 10px; }
             dl.row dt { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .05em; padding-top: 6px; }

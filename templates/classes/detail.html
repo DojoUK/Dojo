@@ -129,7 +129,7 @@
                 <h6 class="mb-0">Sessions</h6>
             </div>
             <div class="card-body border-bottom bg-light">
-                <form method="post" action="{% url 'class_generate_sessions' org_slug=org.slug pk=cls.pk %}" class="d-flex gap-2 align-items-center">
+                <form method="post" action="{% url 'class_generate_sessions' org_slug=org.slug pk=cls.pk %}" class="d-flex flex-wrap gap-2 align-items-center">
                     {% csrf_token %}
                     <span class="small text-muted text-nowrap">Generate next</span>
                     <select name="weeks" class="form-select form-select-sm" style="width: auto;">
