@@ -27,13 +27,8 @@ class EffectiveFeaturesTests(TestCase):
             {'billing', 'documents', 'applications', 'announcements', 'member_portal', 'waiting_lists'},
         )
 
-    @override_settings(STRIPE_PUBLIC_KEY='pk_test', STRIPE_SECRET_KEY='sk_test')
-    def test_online_payments_default_on_only_when_stripe_is_configured(self):
-        self.assertIn('online_payments', effective_features({}))
-
     def test_a_feature_is_off_while_anything_it_needs_is_off(self):
         self.assertNotIn('inventory', effective_features({'inventory': True, 'billing': False}))
-        self.assertNotIn('online_payments', effective_features({**ALL_ON, 'member_portal': False}))
         self.assertIn('inventory', effective_features({'inventory': True, 'billing': True}))
 
     def test_unknown_feature_is_an_error(self):
@@ -86,7 +81,6 @@ class SwitchedOffRoutesTests(FeatureTestBase):
             'announcements': [('get', self.url('org_announcements'))],
             'member_portal': [('get', reverse('member_portal', kwargs={'token': token})),
                               ('post', self.url('member_send_welcome', pk=self.member.pk))],
-            'online_payments': [('post', reverse('portal_checkout', kwargs={'token': token, 'invoice_pk': self.invoice.pk}))],
             'waiting_lists': [('post', self.url('class_waiting_remove', pk=self.cls.pk, member_pk=self.member.pk))],
         }
 
@@ -103,8 +97,6 @@ class SwitchedOffRoutesTests(FeatureTestBase):
     def test_routes_work_when_switched_on(self):
         for key, routes in self.routes().items():
             for method, route in routes:
-                if key == 'online_payments':
-                    continue  # needs Stripe keys; covered by the 404 case only
                 with self.subTest(feature=key, route=route):
                     self.assertNotEqual(getattr(self.client, method)(route).status_code, 404)
 
@@ -286,4 +278,5 @@ class UpgradeBackfillTests(TestCase):
         # A feature added later must not be switched on for existing clubs by this
         # migration; it gets its own default. This pins the list at introduction.
         added_since = {'gradings', 'syllabus'}
-        self.assertEqual(set(migration.EXISTING_FEATURES), set(FEATURES_BY_KEY) - added_since)
+        retired_since = {'online_payments'}  # now Settings → Payments → Card online
+        self.assertEqual(set(migration.EXISTING_FEATURES) - retired_since, set(FEATURES_BY_KEY) - added_since)
