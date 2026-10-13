@@ -73,6 +73,7 @@ class SwitchedOffRoutesTests(FeatureTestBase):
         token = self.member.token
         return {
             'gradings': [('get', self.url('grading_list'))],
+            'syllabus': [('get', self.url('syllabus_home')), ('get', self.url('technique_list'))],
             'grades': [('get', self.url('progression_settings')),
                        ('get', self.url('progression_import'))],
             'billing': [('get', self.url('invoice_list')),
@@ -277,12 +278,12 @@ class UpgradeBackfillTests(TestCase):
         migration.switch_on_existing_features(apps, None)
 
         org.refresh_from_db()
-        self.assertEqual(org.enabled_features, set(FEATURES_BY_KEY) - {'gradings'})
+        self.assertEqual(org.enabled_features, set(FEATURES_BY_KEY) - {'gradings', 'syllabus'})
 
     def test_backfill_covers_every_feature_that_existed(self):
         from importlib import import_module
         migration = import_module('organisations.migrations.0009_organisation_features')
         # A feature added later must not be switched on for existing clubs by this
         # migration; it gets its own default. This pins the list at introduction.
-        added_since = {'gradings'}
+        added_since = {'gradings', 'syllabus'}
         self.assertEqual(set(migration.EXISTING_FEATURES), set(FEATURES_BY_KEY) - added_since)

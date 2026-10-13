@@ -1,0 +1,63 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Syllabus{% endblock %}
+{% block page_title %}Syllabus{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'technique_list' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-book me-1"></i> Technique library ({{ technique_count }})
+</a>
+{% endblock %}
+
+{% block main_content %}
+<p class="text-muted small">
+    Each syllabus lists the techniques members work on between gradings, taken from your technique library.
+    Link a syllabus to one or more grades and it shows on the page of every member at those grades.
+</p>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="post" class="row g-2 align-items-end">
+            {% csrf_token %}
+            <div class="col-sm-8">
+                <label class="form-label small fw-semibold" for="new-syllabus">New syllabus</label>
+                <input type="text" name="name" id="new-syllabus" class="form-control form-control-sm" placeholder="e.g. White to Yellow" required>
+            </div>
+            <div class="col-sm-4"><button type="submit" class="btn btn-dark btn-sm w-100">Create</button></div>
+        </form>
+    </div>
+</div>
+
+{% if syllabuses %}
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3 small fw-semibold">Syllabus</th>
+                    <th class="small fw-semibold">For grades</th>
+                    <th class="small fw-semibold">Techniques</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for syllabus in syllabuses %}
+                <tr>
+                    <td class="ps-3"><a href="{% url 'syllabus_detail' org_slug=org.slug pk=syllabus.pk %}" class="fw-semibold text-decoration-none">{{ syllabus.name }}</a></td>
+                    <td class="small text-muted">
+                        {% for stage in syllabus.stages.all %}{{ stage.name }}{% if not forloop.last %}, {% endif %}{% empty %}<span class="text-warning">Not linked to a grade</span>{% endfor %}
+                    </td>
+                    <td class="small text-muted">{{ syllabus.technique_count }}</td>
+                    <td class="text-end pe-3"><a href="{% url 'syllabus_detail' org_slug=org.slug pk=syllabus.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<p class="text-muted small">No syllabuses yet.</p>
+{% endif %}
+{% endblock %}

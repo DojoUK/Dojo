@@ -35,6 +35,11 @@ FEATURES = (
         default=False, requires=('grades',),
     ),
     Feature(
+        'syllabus', 'Syllabus',
+        "A technique library and syllabuses for each grade, shown on each member's page.",
+        default=False, requires=('grades',),
+    ),
+    Feature(
         'billing', 'Billing',
         'Invoices, billing policies, terms, discounts, overdue reminders and the finance report.',
         default=True,
