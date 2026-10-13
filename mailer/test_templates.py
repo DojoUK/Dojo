@@ -194,3 +194,45 @@ class EditorTests(TemplatesTestCase):
     def test_unknown_email_is_404(self):
         self.assertEqual(self.client.get(reverse('org_email_template_edit',
                                                  kwargs={'org_slug': self.org.slug, 'key': 'nope'})).status_code, 404)
+
+
+class PasswordResetEmailTests(TemplatesTestCase):
+    def reset_link(self):
+        import re
+        return re.search(r'https?://[^\s]+/password-reset/[^\s/]+/[^\s/]+/', mail.outbox[-1].body).group(0)
+
+    def test_forgot_password_sends_the_clubs_email_with_a_working_link(self):
+        self.client.post(reverse('password_reset'), {'email': 'admin@forest.example'})
+        message = mail.outbox[-1]
+        self.assertEqual(message.subject, 'Reset your Forest Judo password')
+        self.assertEqual(message.to, ['admin@forest.example'])
+        html = message.alternatives[0][0]
+        self.assertIn('Choose a new password', html)
+        self.assertIn('<strong>admin</strong>', html)
+        self.assertIn('Powered by', html)
+        page = self.client.get(self.reset_link(), follow=True)
+        self.assertContains(page, 'Choose a new password')
+        self.assertContains(page, 'name="new_password1"')
+
+    def test_customised_reset_wording(self):
+        self.customise('password_reset', subject='{club_name}: new password for {username}',
+                       body='Hi {first_name}, use this: {reset_link}')
+        self.client.post(reverse('password_reset'), {'email': 'admin@forest.example'})
+        self.assertEqual(mail.outbox[-1].subject, 'Forest Judo: new password for admin')
+        self.assertIn('Hi admin, use this: http', mail.outbox[-1].body)
+
+    def test_admin_reset_link_uses_the_same_email(self):
+        coach = User.objects.create_user('coach', password='pw', email='coach@forest.example', first_name='Sam')
+        coach_om = OrganisationMember.objects.create(user=coach, organisation=self.org, role='coach')
+        self.client.force_login(self.admin)
+        self.client.post(reverse('org_staff', kwargs={'org_slug': self.org.slug}),
+                         {'action': 'send_password_reset', 'member_pk': coach_om.pk})
+        self.assertEqual(mail.outbox[-1].subject, 'Reset your Forest Judo password')
+        self.assertIn('Hi Sam,', mail.outbox[-1].body)
+
+    def test_someone_with_no_club_on_a_shared_server_gets_djangos_email(self):
+        Organisation.objects.create(name='Other', slug='other')
+        User.objects.create_superuser('root', 'root@server.example', 'pw')
+        self.client.post(reverse('password_reset'), {'email': 'root@server.example'})
+        self.assertNotIn('Forest Judo', mail.outbox[-1].subject)
+        self.assertIn('/password-reset/', mail.outbox[-1].body)

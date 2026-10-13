@@ -17,6 +17,14 @@ def portal_button(org, portal_link):
     }
 
 
+def reset_button(org, reset_link):
+    return {
+        'html': render_to_string('emails/blocks/link_button.html', {'url': reset_link, 'text': 'Choose a new password',
+                                                                    'accent': _accent(org)}),
+        'text': f'Choose a new password: {reset_link}',
+    }
+
+
 def session_box(class_name, session_date):
     return {
         'html': render_to_string('emails/blocks/session_box.html', {'class_name': class_name, 'session_date': session_date}),
@@ -86,11 +94,13 @@ def example(org, key):
 
     from .catalogue import BY_KEY, EXAMPLE_COMMON
     email_type = BY_KEY[key]
-    values = {**EXAMPLE_COMMON, **email_type.example}
+    values = {**(EXAMPLE_COMMON if email_type.to_members else {}), **email_type.example}
     blocks = {}
     names = {name for name, _ in email_type.blocks}
     if 'portal_button' in names:
         blocks['portal_button'] = portal_button(org, values['portal_link'])
+    if 'reset_button' in names:
+        blocks['reset_button'] = reset_button(org, values['reset_link'])
     if 'session_box' in names:
         blocks['session_box'] = session_box(values['class_name'], values['session_date'])
     if 'message' in names:

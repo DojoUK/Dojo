@@ -432,8 +432,9 @@ class StaffListView(OrgAdminMixin, View):
         from urllib.parse import urlsplit
 
         from django.conf import settings as django_settings
-        from django.contrib.auth.forms import PasswordResetForm
         from django.contrib.auth.tokens import default_token_generator
+
+        from mailer.password_reset import ClubPasswordResetForm
         from django.utils.encoding import force_bytes
         from django.utils.http import urlsafe_base64_encode
         site = urlsplit(django_settings.SITE_URL)
@@ -445,8 +446,9 @@ class StaffListView(OrgAdminMixin, View):
             'user': user,
             'token': default_token_generator.make_token(user),
             'protocol': site.scheme or 'https',
+            'organisation': self.org,
         }
-        PasswordResetForm().send_mail(
+        ClubPasswordResetForm().send_mail(
             'registration/password_reset_subject.txt', 'registration/password_reset_email.html',
             context, None, user.email,
         )

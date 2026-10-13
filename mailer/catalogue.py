@@ -9,10 +9,12 @@ Wording is plain text with a little formatting:
 """
 from dataclasses import dataclass, field
 
-COMMON_FIELDS = (
+MEMBER_FIELDS = (
     ('greeting', '"Hi Ann" or "Dear guardian of Ann Lee"'),
     ('first_name', "The member's first name"),
     ('member_name', "The member's full name"),
+)
+CLUB_FIELDS = (
     ('club_name', 'Your club\'s name'),
     ('club_email', 'Your club\'s contact email'),
     ('club_website', 'Your club\'s website'),
@@ -29,10 +31,11 @@ class EmailType:
     fields: tuple = ()
     blocks: tuple = ()
     example: dict = field(default_factory=dict)
+    to_members: bool = True  # False for emails to staff, which have no member fields
 
     @property
     def all_fields(self):
-        return COMMON_FIELDS + self.fields
+        return (MEMBER_FIELDS if self.to_members else ()) + CLUB_FIELDS + self.fields
 
 
 EXAMPLE_COMMON = {
@@ -166,6 +169,32 @@ Thanks,
 **{club_name}**""",
         fields=(('class_name', 'The class'),),
         example={'class_name': 'Juniors'},
+    ),
+)
+
+EMAIL_TYPES += (
+    EmailType(
+        'password_reset', 'Password reset', 'When someone uses "Forgot password?", or an admin emails them a reset link.',
+        'Reset your {club_name} password',
+        """Hi {first_name},
+
+Someone (hopefully you) asked to reset the password for your {club_name} account, **{username}**.
+
+{reset_button}
+
+The link works once and expires in {link_expires}. If you didn't ask for this, you can ignore this email: your password won't change.
+
+**{club_name}**""",
+        fields=(
+            ('first_name', 'Their first name (or username if none is set)'),
+            ('username', 'The username they sign in with'),
+            ('reset_link', 'The link to choose a new password'),
+            ('link_expires', 'How long the link lasts, e.g. "3 days"'),
+        ),
+        blocks=(('reset_button', 'A "Choose a new password" button with the link underneath'),),
+        example={'first_name': 'Sam', 'username': 'sam.coach', 'reset_link': 'https://example.com/password-reset/…',
+                 'link_expires': '3 days'},
+        to_members=False,
     ),
 )
 
