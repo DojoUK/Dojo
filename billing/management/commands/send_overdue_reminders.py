@@ -1,16 +1,10 @@
 from datetime import date, timedelta
 
-from django.conf import settings
-from django.core.mail import EmailMultiAlternatives
 from django.core.management.base import BaseCommand
-from django.template.loader import render_to_string
 from django.utils import timezone
 
-from billing.emails import portal_url_for
+from billing.emails import send_reminder_email
 from billing.models import Invoice
-from billing.payments import options_for as payment_options
-from mailer import connection_for
-from organisations.branding import email_branding
 
 
 class Command(BaseCommand):
@@ -72,40 +66,11 @@ class Command(BaseCommand):
                 self.stdout.write(f'  SKIP {member.name} — no email address')
                 continue
 
-            portal_url = portal_url_for(member)
-
-            context = {
-                'member': member,
-                'invoice': invoice,
-                'org_name': org.name,
-                **email_branding(org),
-                'org_email': org.email or settings.DEFAULT_FROM_EMAIL,
-                'portal_url': portal_url,
-                **payment_options(invoice),
-                'has_guardians': has_guardians,
-            }
-            html = render_to_string('emails/invoice_reminder.html', context)
-            subject = f"Payment reminder — {invoice.period} ({org.name})"
-
             if options['dry_run']:
                 self.stdout.write(f'  DRY RUN: would email {recipient} re invoice #{invoice.pk} ({invoice.period})')
                 continue
 
-            msg = EmailMultiAlternatives(
-                subject=subject,
-                body=(
-                    f"Payment reminder for {invoice.period}. Please visit {portal_url} to pay."
-                    if portal_url else f"Payment reminder for {invoice.period}."
-                ),
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[recipient],
-                connection=connection_for(org),
-            )
-            msg.attach_alternative(html, 'text/html')
-            msg.send()
-
-            invoice.reminder_sent_at = timezone.now()
-            invoice.save(update_fields=['reminder_sent_at'])
+            send_reminder_email(invoice, recipient=recipient, to_guardian=has_guardians)
             sent += 1
             self.stdout.write(f'  SENT to {recipient} — {member.name} / {invoice.period}')
 

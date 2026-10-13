@@ -34,6 +34,16 @@
 </div>
 {% endif %}
 
+<div class="mt-4 pt-3 border-top">
+    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+        <div>
+            <div class="small fw-semibold">What emails say and look like</div>
+            <div class="small text-muted">Change the wording or the whole design of each email, and the header and footer.</div>
+        </div>
+        <a href="{% url 'org_email_templates' org_slug=org.slug %}" class="btn btn-sm btn-outline-secondary text-nowrap"><i class="bi bi-pencil-square me-1"></i> Customise emails</a>
+    </div>
+</div>
+
 <div class="mt-4 pt-3 border-top" id="email-test">
     <div class="small fw-semibold mb-1">Test it</div>
     <p class="small text-muted mb-2">

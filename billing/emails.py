@@ -1,12 +1,6 @@
-from django.core.mail import EmailMultiAlternatives
-from django.template.loader import render_to_string
 from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
-from organisations.branding import email_branding
-
-from .payments import options_for as payment_options
-from mailer import connection_for
 
 
 def portal_url_for(member, request=None):
@@ -29,108 +23,35 @@ def _autopay_label(invoice):
     return autopay.label if autopay else ''
 
 
+def _recipient(member):
+    """Invoices go to a guardian when the member has one (with an address), otherwise to the member."""
+    if member.guardians.exists():
+        guardian = member.guardians.filter(email__gt='').first()
+        return (guardian.email if guardian else None), True
+    return (member.email or None), False
+
+
 def send_invoice_email(invoice, request=None, autopay_failed=''):
-    member = invoice.member
-    has_guardians = member.guardians.exists()
-
-    if has_guardians:
-        guardian = member.guardians.filter(email__gt='').first()
-        recipient = guardian.email if guardian else None
-    else:
-        recipient = member.email or None
-
-    if not recipient:
-        return False, 'No email address on file for this member or their guardian.'
-
-    portal_url = portal_url_for(member, request)
-
-    org_name = invoice.organisation.name
-    subject = f'Invoice from {org_name} — {invoice.period}'
-
-    context = {
-        'invoice': invoice,
-        'org_name': org_name,
-        **email_branding(invoice.organisation),
-        'org_email': invoice.organisation.email,
-        'member': member,
-        'portal_url': portal_url,
-        **payment_options(invoice),
-        'has_guardians': has_guardians,
-        'autopay_failed': autopay_failed,
-        'autopay_label': _autopay_label(invoice),
-    }
-    html_body = render_to_string('emails/invoice.html', context)
-    text_body = (
-        f"{'Hi' if not has_guardians else 'Dear guardian of'} {member.name},\n\n"
-        f"Invoice from {org_name} for {invoice.period}.\n\n"
-        f"Amount due: £{invoice.amount:.2f}\n"
-        f"Due date: {invoice.due_date.strftime('%d %b %Y')}\n"
-    )
-    if invoice.notes:
-        text_body += f"\n{invoice.notes}\n"
-    if autopay_failed:
-        text_body += f"\nWe couldn't take this payment automatically: {autopay_failed}\n"
-    if context['autopay_label'] and not autopay_failed:
-        text_body += f"\nNothing to do: this will be collected automatically from your {context['autopay_label']}.\n"
-    else:
-        text_body += f"\nHow to pay: {context['pay_url']}\n"
-    if portal_url:
-        text_body += f"\nSee all your invoices: {portal_url}\n"
-
-    msg = EmailMultiAlternatives(
-        subject=subject,
-        body=text_body,
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        to=[recipient],
-        connection=connection_for(invoice.organisation),
-    )
-    msg.attach_alternative(html_body, 'text/html')
-    msg.send()
-    return True, recipient
+    return _send_invoice(invoice, 'invoice', autopay_failed=autopay_failed)
 
 
-def send_reminder_email(invoice, request=None):
-    member = invoice.member
-    has_guardians = member.guardians.exists()
+def send_reminder_email(invoice, request=None, recipient=None, to_guardian=False):
+    sent = _send_invoice(invoice, 'invoice_reminder', overdue=True, recipient=recipient, to_guardian=to_guardian)
+    if sent[0]:
+        invoice.reminder_sent_at = timezone.now()
+        invoice.save(update_fields=['reminder_sent_at'])
+    return sent
 
-    if has_guardians:
-        guardian = member.guardians.filter(email__gt='').first()
-        recipient = guardian.email if guardian else None
-    else:
-        recipient = member.email or None
 
+def _send_invoice(invoice, key, overdue=False, autopay_failed='', recipient=None, to_guardian=False):
+    """Send one of the invoice emails. Returns (success, recipient_or_error)."""
+    from mailer import blocks, compose
+    if recipient is None:
+        recipient, to_guardian = _recipient(invoice.member)
     if not recipient:
         return False, 'No email address on file.'
-
-    portal_url = portal_url_for(member, request)
-
-    org = invoice.organisation
-    context = {
-        'invoice': invoice,
-        'org_name': org.name,
-        **email_branding(org),
-        'org_email': org.email or settings.DEFAULT_FROM_EMAIL,
-        'member': member,
-        'portal_url': portal_url,
-        **payment_options(invoice),
-        'has_guardians': has_guardians,
-    }
-    html_body = render_to_string('emails/invoice_reminder.html', context)
-    subject = f"Payment reminder — {invoice.period} ({org.name})"
-    text_body = (
-        f"This is a reminder that your invoice for {invoice.period} "
-        f"(£{invoice.amount:.2f}, due {invoice.due_date.strftime('%d %b %Y')}) is overdue.\n"
-    )
-    if portal_url:
-        text_body += f"\nPay here: {portal_url}\n"
-    msg = EmailMultiAlternatives(
-        subject=subject, body=text_body,
-        from_email=settings.DEFAULT_FROM_EMAIL, to=[recipient],
-        connection=connection_for(org),
-    )
-    msg.attach_alternative(html_body, 'text/html')
-    msg.send()
-
-    invoice.reminder_sent_at = timezone.now()
-    invoice.save(update_fields=['reminder_sent_at'])
+    values = {**compose.member_values(invoice.member, to_guardian), **blocks.invoice_values(invoice)}
+    email_blocks = blocks.invoice_blocks(invoice, values, overdue=overdue, autopay_failed=autopay_failed,
+                                         autopay_label='' if autopay_failed else _autopay_label(invoice))
+    compose.send(invoice.organisation, key, [recipient], values, email_blocks)
     return True, recipient

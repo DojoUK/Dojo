@@ -1,0 +1,18 @@
+{# Payment part of invoice emails: a failed automatic payment, "nothing to do", or the ways to pay. #}
+{% if autopay_failed %}
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;margin-bottom:16px;">
+  <tr><td style="padding:14px 18px;color:#991b1b;font-size:14px;">
+    We couldn't take this payment automatically: {{ autopay_failed }}<br>
+    <span style="color:#7f1d1d;font-size:13px;">Please pay using one of the options below, or update your saved card or Direct Debit in the member portal.</span>
+  </td></tr>
+</table>
+{% endif %}
+{% if autopay_label and not autopay_failed and invoice.balance_due %}
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;margin-bottom:24px;">
+  <tr><td style="padding:14px 18px;color:#166534;font-size:14px;">
+    <strong>Nothing to do.</strong> This will be collected automatically from your {{ autopay_label }}.
+  </td></tr>
+</table>
+{% else %}
+{% include 'emails/_pay_options.html' %}
+{% endif %}

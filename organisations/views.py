@@ -18,11 +18,11 @@ from dojo.mixins import CapabilityMixin, OrgAdminMixin, OrgMixin
 from dojo.version import RELEASES_URL, get_version_info
 from .models import Announcement, Organisation, OrganisationMember, StaffHoliday
 from members.models import CustomField
-from .branding import email_branding
 from accounts.policy import device_for, two_factor_required
 from mailer.forms import provider_rows as email_provider_rows
+from mailer import blocks as email_blocks
+from mailer import compose
 from billing.payment_forms import form_context as payment_form_context
-from mailer import connection_for
 
 
 class SetupView(View):
@@ -924,8 +924,6 @@ class AnnouncementListView(OrgMixin, View):
     def post(self, request, org_slug):
         from classes.models import ClassMember
         from members.models import Member
-        from django.core.mail import EmailMultiAlternatives
-        from django.template.loader import render_to_string
 
         subject = request.POST.get('subject', '').strip()
         body = request.POST.get('body', '').strip()
@@ -952,10 +950,8 @@ class AnnouncementListView(OrgMixin, View):
             label = 'All active members'
 
         sent = 0
-        org_name = self.org.name
         for member in members:
             recipient = member.email
-            has_guardians = member.guardians.exists()
             if not recipient:
                 guardian = member.guardians.filter(email__gt='').first()
                 if guardian:
@@ -963,28 +959,12 @@ class AnnouncementListView(OrgMixin, View):
             if not recipient:
                 continue
 
-            html_body = render_to_string('emails/announcement.html', {
-                'member': member,
-                'org_name': org_name,
-                **email_branding(self.org),
-                'org_email': self.org.email,
-                'subject': subject,
-                'body': body,
-                'has_guardians': has_guardians,
-            })
-            text_body = f"{'Dear guardian of ' + member.name if has_guardians and not member.email else 'Hi ' + member.name},\n\n{body}\n\n{org_name}"
-            msg = EmailMultiAlternatives(
-                subject=subject,
-                body=text_body,
-                from_email=None,
-                to=[recipient],
-                connection=connection_for(self.org),
-            )
-            msg.attach_alternative(html_body, 'text/html')
             try:
-                msg.send()
+                compose.send(self.org, 'announcement', [recipient],
+                             {**compose.member_values(member), 'title': subject},
+                             {'message': email_blocks.message(body)})
                 sent += 1
-            except Exception:
+            except Exception:  # one bad address mustn't stop the rest of the announcement
                 pass
 
         Announcement.objects.create(

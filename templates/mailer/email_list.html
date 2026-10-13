@@ -1,0 +1,74 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Customise emails{% endblock %}
+{% block page_title %}Customise emails{% endblock %}
+{% block page_subtitle %}Change the wording, or the whole design, of every email Dojo sends{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'org_settings' org_slug=org.slug %}#email" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Email settings</a>
+{% endblock %}
+
+{% block main_content %}
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header bg-white border-bottom py-3"><h6 class="mb-0">Emails</h6></div>
+            <div class="list-group list-group-flush">
+                {% for email_type, saved in rows %}
+                <a href="{% url 'org_email_template_edit' org_slug=org.slug key=email_type.key %}" class="list-group-item list-group-item-action py-3">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div>
+                            <div class="fw-semibold small">{{ email_type.label }}</div>
+                            <div class="text-muted" style="font-size:0.78rem;">{{ email_type.when }}</div>
+                        </div>
+                        {% if saved %}
+                        <span class="badge bg-primary-subtle text-primary text-nowrap" title="Changed {{ saved.updated_at|date:'j M Y' }}">Customised{% if saved.mode == 'html' %} · HTML{% endif %}</span>
+                        {% else %}
+                        <span class="badge bg-light text-secondary border text-nowrap">Default</span>
+                        {% endif %}
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Layout</h6>
+                <div class="text-muted" style="font-size:0.78rem;">The header and footer around every email (except ones written in full HTML).</div>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <label class="form-label small fw-semibold" for="header-colour">Header colour</label>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <input type="color" name="header_colour" id="header-colour" value="{{ layout.header_colour|default:club_colour }}" class="form-control form-control-color form-control-sm">
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox" name="use_club_colour" id="use-club-colour" value="1" {% if not layout.header_colour %}checked{% endif %}>
+                            <label class="form-check-label small" for="use-club-colour">Use the club's colour</label>
+                        </div>
+                    </div>
+                    <div class="form-text mb-3">The club's colour is set under Settings → Appearance.</div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="show_logo" id="show-logo" value="1" {% if layout.show_logo %}checked{% endif %}>
+                        <label class="form-check-label small" for="show-logo">Show the club logo in the header</label>
+                    </div>
+
+                    <label class="form-label small fw-semibold" for="header-text">Header text</label>
+                    <input type="text" name="header_text" id="header-text" value="{{ layout.header_text }}" maxlength="100" class="form-control form-control-sm mb-1" placeholder="{{ org.name }}">
+                    <div class="form-text mb-3">Leave blank to show the club's name.</div>
+
+                    <label class="form-label small fw-semibold" for="footer-text">Footer message</label>
+                    <textarea name="footer_text" id="footer-text" rows="3" maxlength="500" class="form-control form-control-sm mb-1" placeholder="Sent by {{ org.name }}. Questions? Just reply{% if org.email %}, or email {{ org.email }}{% endif %}.">{{ layout.footer_text }}</textarea>
+                    <div class="form-text mb-3">Leave blank for the standard message. "Powered by Dojo" always appears underneath.</div>
+
+                    <button type="submit" class="btn btn-dark btn-sm">Save layout</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,4 +1,7 @@
 from django.urls import include, path
+
+from mailer import views as mailer_views
+
 from . import views
 
 urlpatterns = [
@@ -16,6 +19,10 @@ urlpatterns = [
     path('reseed-demo/', views.ReseedDemoView.as_view(), name='org_reseed_demo'),
     path('onboarding/dismiss/', views.DismissOnboardingView.as_view(), name='org_onboarding_dismiss'),
     path('settings/test-email/', views.TestEmailView.as_view(), name='org_test_email'),
+    path('settings/emails/', mailer_views.EmailTemplateListView.as_view(), name='org_email_templates'),
+    path('settings/emails/<slug:key>/', mailer_views.EmailTemplateEditView.as_view(), name='org_email_template_edit'),
+    path('settings/emails/<slug:key>/preview/', mailer_views.EmailTemplatePreviewView.as_view(),
+         name='org_email_template_preview'),
     path('settings/fields/', views.CustomFieldSettingsView.as_view(), name='org_custom_fields'),
     path('settings/progression/', include('progression.urls')),
     path('announcements/', views.AnnouncementListView.as_view(), name='org_announcements'),
