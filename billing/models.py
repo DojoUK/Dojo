@@ -128,6 +128,8 @@ class Invoice(models.Model):
         PAID = 'paid', 'Collected'
         FAILED = 'failed', 'Collection failed'
 
+    # The automatic run that made this invoice, if any (see InvoiceSchedule).
+    run = models.ForeignKey('InvoiceRun', null=True, blank=True, on_delete=models.SET_NULL, related_name='invoices')
     autopay_status = models.CharField(max_length=12, choices=AutoPayStatus.choices, blank=True, default='')
     autopay_payment_intent = models.CharField(max_length=255, blank=True)
     autopay_error = models.CharField(max_length=255, blank=True)
@@ -289,3 +291,51 @@ class AutoPay(models.Model):
 
     def __str__(self):
         return f'{self.member}: {self.label}'
+
+
+class InvoiceSchedule(models.Model):
+    """When Dojo makes a plan's invoices by itself. The scheduler container runs it."""
+    class SendMode(models.TextChoices):
+        REVIEW = 'review', 'Let me check them first'
+        SEND = 'send', 'Send them automatically'
+
+    policy = models.OneToOneField(BillingPolicy, on_delete=models.CASCADE, related_name='schedule')
+    enabled = models.BooleanField(default=False)
+    # Monthly plans: the day of the month invoices are made (1-28).
+    day_of_month = models.PositiveSmallIntegerField(default=1)
+    # Termly plans: how many days before each term starts.
+    days_before_term = models.PositiveSmallIntegerField(default=7)
+    # Annual plans: the date each year.
+    annual_month = models.PositiveSmallIntegerField(default=9)
+    annual_day = models.PositiveSmallIntegerField(default=1)
+    due_after_days = models.PositiveSmallIntegerField(default=14)
+    send_mode = models.CharField(max_length=10, choices=SendMode.choices, default=SendMode.REVIEW)
+    # Periods whose invoice date is before this aren't made, so switching on mid-month waits for the next one.
+    starts_from = models.DateField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'Schedule for {self.policy}'
+
+
+class InvoiceRun(models.Model):
+    """One automatic batch of invoices for a plan and period."""
+    class Status(models.TextChoices):
+        AWAITING_REVIEW = 'awaiting_review', 'Waiting for you to check'
+        SENT = 'sent', 'Sent'
+        CANCELLED = 'cancelled', 'Cancelled'
+
+    schedule = models.ForeignKey(InvoiceSchedule, on_delete=models.CASCADE, related_name='runs')
+    period = models.CharField(max_length=50)
+    status = models.CharField(max_length=20, choices=Status.choices)
+    invoice_count = models.PositiveIntegerField(default=0)
+    total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    released_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [models.UniqueConstraint(fields=['schedule', 'period'], name='one_run_per_plan_and_period')]
+
+    def __str__(self):
+        return f'{self.schedule.policy.name}: {self.period}'

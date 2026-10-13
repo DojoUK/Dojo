@@ -7,8 +7,21 @@ def _collect_automatic_payments():
     return collect_due()
 
 
+def _create_scheduled_invoices():
+    from billing.schedule import create_due_runs
+    return create_due_runs()
+
+
+def _send_overdue_reminders():
+    from billing.schedule import send_due_reminders
+    return send_due_reminders()
+
+
 JOBS = (
     ('collect_automatic_payments', 60, _collect_automatic_payments),
+    # Both are safe to repeat: a period's invoices are made once, and reminders respect their repeat gap.
+    ('create_scheduled_invoices', 15 * 60, _create_scheduled_invoices),
+    ('send_overdue_reminders', 60 * 60, _send_overdue_reminders),
 )
 
 

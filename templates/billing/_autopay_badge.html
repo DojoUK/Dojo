@@ -1,3 +1,4 @@
+{% if invoice.run_id and invoice.run.status == 'awaiting_review' %}<span class="badge bg-warning-subtle text-warning-emphasis ms-1" title="Made automatically and waiting for you to check; members can't see it yet"><i class="bi bi-hourglass-split"></i> Not sent yet</span>{% endif %}
 {# Automatic payment progress for an unpaid invoice. #}
 {% if invoice.status != 'paid' %}
 {% if invoice.autopay_status == 'due' or invoice.autopay_status == 'collecting' %}<span class="badge bg-info-subtle text-info-emphasis ms-1" title="Will be collected automatically within a few minutes"><i class="bi bi-arrow-repeat"></i> Auto-pay</span>
