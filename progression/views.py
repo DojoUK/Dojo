@@ -70,6 +70,16 @@ class ToggleAutoAssignView(OrgAdminMixin, View):
         return redirect('progression_settings', org_slug=org_slug)
 
 
+class ToggleUsesGradingsView(OrgAdminMixin, View):
+    required_feature = 'gradings'
+
+    def post(self, request, org_slug, pk):
+        system = get_object_or_404(ProgressionSystem, pk=pk, organisation=self.org)
+        system.uses_gradings = not system.uses_gradings
+        system.save(update_fields=['uses_gradings'])
+        return redirect('progression_settings', org_slug=org_slug)
+
+
 class AddStageView(OrgAdminMixin, View):
     required_feature = 'grades'
 

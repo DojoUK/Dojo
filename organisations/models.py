@@ -121,11 +121,14 @@ class OrganisationMember(models.Model):
          'Attendance analytics and export for every class, not just their own.'),
         ('message_all_members', 'Message all members',
          'Send announcements to the whole club or any class, not just their own classes.'),
+        ('manage_gradings', 'Manage gradings',
+         'Run gradings: add candidates and record results, which updates members\' grades.'),
     )
     can_manage_billing = models.BooleanField(default=False)
     can_take_payments = models.BooleanField(default=False)
     can_view_all_attendance = models.BooleanField(default=False)
     can_message_all_members = models.BooleanField(default=False)
+    can_manage_gradings = models.BooleanField(default=False)
 
     @property
     def is_org_admin(self):

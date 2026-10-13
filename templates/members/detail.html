@@ -331,6 +331,16 @@
                             <td class="py-2 small text-muted">{{ prog.stage.system.name }}</td>
                             <td class="py-2 small text-muted">{{ prog.achieved_date|date:"d M Y" }}</td>
                             <td class="py-2 text-end pe-3">
+                                {% with candidate=prog.grading_candidate %}
+                                {% if candidate %}
+                                {% if 'gradings' in org.enabled_features %}
+                                <a href="{% url 'grading_detail' org_slug=org.slug pk=candidate.session.grading_id %}" class="small text-decoration-none" title="Awarded at this grading; change it there">
+                                    <i class="bi bi-award me-1"></i>{{ candidate.session.grading.name }}
+                                </a>
+                                {% else %}
+                                <span class="small text-muted" title="Awarded at a grading"><i class="bi bi-award me-1"></i>{{ candidate.session.grading.name }}</span>
+                                {% endif %}
+                                {% else %}
                                 <form method="post" action="{% url 'member_progression_delete' org_slug=org.slug pk=member.pk prog_pk=prog.pk %}">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-sm btn-outline-danger"
@@ -338,6 +348,8 @@
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </form>
+                                {% endif %}
+                                {% endwith %}
                             </td>
                         </tr>
                         {% endfor %}

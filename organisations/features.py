@@ -30,6 +30,11 @@ FEATURES = (
         default=False,
     ),
     Feature(
+        'gradings', 'Gradings',
+        'Grading events where members are promoted, run as one session or split into groups.',
+        default=False, requires=('grades',),
+    ),
+    Feature(
         'billing', 'Billing',
         'Invoices, billing policies, terms, discounts, overdue reminders and the finance report.',
         default=True,

@@ -1,0 +1,52 @@
+{% extends 'org/base.html' %}
+
+{% block title %}{{ grading.name }}{% endblock %}
+{% block page_title %}{{ grading.name }}{% endblock %}
+{% block page_subtitle %}{{ grading.system.name }} · {{ sessions|length }} sessions{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2">
+    <a href="{% url 'grading_list' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Gradings</a>
+    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#grading-settings">
+        <i class="bi bi-gear me-1"></i> Grading settings
+    </button>
+</div>
+{% endblock %}
+
+{% block main_content %}
+{% include 'progression/gradings/_grading_controls.html' %}
+{% if grading.notes %}<p class="text-muted small">{{ grading.notes|linebreaksbr }}</p>{% endif %}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3 small fw-semibold">Session</th>
+                    <th class="small fw-semibold">Date</th>
+                    <th class="small fw-semibold">People</th>
+                    <th class="small fw-semibold">Passed</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for session in sessions %}
+                <tr>
+                    <td class="ps-3">
+                        <a href="{% url 'grading_session' org_slug=org.slug pk=grading.pk session_pk=session.pk %}" class="fw-semibold text-decoration-none">{{ session.display_name }}</a>
+                    </td>
+                    <td class="small text-muted">{{ session.date|date:"D d M Y" }}</td>
+                    <td class="small text-muted">{{ session.people }}</td>
+                    <td class="small text-muted">{{ session.passed }}</td>
+                    <td class="text-end pe-3">
+                        <a href="{% url 'grading_session' org_slug=org.slug pk=grading.pk session_pk=session.pk %}" class="btn btn-sm btn-outline-secondary">Open</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

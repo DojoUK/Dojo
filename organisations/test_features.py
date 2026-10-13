@@ -72,6 +72,7 @@ class SwitchedOffRoutesTests(FeatureTestBase):
     def routes(self):
         token = self.member.token
         return {
+            'gradings': [('get', self.url('grading_list'))],
             'grades': [('get', self.url('progression_settings')),
                        ('get', self.url('progression_import'))],
             'billing': [('get', self.url('invoice_list')),
@@ -266,7 +267,7 @@ class SetupWizardTests(TestCase):
 class UpgradeBackfillTests(TestCase):
     """Clubs that existed before feature switches keep everything switched on."""
 
-    def test_backfill_switches_on_every_feature(self):
+    def test_backfill_switches_on_every_feature_that_existed(self):
         from importlib import import_module
 
         from django.apps import apps
@@ -276,11 +277,12 @@ class UpgradeBackfillTests(TestCase):
         migration.switch_on_existing_features(apps, None)
 
         org.refresh_from_db()
-        self.assertEqual(org.enabled_features, set(FEATURES_BY_KEY))
+        self.assertEqual(org.enabled_features, set(FEATURES_BY_KEY) - {'gradings'})
 
     def test_backfill_covers_every_feature_that_existed(self):
         from importlib import import_module
         migration = import_module('organisations.migrations.0009_organisation_features')
         # A feature added later must not be switched on for existing clubs by this
         # migration; it gets its own default. This pins the list at introduction.
-        self.assertEqual(set(migration.EXISTING_FEATURES), set(FEATURES_BY_KEY))
+        added_since = {'gradings'}
+        self.assertEqual(set(migration.EXISTING_FEATURES), set(FEATURES_BY_KEY) - added_since)

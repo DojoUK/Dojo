@@ -1,0 +1,92 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Gradings{% endblock %}
+{% block page_title %}Gradings{% endblock %}
+
+{% block page_actions %}
+{% if systems %}
+<button class="btn btn-dark btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#new-grading">
+    <i class="bi bi-plus-lg me-1"></i> New grading
+</button>
+{% endif %}
+{% endblock %}
+
+{% block main_content %}
+{% if not systems %}
+<div class="alert alert-info small">
+    No progression system is set up for grading events yet.
+    {% if request.user.is_superuser or org_membership.is_org_admin %}
+    Turn on <strong>Promotions at grading events</strong> for a system in <a href="{% url 'progression_settings' org_slug=org.slug %}">Progression settings</a>.
+    {% else %}
+    Ask an admin to turn on grading events for a progression system.
+    {% endif %}
+</div>
+{% else %}
+<div class="collapse mb-4{% if not gradings %} show{% endif %}" id="new-grading">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-3"><h6 class="mb-0">New grading</h6></div>
+        <div class="card-body">
+            <form method="post" class="row g-2 align-items-end">
+                {% csrf_token %}
+                <div class="col-sm-4">
+                    <label class="form-label small fw-semibold">Name</label>
+                    <input type="text" name="name" class="form-control form-control-sm" placeholder="e.g. Winter grading" required>
+                </div>
+                <div class="col-sm-3">
+                    <label class="form-label small fw-semibold">Date</label>
+                    <input type="date" name="date" class="form-control form-control-sm" required>
+                </div>
+                <div class="col-sm-3">
+                    <label class="form-label small fw-semibold">Progression system</label>
+                    <select name="system_id" class="form-select form-select-sm" required>
+                        {% for system in systems %}<option value="{{ system.pk }}">{{ system.name }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-sm-2">
+                    <button type="submit" class="btn btn-dark btn-sm w-100">Create</button>
+                </div>
+                <div class="col-12 form-text">Running it in groups across a weekend? Create it, then add a session for each group.</div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if gradings %}
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3 small fw-semibold">Grading</th>
+                    <th class="small fw-semibold">System</th>
+                    <th class="small fw-semibold">Date</th>
+                    <th class="small fw-semibold">People</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for grading in gradings %}
+                <tr>
+                    <td class="ps-3">
+                        <a href="{% url 'grading_detail' org_slug=org.slug pk=grading.pk %}" class="fw-semibold text-decoration-none">{{ grading.name }}</a>
+                        {% if grading.session_count > 1 %}<div class="text-muted small">{{ grading.session_count }} sessions</div>{% endif %}
+                    </td>
+                    <td class="small text-muted">{{ grading.system.name }}</td>
+                    <td class="small text-muted">{{ grading.starts|date:"d M Y" }}</td>
+                    <td class="small text-muted">{{ grading.candidate_count }}</td>
+                    <td class="text-end pe-3">
+                        <a href="{% url 'grading_detail' org_slug=org.slug pk=grading.pk %}" class="btn btn-sm btn-outline-secondary">Open</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+{% elif systems %}
+<p class="text-muted small">No gradings yet.</p>
+{% endif %}
+{% endblock %}

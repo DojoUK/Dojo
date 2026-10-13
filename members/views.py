@@ -221,7 +221,7 @@ class MemberDetailView(OrgAdminMixin, DetailView):
         from progression.models import MemberProgression, ProgressionStage, ProgressionSystem
         context['progressions'] = MemberProgression.objects.filter(
             member=self.object
-        ).select_related('stage__system').order_by('-achieved_date')
+        ).select_related('stage__system', 'grading_candidate__session__grading').order_by('-achieved_date')
         context['stages'] = ProgressionStage.objects.filter(
             system__organisation=self.org
         ).select_related('system')
@@ -387,6 +387,14 @@ class DeleteProgressionView(OrgAdminMixin, View):
         member = get_object_or_404(Member, pk=pk, organisation=self.org)
         from progression.models import MemberProgression
         prog = get_object_or_404(MemberProgression, pk=prog_pk, member=member)
+        candidate = getattr(prog, 'grading_candidate', None)
+        if candidate is not None:
+            # Deleting it here would leave the grading saying "passed" with no grade behind it.
+            messages.error(
+                request,
+                f'This grade was awarded at {candidate.session.grading.name}. Change the result there instead.',
+            )
+            return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
         prog.delete()
         messages.success(request, 'Progression record removed.')
         return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
