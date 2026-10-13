@@ -442,13 +442,8 @@ class StaffListView(OrgAdminMixin, View):
             member_pk = request.POST.get('member_pk')
             om = get_object_or_404(OrganisationMember, pk=member_pk, organisation=self.org)
             # Only fields the club has switched on are on the form; leave the rest untouched.
-            from .optional_fields import OPTIONAL_FIELDS, STAFF
-            fields = [
-                name
-                for f in OPTIONAL_FIELDS
-                if f.group == STAFF and self.org.has_field(f.key)
-                for name in f.model_fields
-            ]
+            from .optional_fields import STAFF, enabled_model_fields
+            fields = enabled_model_fields(self.org, STAFF)
             for name in fields:
                 value = request.POST.get(name, '').strip()
                 setattr(om, name, (value or None) if name.endswith('_expiry') else value)
@@ -967,6 +962,23 @@ class AccountView(OrgMixin, View):
             holiday = get_object_or_404(StaffHoliday, pk=holiday_pk, member=self.org_membership)
             holiday.delete()
             messages.success(request, 'Holiday removed.')
+            return redirect('account_settings', org_slug=self.org.slug)
+
+        elif action == 'update_emergency_contacts':
+            if not self.org_membership:
+                messages.error(request, "You're not a staff member of this organisation.")
+                return redirect('account_settings', org_slug=self.org.slug)
+            # Scoped to the logged-in user's own membership, and only the
+            # emergency contact fields the club has switched on.
+            from .optional_fields import STAFF, enabled_model_fields
+            fields = enabled_model_fields(
+                self.org, STAFF, keys={'staff_emergency_contact', 'staff_emergency_contact_2'},
+            )
+            for name in fields:
+                setattr(self.org_membership, name, request.POST.get(name, '').strip())
+            if fields:
+                self.org_membership.save(update_fields=fields)
+            messages.success(request, 'Emergency contacts updated.')
             return redirect('account_settings', org_slug=self.org.slug)
 
         user = request.user

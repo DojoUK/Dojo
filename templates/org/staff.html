@@ -67,7 +67,7 @@
                     <th class="small fw-semibold">Permissions</th>
                     {% if 'dbs' in org.enabled_fields %}<th class="small fw-semibold">DBS</th>{% endif %}
                     {% if 'coaching_licence' in org.enabled_fields %}<th class="small fw-semibold">{{ org.coaching_licence_label }}</th>{% endif %}
-                    {% if 'staff_emergency_contact' in org.enabled_fields %}<th class="small fw-semibold">Emergency contact</th>{% endif %}
+                    {% if 'staff_emergency_contact' in org.enabled_fields or 'staff_emergency_contact_2' in org.enabled_fields %}<th class="small fw-semibold">Emergency contacts</th>{% endif %}
                     <th></th>
                 </tr>
             </thead>
@@ -151,15 +151,23 @@
                         {% endif %}
                     </td>
                     {% endif %}
-                    {% if 'staff_emergency_contact' in org.enabled_fields %}
+                    {% if 'staff_emergency_contact' in org.enabled_fields or 'staff_emergency_contact_2' in org.enabled_fields %}
                     <td class="py-2 small">
+                        {% if 'staff_emergency_contact' in org.enabled_fields %}
                         {% if om.emergency_contact_name %}
                             <div>{{ om.emergency_contact_name }}</div>
                         {% endif %}
                         {% if om.emergency_contact_phone %}
                             <div class="text-muted" style="font-size:0.75rem;">{{ om.emergency_contact_phone }}</div>
                         {% endif %}
-                        {% if not om.emergency_contact_name and not om.emergency_contact_phone %}
+                        {% endif %}
+                        {% if 'staff_emergency_contact_2' in org.enabled_fields %}
+                        {% if om.emergency_contact_2_name or om.emergency_contact_2_phone %}
+                            <div class="mt-1">{{ om.emergency_contact_2_name }}</div>
+                            {% if om.emergency_contact_2_phone %}<div class="text-muted" style="font-size:0.75rem;">{{ om.emergency_contact_2_phone }}</div>{% endif %}
+                        {% endif %}
+                        {% endif %}
+                        {% if not om.emergency_contact_name and not om.emergency_contact_phone and not om.emergency_contact_2_name %}
                             <span class="text-muted">—</span>
                         {% endif %}
                     </td>
@@ -187,7 +195,7 @@
                 </tr>
                 <tr class="collapse" id="quals-{{ om.pk }}">
                     <td colspan="7" class="bg-light px-3 py-3">
-                        {% if 'dbs' in org.enabled_fields or 'coaching_licence' in org.enabled_fields or 'staff_emergency_contact' in org.enabled_fields %}
+                        {% if 'dbs' in org.enabled_fields or 'coaching_licence' in org.enabled_fields or 'staff_emergency_contact' in org.enabled_fields or 'staff_emergency_contact_2' in org.enabled_fields %}
                         <form method="post">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="update_qualifications">
@@ -227,6 +235,16 @@
                                 <div class="col-sm-3">
                                     <label class="form-label small fw-semibold">Emergency contact phone</label>
                                     <input type="text" name="emergency_contact_phone" value="{{ om.emergency_contact_phone }}" class="form-control form-control-sm">
+                                </div>
+                                {% endif %}
+                                {% if 'staff_emergency_contact_2' in org.enabled_fields %}
+                                <div class="col-sm-3">
+                                    <label class="form-label small fw-semibold">Second contact name</label>
+                                    <input type="text" name="emergency_contact_2_name" value="{{ om.emergency_contact_2_name }}" class="form-control form-control-sm">
+                                </div>
+                                <div class="col-sm-3">
+                                    <label class="form-label small fw-semibold">Second contact phone</label>
+                                    <input type="text" name="emergency_contact_2_phone" value="{{ om.emergency_contact_2_phone }}" class="form-control form-control-sm">
                                 </div>
                                 {% endif %}
                                 <div class="col-12">

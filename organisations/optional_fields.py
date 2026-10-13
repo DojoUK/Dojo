@@ -58,6 +58,9 @@ OPTIONAL_FIELDS = (
     OptionalField('staff_emergency_contact', 'Emergency contact', STAFF,
                   'An emergency contact name and number for each staff member.', default=True,
                   model_fields=('emergency_contact_name', 'emergency_contact_phone')),
+    OptionalField('staff_emergency_contact_2', 'Second emergency contact', STAFF,
+                  'A second name and number for each staff member.', default=True,
+                  model_fields=('emergency_contact_2_name', 'emergency_contact_2_phone')),
     OptionalField('dbs', 'DBS check', STAFF,
                   'DBS number and expiry, with expiry warnings.', default=False,
                   model_fields=('dbs_number', 'dbs_expiry')),
@@ -80,6 +83,16 @@ def disabled_model_fields(org, group):
         if f.group == group and not org.has_field(f.key)
         for name in f.model_fields
     }
+
+
+def enabled_model_fields(org, group, keys=None):
+    """Model field names covered by this group's switched-on optional fields (optionally only `keys`)."""
+    return [
+        name
+        for f in OPTIONAL_FIELDS
+        if f.group == group and org.has_field(f.key) and (keys is None or f.key in keys)
+        for name in f.model_fields
+    ]
 
 
 def effective_fields(stored):
