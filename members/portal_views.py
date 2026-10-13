@@ -62,9 +62,9 @@ class PortalView(View):
 
         stripe_enabled = org.has_feature('billing') and stripe_keys(org) is not None
         from billing import autopay
-        autopay_methods = autopay.methods_for(org)
+        autopay_enabled = autopay.enabled(org)
         autopay_just_set_up = None
-        if autopay_methods and request.GET.get('autopay_session'):
+        if autopay_enabled and request.GET.get('autopay_session'):
             autopay_just_set_up = autopay.finish_setup(org, request.GET['autopay_session'])
         payment_settings = payments_settings_for(org)
 
@@ -79,7 +79,7 @@ class PortalView(View):
             'progressions': progressions,
             'outstanding_total': outstanding_total,
             'stripe_enabled': stripe_enabled,
-            'autopay_methods': autopay_methods,
+            'autopay_enabled': autopay_enabled,
             'autopay': autopay.active_autopay(member),
             'autopay_just_set_up': autopay_just_set_up,
             'autopay_expected': bool(payment_settings and payment_settings.auto_pay == 'encouraged'),
@@ -212,7 +212,7 @@ class AutoPaySetupView(View):
         from billing import autopay
         member = _portal_member(token, 'billing')
         portal_url = request.build_absolute_uri(reverse('member_portal', kwargs={'token': token}))
-        if not autopay.methods_for(member.organisation):
+        if not autopay.enabled(member.organisation):
             return redirect('member_portal', token=token)
         import stripe
         try:

@@ -20,18 +20,15 @@ from .payments import field
 log = logging.getLogger(__name__)
 
 
-def methods_for(org):
-    """Stripe payment method types members of `org` can use for auto-pay ([] when it's off)."""
+def enabled(org):
+    """Whether members of `org` can pay automatically.
+
+    Which methods they can save (card, Bacs Direct Debit, ...) is set in the club's
+    Stripe dashboard: current Stripe API versions no longer take a list from us.
+    """
     payment_settings = payments.settings_for(org)
-    if (payment_settings is None or payment_settings.auto_pay == 'off'
-            or payments.stripe_keys(org) is None or not org.has_feature('billing')):
-        return []
-    methods = []
-    if payment_settings.auto_pay_card:
-        methods.append('card')
-    if payment_settings.auto_pay_direct_debit:
-        methods.append('bacs_debit')
-    return methods
+    return bool(payment_settings is not None and payment_settings.auto_pay != 'off'
+                and payments.stripe_keys(org) is not None and org.has_feature('billing'))
 
 
 def active_autopay(member):
@@ -70,7 +67,6 @@ def start_setup(member, return_url, invoice=None):
         mode='setup',
         currency='gbp',
         customer=_customer_id(member, keys),
-        payment_method_types=methods_for(org),
         success_url=f'{return_url}{separator}autopay_session={{CHECKOUT_SESSION_ID}}',
         cancel_url=return_url,
         metadata=metadata,
@@ -80,7 +76,10 @@ def start_setup(member, return_url, invoice=None):
 
 
 def _label(payment_method):
-    if field(payment_method, 'type') == 'bacs_debit':
+    kind = field(payment_method, 'type')
+    if kind not in ('card', 'bacs_debit'):
+        return f"{kind.replace('_', ' ').title()} ending {field(field(payment_method, kind), 'last4', '????')}"
+    if kind == 'bacs_debit':
         return f"Direct Debit, account ending {field(field(payment_method, 'bacs_debit'), 'last4', '????')}"
     card = field(payment_method, 'card')
     return f"{field(card, 'brand', 'card').title()} ending {field(card, 'last4', '????')}"
@@ -105,9 +104,13 @@ def save_from_setup_intent(org, setup_intent):
         'label': _label(payment_method),
         'active': True,
     })
-    # Anything already waiting for this member can now be collected.
-    from .models import Invoice
-    Invoice.objects.filter(member=member, status='unpaid', autopay_status__in=['', 'failed']).update(autopay_status='due')
+    # Only invoices made from now on are collected automatically, plus the one the member was paying
+    # when they set this up. Older unpaid invoices aren't charged without them asking.
+    invoice_pk = field(field(setup_intent, 'metadata'), 'invoice_pk')
+    if invoice_pk:
+        from .models import Invoice
+        Invoice.objects.filter(pk=invoice_pk, member=member, status='unpaid',
+                               autopay_status__in=['', 'failed']).update(autopay_status='due')
     return autopay
 
 
@@ -135,7 +138,7 @@ def turn_off(member):
 
 def mark_due(invoice):
     """Called when an invoice is created: queue it for collection if the member pays automatically."""
-    if invoice.status == 'unpaid' and methods_for(invoice.organisation) and active_autopay(invoice.member):
+    if invoice.status == 'unpaid' and enabled(invoice.organisation) and active_autopay(invoice.member):
         type(invoice).objects.filter(pk=invoice.pk).update(autopay_status='due')
 
 
@@ -174,7 +177,7 @@ def collect(invoice):
     keys = payments.stripe_keys(org)
     autopay = active_autopay(invoice.member)
     balance = invoice.balance_due
-    if keys is None or autopay is None or balance <= 0 or not methods_for(org):
+    if keys is None or autopay is None or balance <= 0 or not enabled(org):
         Invoice.objects.filter(pk=invoice.pk).update(autopay_status='')
         return
     attempt = invoice.autopay_attempts + 1
@@ -185,7 +188,8 @@ def collect(invoice):
         'currency': 'gbp',
         'customer': invoice.member.stripe_customer_id,
         'payment_method': autopay.payment_method_id,
-        'payment_method_types': [autopay.method_type],
+        # Charge the saved method as it is, with no redirects: the member isn't there to follow one.
+        'automatic_payment_methods': {'enabled': True, 'allow_redirects': 'never'},
         'off_session': True,
         'confirm': True,
         'description': f'{org.name}: {invoice.period} ({invoice.payment_reference})',
@@ -248,7 +252,9 @@ def payment_intent_failed(org, intent):
     metadata = field(intent, 'metadata')
     if field(metadata, 'purpose') != 'autopay':
         return
-    invoice = Invoice.objects.filter(pk=field(metadata, 'invoice_pk'), organisation=org, status='unpaid').first()
+    # Card declines are handled when the charge is made; this is for Direct Debits still in progress.
+    invoice = Invoice.objects.filter(pk=field(metadata, 'invoice_pk'), organisation=org, status='unpaid',
+                                     autopay_status='processing').first()
     if invoice is not None:
         error = field(field(intent, 'last_payment_error'), 'message', 'The payment didn\'t go through.')
         _fail(invoice, error)

@@ -42,7 +42,7 @@ class InvoicePayView(View):
                 invoice.refresh_from_db()
         payment_settings = payments.settings_for(invoice.organisation)
         return render(request, 'billing/pay.html', {
-            'autopay_methods': autopay.methods_for(invoice.organisation),
+            'autopay_enabled': autopay.enabled(invoice.organisation),
             'autopay': autopay.active_autopay(invoice.member),
             'autopay_expected': bool(payment_settings and payment_settings.auto_pay == 'encouraged'),
             'autopay_just_set_up': just_set_up,
@@ -107,7 +107,7 @@ class InvoiceAutoPaySetupView(View):
         from . import autopay
         invoice = _invoice_or_404(token)
         page = request.build_absolute_uri(reverse('invoice_pay', kwargs={'token': token}))
-        if not autopay.methods_for(invoice.organisation):
+        if not autopay.enabled(invoice.organisation):
             return redirect(page)
         import stripe
         try:
