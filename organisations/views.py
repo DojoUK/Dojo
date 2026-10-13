@@ -15,6 +15,7 @@ from django.views import View
 from django.views.generic import ListView, TemplateView
 from auditlog.models import LogEntry
 from dojo.mixins import CapabilityMixin, OrgAdminMixin, OrgMixin
+from dojo.version import RELEASES_URL, get_version_info
 from .models import Announcement, Organisation, OrganisationMember, StaffHoliday
 from members.models import CustomField
 
@@ -551,6 +552,10 @@ class OrgSettingsView(OrgAdminMixin, View):
         from .optional_fields import field_groups
         return {
             'settings_sections': self.SECTIONS,
+            'version': get_version_info(),
+            'org_url': self.request.build_absolute_uri(reverse('org_dashboard', kwargs={'org_slug': self.org.slug})),
+            'org_url_display': self.request.get_host() + reverse('org_dashboard', kwargs={'org_slug': self.org.slug}),
+            'releases_url': RELEASES_URL,
             'org': self.org,
             'org_membership': self.org_membership,
             'presets': self.PRESETS,

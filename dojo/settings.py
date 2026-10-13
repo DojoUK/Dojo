@@ -96,6 +96,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'dojo.context_processors.dojo_licence',
+                'dojo.context_processors.dojo_version',
                 'dojo.context_processors.dojo_debug',
             ],
         },

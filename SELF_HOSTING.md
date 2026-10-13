@@ -58,6 +58,7 @@ Nothing here is required for a basic instance — everything has a sane default.
 | `TRUST_PROXY_HTTPS` | unset (off) | Set to `true` when a reverse proxy handles HTTPS in front of Dojo — see [Running behind a reverse proxy](#running-behind-a-reverse-proxy) |
 | `EMAIL_*` | console backend | Leave unset to print outgoing mail to `docker compose logs -f web` instead of sending it. Set `EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend` plus the `EMAIL_HOST*` vars for real delivery |
 | `STRIPE_PUBLIC_KEY` / `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | unset | Only needed if you want online payments; get these from your Stripe dashboard |
+| `DOJO_BUILD_REPO` / `DOJO_BUILD_COMMIT` / `DOJO_BUILD_TAG` | unset (read from `.git`) | The version shown under Settings → General. Dojo reads it from the `.git` folder; set these only if your image is built without one. A repository other than `DojoUK/Dojo` shows as "Unofficial Dojo fork" |
 | `DOJO_LICENCE_KEY` / `DOJO_LICENCE_HOLDER` | unset | Self-hosters on the default AGPL-3.0 licence leave both blank |
 
 ### `SITE_URL` and security headers

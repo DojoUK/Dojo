@@ -1,4 +1,15 @@
 {# Club details and account info. #}
+<style>
+.info-box { display: inline-flex; align-items: center; border: 1px solid var(--dojo-border); border-radius: 6px; background: rgba(0,0,0,.025); font-size: .78rem; overflow: hidden; }
+.info-box { max-width: 100%; }
+.info-box > span, .info-box > a { padding: 2px 8px; min-width: 0; overflow-wrap: anywhere; }
+.info-box > a { color: inherit; text-decoration: none; }
+.info-box > a:hover { text-decoration: underline; }
+.info-box > * + * { border-left: 1px solid var(--dojo-border); }
+.build-status { font-weight: 600; }
+.build-status-beta { background: rgba(37,99,235,.08); color: #1d4ed8; }
+.build-status-fork { background: rgba(217,119,6,.1); color: #b45309; }
+</style>
 <form method="post">
     {% csrf_token %}
     <input type="hidden" name="action" value="general">
@@ -23,10 +34,27 @@
 </form>
 <hr class="my-4">
 <dl class="row small mb-0">
-    <dt class="col-sm-4 text-muted fw-normal">Web address name</dt>
-    <dd class="col-sm-8"><code>{{ org.slug }}</code></dd>
+    <dt class="col-sm-4 text-muted fw-normal">Web address</dt>
+    <dd class="col-sm-8">
+        <span class="info-box"><a href="{{ org_url }}"><i class="bi bi-link-45deg me-1"></i>{{ org_url_display }}</a></span>
+    </dd>
     <dt class="col-sm-4 text-muted fw-normal">Plan</dt>
-    <dd class="col-sm-8">Free - Self Hosted</dd>
-    <dt class="col-sm-4 text-muted fw-normal">Created</dt>
-    <dd class="col-sm-8 mb-0">{{ org.created_at|date:"d M Y" }}</dd>
+    <dd class="col-sm-8">
+        <span class="info-box"><span><i class="bi bi-hdd-rack me-1"></i>Self-hosted · Free</span></span>
+    </dd>
+    {% if version.kind == 'release' %}
+    <dt class="col-sm-4 text-muted fw-normal">Version</dt>
+    <dd class="col-sm-8 mb-0">{{ version.label }}</dd>
+    {% else %}
+    <dt class="col-sm-4 text-muted fw-normal">Build</dt>
+    <dd class="col-sm-8 mb-0">
+        {% if version.repo or version.short_commit %}
+        <span class="info-box">
+            {% if version.status %}<span class="build-status build-status-{{ version.kind }}">{{ version.status }}</span>{% endif %}
+            {% if version.repo %}<span><i class="bi bi-github me-1"></i>{{ version.repo }}</span>{% endif %}
+            {% if version.short_commit %}<span class="font-monospace"><i class="bi bi-git me-1"></i>{{ version.short_commit }}</span>{% endif %}
+        </span>
+        {% else %}Unknown{% endif %}
+    </dd>
+    {% endif %}
 </dl>
