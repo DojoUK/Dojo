@@ -21,6 +21,22 @@
 {% endblock %}
 
 {% block main_content %}
+<style>
+/* On phones each person becomes a stacked card instead of a wide table row. */
+@media (max-width: 575.98px) {
+    .grading-results thead { display: none; }
+    .grading-results, .grading-results tbody, .grading-results tr, .grading-results td { display: block; width: 100%; }
+    .grading-results tr { position: relative; padding: .75rem 1rem; border-bottom: 1px solid var(--dojo-border); }
+    .grading-results td { border: 0; padding: .2rem 0 !important; }
+    .grading-results td[data-label]::before {
+        content: attr(data-label); display: block; font-size: .7rem; text-transform: uppercase;
+        letter-spacing: .04em; color: var(--dojo-muted);
+    }
+    .grading-results td:first-child { padding-right: 2.75rem !important; }
+    .grading-results td.remove-cell { position: absolute; top: .55rem; right: .75rem; width: auto; }
+    .grading-results select, .grading-results input { min-width: 0 !important; }
+}
+</style>
 {% if single %}
 {% include 'progression/gradings/_grading_controls.html' %}
 {% endif %}
@@ -66,7 +82,7 @@
     <form method="post" action="{% url 'grading_results_save' org_slug=org.slug pk=grading.pk session_pk=session.pk %}">
         {% csrf_token %}
         <div class="table-responsive">
-        <table class="table mb-0 align-middle">
+        <table class="table mb-0 align-middle grading-results">
             <thead class="table-light">
                 <tr>
                     <th class="ps-3 small fw-semibold">Name</th>
@@ -81,15 +97,15 @@
                 {% for candidate in candidates %}
                 <tr>
                     <td class="ps-3 small fw-semibold">{{ candidate.member.name }}</td>
-                    <td class="small text-muted">{{ candidate.current.stage.name|default:"—" }}</td>
-                    <td>
+                    <td class="small text-muted" data-label="Current grade">{{ candidate.current.stage.name|default:"—" }}</td>
+                    <td data-label="Result">
                         <select name="result_{{ candidate.pk }}" class="form-select form-select-sm" style="min-width:110px;" aria-label="Result for {{ candidate.member.name }}">
                             {% for value, label in results %}
                             <option value="{{ value }}" {% if candidate.result == value %}selected{% endif %}>{{ label }}</option>
                             {% endfor %}
                         </select>
                     </td>
-                    <td>
+                    <td data-label="Grading for">
                         <select name="stage_{{ candidate.pk }}" class="form-select form-select-sm" style="min-width:130px;" aria-label="Grade {{ candidate.member.name }} is going for">
                             <option value="">—</option>
                             {% for stage in stages %}
@@ -97,10 +113,10 @@
                             {% endfor %}
                         </select>
                     </td>
-                    <td>
+                    <td data-label="Notes">
                         <input type="text" name="notes_{{ candidate.pk }}" value="{{ candidate.notes }}" class="form-control form-control-sm" placeholder="Examiner's notes" aria-label="Notes for {{ candidate.member.name }}">
                     </td>
-                    <td class="text-end pe-3">
+                    <td class="text-end pe-3 remove-cell">
                         {% if not candidate.progression_id %}
                         <button type="submit" form="remove-{{ candidate.pk }}" class="btn btn-sm btn-outline-secondary" title="Remove {{ candidate.member.name }}"
                                 onclick="return confirm('Remove {{ candidate.member.name|escapejs }} from this grading?')">
