@@ -80,10 +80,10 @@
                 <div class="border-top pt-3 small text-muted" style="white-space:pre-line;">{{ payment_instructions }}</div>
                 {% endif %}
 
-                {% if autopay_methods and not autopay %}
+                {% if autopay_enabled and not autopay %}
                 <div class="border-top pt-3 mt-3 {% if autopay_expected %}bg-light rounded p-3{% endif %}">
                     <div class="small fw-semibold">{% if autopay_expected %}{{ org.name }} asks members to pay automatically{% else %}Pay automatically from now on{% endif %}</div>
-                    <p class="small text-muted mb-2">Save {% if 'card' in autopay_methods and 'bacs_debit' in autopay_methods %}a card or set up a Direct Debit{% elif 'bacs_debit' in autopay_methods %}a Direct Debit{% else %}a card{% endif %} once, and this invoice and future ones are paid automatically. You can turn it off any time in the member portal.</p>
+                    <p class="small text-muted mb-2">Save a card or set up a Direct Debit once, and this invoice and future ones are paid automatically. You can turn it off any time in the member portal.</p>
                     <form method="post" action="{% url 'invoice_pay_autopay' token=token %}">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-sm {% if autopay_expected %}btn-dark{% else %}btn-outline-secondary{% endif %}"><i class="bi bi-arrow-repeat me-1"></i> Set up automatic payments</button>

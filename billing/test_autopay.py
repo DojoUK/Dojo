@@ -25,7 +25,7 @@ def stripe_object(values):
     return stripe.StripeObject.construct_from(values, 'sk_test_abc')
 
 
-def setup_intent(member, method='card', status='succeeded'):
+def setup_intent(member, method='card', status='succeeded', invoice=None):
     payment_method = {'id': 'pm_1', 'type': method}
     if method == 'card':
         payment_method['card'] = {'brand': 'visa', 'last4': '4242'}
@@ -33,7 +33,8 @@ def setup_intent(member, method='card', status='succeeded'):
         payment_method['bacs_debit'] = {'last4': '6789'}
     return stripe_object({
         'id': 'seti_1', 'object': 'setup_intent', 'status': status, 'mandate': 'mandate_1' if method == 'bacs_debit' else None,
-        'metadata': {'member_pk': str(member.pk), 'organisation': member.organisation.slug, 'purpose': 'autopay'},
+        'metadata': {'member_pk': str(member.pk), 'organisation': member.organisation.slug, 'purpose': 'autopay',
+                     **({'invoice_pk': str(invoice.pk)} if invoice else {})},
         'payment_method': payment_method,
     })
 
@@ -51,7 +52,7 @@ class AutoPayTestCase(TestCase):
                                            stripe_customer_id='cus_1')
 
     def setUp(self):
-        self.configure(auto_pay='optional', auto_pay_card='1', auto_pay_direct_debit='1')
+        self.configure(auto_pay='optional')
 
     def configure(self, **values):
         payment_settings = PaymentSettings.objects.filter(organisation=self.org).first() or PaymentSettings(organisation=self.org)
@@ -72,17 +73,15 @@ class AutoPayTestCase(TestCase):
 
 
 class SettingsTests(AutoPayTestCase):
-    def test_auto_pay_needs_cards_and_a_method(self):
+    def test_auto_pay_needs_card_payments(self):
         payment_settings = PaymentSettings.objects.get()
         self.assertIn('Paying automatically needs card payments (Stripe) switched on.',
-                      apply_post(payment_settings, form(auto_pay='optional', auto_pay_card='1')))
-        self.assertIn('Paying automatically: tick card, Direct Debit or both.',
-                      apply_post(payment_settings, {**CARD, **form(auto_pay='encouraged')}))
+                      apply_post(payment_settings, form(auto_pay='optional')))
 
-    def test_methods_offered(self):
-        self.assertEqual(autopay.methods_for(self.org), ['card', 'bacs_debit'])
+    def test_on_and_off(self):
+        self.assertTrue(autopay.enabled(self.org))
         self.configure(auto_pay='off')
-        self.assertEqual(autopay.methods_for(self.org), [])
+        self.assertFalse(autopay.enabled(self.org))
 
 
 class SetupTests(AutoPayTestCase):
@@ -104,12 +103,14 @@ class SetupTests(AutoPayTestCase):
         self.assertEqual(url, 'https://stripe.test/setup')
         kwargs = create.call_args.kwargs
         self.assertEqual((kwargs['mode'], kwargs['customer'], kwargs['api_key']), ('setup', 'cus_1', 'sk_test_abc'))
-        self.assertEqual(kwargs['payment_method_types'], ['card', 'bacs_debit'])
+        # Current Stripe API versions refuse a method list; the club's dashboard decides.
+        self.assertNotIn('payment_method_types', kwargs)
         self.assertEqual(kwargs['success_url'], 'https://club.example/p/abc/?autopay_session={CHECKOUT_SESSION_ID}')
 
     def test_returning_from_the_pay_page_takes_that_invoice_at_once(self):
         invoice = self.invoice()
-        session = stripe_object({'id': 'cs_1', 'mode': 'setup', 'setup_intent': setup_intent(self.member).to_dict()})
+        older = self.invoice()
+        session = stripe_object({'id': 'cs_1', 'mode': 'setup', 'setup_intent': setup_intent(self.member, invoice=invoice).to_dict()})
         token = payments.pay_token(invoice)
         with mock.patch('stripe.checkout.Session.retrieve', return_value=session), \
                 mock.patch('stripe.PaymentIntent.create', return_value=intent()) as charge:
@@ -118,6 +119,13 @@ class SetupTests(AutoPayTestCase):
         self.assertContains(response, 'This invoice is paid')
         charge.assert_called_once()
         self.assertEqual(self.refresh(invoice).status, 'paid')
+        self.assertEqual(self.refresh(older).autopay_status, '')  # only the invoice they were paying
+
+    def test_setting_up_does_not_charge_invoices_already_owed(self):
+        owed = self.invoice()
+        self.save_card()
+        self.assertEqual(self.refresh(owed).autopay_status, '')
+        self.assertEqual(self.refresh(self.invoice()).autopay_status, 'due')  # new ones are
 
     def test_portal_turn_off(self):
         self.save_card()
@@ -142,6 +150,8 @@ class CollectionTests(AutoPayTestCase):
         kwargs = charge.call_args.kwargs
         self.assertEqual((kwargs['amount'], kwargs['payment_method'], kwargs['customer']), (4500, 'pm_1', 'cus_1'))
         self.assertTrue(kwargs['off_session'] and kwargs['confirm'])
+        self.assertNotIn('payment_method_types', kwargs)
+        self.assertEqual(kwargs['automatic_payment_methods'], {'enabled': True, 'allow_redirects': 'never'})
         self.assertEqual(kwargs['idempotency_key'], f'dojo-test-club-invoice-{invoice.pk}-attempt-1')
         invoice = self.refresh(invoice)
         self.assertEqual((invoice.status, invoice.autopay_status), ('paid', 'paid'))
@@ -224,6 +234,17 @@ class WebhookTests(AutoPayTestCase):
             'last_payment_error': {'message': 'The account has insufficient funds.'}})
         invoice = self.refresh(invoice)
         self.assertEqual((invoice.status, invoice.autopay_error), ('unpaid', 'The account has insufficient funds.'))
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_a_declined_card_is_only_reported_once(self):
+        self.save_card()
+        invoice = self.invoice()
+        declined = stripe.error.CardError('Your card was declined.', None, 'card_declined')
+        with mock.patch('stripe.PaymentIntent.create', side_effect=declined):
+            autopay.collect_due()
+        self.post('payment_intent.payment_failed', {
+            'id': 'pi_card', 'object': 'payment_intent', 'metadata': self.metadata(invoice),
+            'last_payment_error': {'message': 'Your card was declined.'}})
         self.assertEqual(len(mail.outbox), 1)
 
     def test_one_clubs_webhook_cannot_touch_another_clubs_invoice(self):
