@@ -64,6 +64,7 @@
                 <tr>
                     <th class="ps-3 small fw-semibold">Name</th>
                     <th class="small fw-semibold">Role</th>
+                    <th class="small fw-semibold">Permissions</th>
                     <th class="small fw-semibold">DBS</th>
                     <th class="small fw-semibold">Coaching licence</th>
                     <th class="small fw-semibold">Emergency contact</th>
@@ -97,6 +98,17 @@
                                 {% endfor %}
                             </select>
                         </form>
+                        {% endif %}
+                    </td>
+                    <td class="py-2 small">
+                        {% if om.is_org_admin %}
+                            <span class="text-muted">Everything</span>
+                        {% else %}
+                            {% for name, label in om.granted_capabilities %}
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-normal">{{ label }}</span>
+                            {% empty %}
+                            <span class="text-muted">Own classes only</span>
+                            {% endfor %}
                         {% endif %}
                     </td>
                     <td class="py-2 small">
@@ -168,7 +180,7 @@
                     </td>
                 </tr>
                 <tr class="collapse" id="quals-{{ om.pk }}">
-                    <td colspan="6" class="bg-light px-3 py-3">
+                    <td colspan="7" class="bg-light px-3 py-3">
                         <form method="post">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="update_qualifications">
@@ -203,6 +215,35 @@
                                 </div>
                             </div>
                         </form>
+                        {% if not om.is_org_admin %}
+                        <form method="post" class="mt-3 pt-3 border-top">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="update_capabilities">
+                            <input type="hidden" name="member_pk" value="{{ om.pk }}">
+                            <div class="small fw-semibold mb-1">Permissions</div>
+                            <div class="text-muted mb-2" style="font-size:0.75rem;">
+                                Coaches can always take registers, add helpers, and view attendance and send announcements for their own classes. Tick anything extra this person needs.
+                            </div>
+                            <div class="row g-2">
+                                {% for name, label, help, granted in om.capability_states %}
+                                <div class="col-sm-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="capabilities" value="{{ name }}"
+                                               id="cap-{{ om.pk }}-{{ name }}"
+                                               {% if granted %}checked{% endif %}>
+                                        <label class="form-check-label small" for="cap-{{ om.pk }}-{{ name }}">
+                                            <span class="fw-semibold">{{ label }}</span>
+                                            <span class="d-block text-muted" style="font-size:0.75rem;">{{ help }}</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-sm btn-dark">Save permissions</button>
+                                </div>
+                            </div>
+                        </form>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}

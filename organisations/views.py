@@ -14,7 +14,7 @@ from django.urls import reverse
 from django.views import View
 from django.views.generic import ListView, TemplateView
 from auditlog.models import LogEntry
-from dojo.mixins import OrgAdminMixin, OrgMixin
+from dojo.mixins import CapabilityMixin, OrgAdminMixin, OrgMixin
 from .models import Announcement, Organisation, OrganisationMember, StaffHoliday
 from members.models import CustomField
 
@@ -427,6 +427,17 @@ class StaffListView(OrgAdminMixin, View):
             ])
             messages.success(request, 'Qualifications updated.')
 
+        elif action == 'update_capabilities':
+            member_pk = request.POST.get('member_pk')
+            om = get_object_or_404(OrganisationMember, pk=member_pk, organisation=self.org)
+            granted = set(request.POST.getlist('capabilities'))
+            fields = []
+            for name, _, _ in OrganisationMember.CAPABILITIES:
+                setattr(om, f'can_{name}', name in granted)
+                fields.append(f'can_{name}')
+            om.save(update_fields=fields)
+            messages.success(request, f'Permissions updated for {om.user.get_full_name() or om.user.username}.')
+
         elif action == 'add_holiday':
             member_pk = request.POST.get('member_pk')
             om = get_object_or_404(OrganisationMember, pk=member_pk, organisation=self.org)
@@ -608,11 +619,22 @@ class CustomFieldSettingsView(OrgAdminMixin, View):
         return redirect('org_custom_fields', org_slug=self.org.slug)
 
 
-class AnnouncementListView(OrgAdminMixin, View):
-    def get(self, request, org_slug):
+class AnnouncementListView(OrgMixin, View):
+    """
+    All staff can send announcements. Coaches can only send to classes they
+    coach unless granted `message_all_members`, which also unlocks sending
+    to every active member.
+    """
+    def _sendable_classes(self):
         from classes.models import Class
+        classes = Class.objects.filter(organisation=self.org)
+        if not self.can('message_all_members'):
+            classes = classes.filter(pk__in=self.coached_class_ids())
+        return classes.order_by('name')
+
+    def get(self, request, org_slug):
         announcements = Announcement.objects.filter(organisation=self.org)
-        classes = Class.objects.filter(organisation=self.org).order_by('name')
+        classes = self._sendable_classes()
         return render(request, 'org/announcements.html', {
             'org': self.org,
             'org_membership': self.org_membership,
@@ -621,7 +643,7 @@ class AnnouncementListView(OrgAdminMixin, View):
         })
 
     def post(self, request, org_slug):
-        from classes.models import Class, ClassMember
+        from classes.models import ClassMember
         from members.models import Member
         from django.core.mail import EmailMultiAlternatives
         from django.template.loader import render_to_string
@@ -635,8 +657,14 @@ class AnnouncementListView(OrgAdminMixin, View):
             messages.error(request, 'Subject and body are required.')
             return redirect('org_announcements', org_slug=self.org.slug)
 
-        if recipient_type == 'class' and class_pk:
-            cls = get_object_or_404(Class, pk=class_pk, organisation=self.org)
+        if not self.can('message_all_members'):
+            recipient_type = 'class'
+
+        if recipient_type == 'class':
+            if not class_pk:
+                messages.error(request, 'Select a class to send to.')
+                return redirect('org_announcements', org_slug=self.org.slug)
+            cls = get_object_or_404(self._sendable_classes(), pk=class_pk)
             member_ids = ClassMember.objects.filter(assigned_class=cls).values_list('member_id', flat=True)
             members = Member.objects.filter(pk__in=member_ids, is_active=True)
             label = f'Class: {cls.name}'
@@ -762,7 +790,9 @@ class CalendarEventsView(OrgMixin, View):
         return JsonResponse(events, safe=False)
 
 
-class FinancialReportView(OrgAdminMixin, View):
+class FinancialReportView(CapabilityMixin, View):
+    required_capabilities = ('manage_billing',)
+
     def get(self, request, org_slug):
         from billing.models import Invoice, Payment
         from django.db.models.functions import TruncMonth

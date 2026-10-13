@@ -52,6 +52,41 @@ class OrganisationMember(models.Model):
     emergency_contact_name = models.CharField(max_length=255, blank=True)
     emergency_contact_phone = models.CharField(max_length=30, blank=True)
 
+    # Extra permissions an org admin can grant to an individual coach. Org
+    # admins implicitly hold all of them. Each entry is (name, label, help);
+    # the matching model field is `can_<name>`.
+    CAPABILITIES = (
+        ('manage_billing', 'Manage billing',
+         'Invoices, payments, billing policies, discounts and the finance report for the whole club.'),
+        ('take_payments', 'Take payments',
+         'View invoices and record payments for members of their own classes.'),
+        ('view_all_attendance', 'View all attendance',
+         'Attendance analytics and export for every class, not just their own.'),
+        ('message_all_members', 'Message all members',
+         'Send announcements to the whole club or any class, not just their own classes.'),
+    )
+    can_manage_billing = models.BooleanField(default=False)
+    can_take_payments = models.BooleanField(default=False)
+    can_view_all_attendance = models.BooleanField(default=False)
+    can_message_all_members = models.BooleanField(default=False)
+
+    @property
+    def is_org_admin(self):
+        return self.role == self.Role.ORG_ADMIN
+
+    def has_capability(self, capability):
+        if capability not in {name for name, _, _ in self.CAPABILITIES}:
+            raise ValueError(f'Unknown capability: {capability}')
+        return self.is_org_admin or getattr(self, f'can_{capability}')
+
+    def capability_states(self):
+        """(name, label, help, granted) for every capability, for the staff permissions form."""
+        return [(name, label, help, getattr(self, f'can_{name}')) for name, label, help in self.CAPABILITIES]
+
+    def granted_capabilities(self):
+        """(name, label) for each capability this coach has been explicitly granted."""
+        return [(name, label) for name, label, _ in self.CAPABILITIES if getattr(self, f'can_{name}')]
+
     def __str__(self):
         return f"{self.user.get_full_name() or self.user.username} — {self.organisation} ({self.get_role_display()})"
 

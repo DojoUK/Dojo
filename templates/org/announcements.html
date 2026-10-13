@@ -1,9 +1,11 @@
 {% extends 'org/base.html' %}
+{% load staff_permissions %}
 
 {% block title %}Announcements{% endblock %}
 {% block page_title %}Announcements{% endblock %}
 
 {% block main_content %}
+{% can 'message_all_members' as can_message_all %}
 <div class="row g-4">
 
     <div class="col-lg-5">
@@ -14,6 +16,7 @@
             <div class="card-body">
                 <form method="post">
                     {% csrf_token %}
+                    {% if can_message_all %}
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Recipients</label>
                         <select name="recipient_type" class="form-select form-select-sm" id="recipient-type">
@@ -21,7 +24,10 @@
                             <option value="class">Specific class</option>
                         </select>
                     </div>
-                    <div class="mb-3 d-none" id="class-picker">
+                    {% else %}
+                    <input type="hidden" name="recipient_type" value="class">
+                    {% endif %}
+                    <div class="mb-3{% if can_message_all %} d-none{% endif %}" id="class-picker">
                         <label class="form-label small fw-semibold">Class</label>
                         <select name="class_pk" class="form-select form-select-sm">
                             <option value="">— Select class —</option>
@@ -91,7 +97,7 @@
 
 {% block extra_scripts %}
 <script>
-document.getElementById('recipient-type').addEventListener('change', function() {
+document.getElementById('recipient-type')?.addEventListener('change', function() {
     document.getElementById('class-picker').classList.toggle('d-none', this.value !== 'class');
 });
 </script>
