@@ -3,7 +3,6 @@ The page a member reaches from "Pay now" in an invoice email. It needs no
 login: the link itself is signed, so it can't be guessed or changed.
 """
 import logging
-from decimal import Decimal
 
 from django.http import Http404
 from django.shortcuts import redirect, render
@@ -80,17 +79,8 @@ class InvoiceCardPaymentView(View):
         return stripe.checkout.Session.create(
             api_key=keys.secret,
             mode='payment',
-            line_items=[{
-                'price_data': {
-                    'currency': 'gbp',
-                    'unit_amount': int((balance * 100).quantize(Decimal(1))),
-                    'product_data': {
-                        'name': f'{org.name}: {invoice.period}',
-                        'description': f'{invoice.member.name} · reference {invoice.payment_reference}',
-                    },
-                },
-                'quantity': 1,
-            }],
+            line_items=payments.checkout_line_items(invoice),
+            custom_text={'submit': {'message': payments.checkout_note(invoice)}},
             success_url=page + '?paid=1',
             cancel_url=page,
             customer_email=_recipient_email(invoice.member),
