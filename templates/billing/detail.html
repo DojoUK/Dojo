@@ -87,6 +87,8 @@
                         {% else %}
                         <span class="badge bg-secondary-subtle text-secondary">Unpaid</span>
                         {% endif %}
+                        {% include 'billing/_autopay_badge.html' %}
+                        {% if invoice.autopay_status == 'failed' and invoice.status != 'paid' %}<div class="text-danger mt-1" style="font-size:0.75rem;">{{ invoice.autopay_error }} The member was emailed the invoice to pay another way.</div>{% endif %}
                     </dd>
 
                     <dt class="col-sm-4 text-muted fw-normal small">Created</dt>

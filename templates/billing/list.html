@@ -120,6 +120,7 @@
                         {% else %}
                         <span class="badge bg-secondary-subtle text-secondary">Unpaid</span>
                         {% endif %}
+                        {% include 'billing/_autopay_badge.html' %}
                     </td>
                     <td class="text-end pe-3">
                         <a href="{% url 'invoice_detail' org_slug=org.slug pk=invoice.pk %}" class="btn btn-sm btn-outline-secondary">View</a>

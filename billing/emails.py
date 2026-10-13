@@ -20,7 +20,16 @@ def portal_url_for(member, request=None):
     return f"{site_url.rstrip('/')}{portal_path}"
 
 
-def send_invoice_email(invoice, request=None):
+def _autopay_label(invoice):
+    """The saved card or Direct Debit this invoice will be collected from, if any."""
+    if invoice.autopay_status not in ('due', 'collecting', 'processing'):
+        return ''
+    from .autopay import active_autopay
+    autopay = active_autopay(invoice.member)
+    return autopay.label if autopay else ''
+
+
+def send_invoice_email(invoice, request=None, autopay_failed=''):
     member = invoice.member
     has_guardians = member.guardians.exists()
 
@@ -47,6 +56,8 @@ def send_invoice_email(invoice, request=None):
         'portal_url': portal_url,
         **payment_options(invoice),
         'has_guardians': has_guardians,
+        'autopay_failed': autopay_failed,
+        'autopay_label': _autopay_label(invoice),
     }
     html_body = render_to_string('emails/invoice.html', context)
     text_body = (
@@ -57,8 +68,14 @@ def send_invoice_email(invoice, request=None):
     )
     if invoice.notes:
         text_body += f"\n{invoice.notes}\n"
+    if autopay_failed:
+        text_body += f"\nWe couldn't take this payment automatically: {autopay_failed}\n"
+    if context['autopay_label'] and not autopay_failed:
+        text_body += f"\nNothing to do: this will be collected automatically from your {context['autopay_label']}.\n"
+    else:
+        text_body += f"\nHow to pay: {context['pay_url']}\n"
     if portal_url:
-        text_body += f"\nView and pay your invoice: {portal_url}\n"
+        text_body += f"\nSee all your invoices: {portal_url}\n"
 
     msg = EmailMultiAlternatives(
         subject=subject,

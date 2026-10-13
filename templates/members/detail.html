@@ -492,13 +492,16 @@
                             <span class="badge bg-secondary-subtle text-secondary">£{{ member.monthly_fee|floatformat:2 }}/mo</span>
                             {% endif %}
                             {% if member.subscription_status == 'active' %}
-                            <span class="badge bg-success-subtle text-success">Autopay active</span>
+                            <span class="badge bg-success-subtle text-success">Old subscription active</span>
                             {% elif member.subscription_status == 'cancelling' %}
-                            <span class="badge bg-warning-subtle text-warning">Autopay cancelling</span>
+                            <span class="badge bg-warning-subtle text-warning">Old subscription ending</span>
                             {% elif member.subscription_status == 'past_due' %}
-                            <span class="badge bg-danger-subtle text-danger">Autopay failed</span>
+                            <span class="badge bg-danger-subtle text-danger">Old subscription payment failed</span>
                             {% elif member.subscription_status == 'cancelled' %}
-                            <span class="badge bg-secondary-subtle text-secondary">Autopay cancelled</span>
+                            <span class="badge bg-secondary-subtle text-secondary">Old subscription cancelled</span>
+                            {% endif %}
+                            {% if member.autopay.active %}
+                            <span class="badge bg-success-subtle text-success" title="Invoices are collected automatically"><i class="bi bi-arrow-repeat"></i> Pays automatically: {{ member.autopay.label }}</span>
                             {% endif %}
                         </div>
                         <a href="{% url 'invoice_list' org_slug=org.slug %}?q={{ member.name|urlencode }}" class="btn btn-sm btn-outline-secondary">View all</a>

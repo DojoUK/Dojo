@@ -45,6 +45,26 @@
             <div class="form-text">Lets Dojo mark invoices paid the moment Stripe takes the payment. {% if payments_settings_page %}Use <strong>Set up automatically</strong> below{% else %}You can set this up automatically later in Settings → Payments{% endif %}.</div>
         </div>
     </div>
+    <div class="border-top mt-3 pt-3">
+        <label class="form-label small fw-semibold" for="pay-auto">Pay automatically</label>
+        <select name="pay_auto_pay" id="pay-auto" class="form-select form-select-sm" style="max-width:340px;">
+            {% for value, label in pay_auto_pay_choices %}
+            <option value="{{ value }}" {% if pay_values.auto_pay == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <div class="form-text mb-2">Members save a card or set up a Direct Debit once; every invoice Dojo makes for them is then charged to it. "Expected" asks them to set it up on every invoice and in the member portal, like a gym membership.</div>
+        <div class="d-flex flex-wrap gap-3">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="pay_auto_pay_card" id="pay-auto-card" value="1" {% if pay_auto_methods.card %}checked{% endif %}>
+                <label class="form-check-label small" for="pay-auto-card">Card</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="pay_auto_pay_direct_debit" id="pay-auto-dd" value="1" {% if pay_auto_methods.direct_debit %}checked{% endif %}>
+                <label class="form-check-label small" for="pay-auto-dd">Direct Debit</label>
+            </div>
+        </div>
+        <div class="form-text">Direct Debit (Bacs) has to be switched on in your Stripe account first (Stripe → Settings → Payment methods). Payments take about 3 working days to clear.</div>
+    </div>
 </div>
 
 <div class="form-check mb-3">

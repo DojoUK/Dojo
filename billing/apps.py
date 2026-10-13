@@ -10,3 +10,4 @@ class BillingConfig(AppConfig):
         from .models import Invoice, Payment
         auditlog.register(Invoice)
         auditlog.register(Payment)
+        from . import signals  # noqa: F401  (connects the signal handlers)

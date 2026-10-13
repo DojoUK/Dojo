@@ -47,49 +47,60 @@
 
 <div class="container pb-5" style="max-width: 680px;">
 
-    {% if subscription_enabled %}
+    {% if autopay_just_set_up %}
+    <div class="alert alert-success small"><i class="bi bi-check-circle me-1"></i> Automatic payments are set up with your {{ autopay_just_set_up.label }}.</div>
+    {% elif request.GET.autopay_off %}
+    <div class="alert alert-info small"><i class="bi bi-info-circle me-1"></i> Automatic payments are off. Future invoices will be emailed to you to pay.</div>
+    {% endif %}
+
+    {% if autopay_methods %}
+    <div class="card border-0 shadow-sm mb-4{% if autopay_expected and not autopay %} border-start border-4 border-dark{% endif %}">
+        <div class="card-body d-flex align-items-center justify-content-between gap-3 flex-wrap">
+            <div>
+                {% if autopay %}
+                <p class="fw-semibold mb-0"><i class="bi bi-check-circle-fill text-success me-1"></i> Paying automatically</p>
+                <p class="text-muted small mb-0">Invoices are taken from your {{ autopay.label }} when they're issued.</p>
+                {% else %}
+                <p class="fw-semibold mb-0">{% if autopay_expected %}{{ org.name }} asks members to pay automatically{% else %}Pay automatically{% endif %}</p>
+                <p class="text-muted small mb-0">Save {% if 'card' in autopay_methods and 'bacs_debit' in autopay_methods %}a card or set up a Direct Debit{% elif 'bacs_debit' in autopay_methods %}a Direct Debit{% else %}a card{% endif %} once, and invoices are paid when they're issued.</p>
+                {% endif %}
+            </div>
+            <div class="flex-shrink-0 d-flex flex-column gap-2">
+                <form method="post" action="{% url 'portal_autopay_setup' token=member.token %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm {% if autopay %}btn-outline-secondary{% else %}btn-dark{% endif %} w-100">
+                        {% if autopay %}Change card or account{% else %}Set up automatic payments{% endif %}
+                    </button>
+                </form>
+                {% if autopay %}
+                <form method="post" action="{% url 'portal_autopay_off' token=member.token %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger w-100"
+                            onclick="return confirm('Turn off automatic payments? Future invoices will be emailed to you to pay.')">Turn off</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if legacy_subscription %}
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body d-flex align-items-center justify-content-between gap-3 flex-wrap">
             <div>
-                {% if member.has_active_subscription %}
-                <p class="fw-semibold mb-0"><i class="bi bi-check-circle-fill text-success me-1"></i> Autopay active</p>
-                <p class="text-muted small mb-0">£{{ member.monthly_fee|floatformat:2 }}/month — card charged automatically each month.</p>
-                {% elif member.subscription_status == 'cancelling' %}
-                <p class="fw-semibold mb-0"><i class="bi bi-clock text-warning me-1"></i> Autopay cancelling</p>
-                <p class="text-muted small mb-0">Your subscription will end at the close of the current billing period.</p>
-                {% elif member.subscription_status == 'past_due' %}
-                <p class="fw-semibold mb-0"><i class="bi bi-exclamation-triangle-fill text-danger me-1"></i> Autopay payment failed</p>
-                <p class="text-muted small mb-0">Your last payment didn't go through. Please update your payment details.</p>
-                {% else %}
-                <p class="fw-semibold mb-0">Set up autopay</p>
-                <p class="text-muted small mb-0">Pay £{{ member.monthly_fee|floatformat:2 }}/month automatically — no more manual invoices.</p>
-                {% endif %}
+                <p class="fw-semibold mb-0">Monthly subscription{% if member.subscription_status == 'cancelling' %} (ending){% endif %}</p>
+                <p class="text-muted small mb-0">{% if member.subscription_status == 'cancelling' %}Ends at the close of the current billing period.{% else %}An older monthly card subscription. {% if autopay_methods %}Once automatic payments are set up above, cancel this so you're not charged twice.{% endif %}{% endif %}</p>
             </div>
-            <div class="flex-shrink-0">
-                {% if member.has_active_subscription or member.subscription_status == 'cancelling' %}
-                <div class="d-flex flex-column gap-2">
-                    <form method="post" action="/p/{{ member.token }}/billing-portal/">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-outline-secondary w-100">
-                            Manage payment method
-                        </button>
-                    </form>
-                    {% if not member.subscription_status == 'cancelling' %}
-                    <form method="post" action="/p/{{ member.token }}/cancel-subscription/">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-outline-danger w-100"
-                                onclick="return confirm('Cancel autopay at the end of this billing period?')">
-                            Cancel autopay
-                        </button>
-                    </form>
-                    {% endif %}
-                </div>
-                {% else %}
-                <form method="post" action="/p/{{ member.token }}/subscribe/">
+            <div class="flex-shrink-0 d-flex flex-column gap-2">
+                <form method="post" action="{% url 'portal_billing_portal' token=member.token %}">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-dark btn-sm">
-                        Set up autopay £{{ member.monthly_fee|floatformat:2 }}/month
-                    </button>
+                    <button type="submit" class="btn btn-sm btn-outline-secondary w-100">Manage payment method</button>
+                </form>
+                {% if member.subscription_status != 'cancelling' %}
+                <form method="post" action="{% url 'portal_cancel_subscription' token=member.token %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger w-100"
+                            onclick="return confirm('Cancel this subscription at the end of the billing period?')">Cancel subscription</button>
                 </form>
                 {% endif %}
             </div>
