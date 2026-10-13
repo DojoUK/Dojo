@@ -6,6 +6,8 @@ from datetime import date
 from decimal import Decimal
 from unittest import mock
 
+import stripe
+
 from django.contrib.auth.models import User
 from django.core import mail
 from django.test import TestCase, override_settings
@@ -120,7 +122,9 @@ class SettingsPageTests(PaymentsTestCase):
 
     def test_check_connection(self):
         self.configure(**CARD)
-        account = {'id': 'acct_1', 'settings': {'dashboard': {'display_name': 'Test Club Ltd'}}}
+        # A real Stripe object: it has no .get(), unlike a dict.
+        account = stripe.StripeObject.construct_from(
+            {'id': 'acct_1', 'settings': {'dashboard': {'display_name': 'Test Club Ltd'}}}, 'sk_test_abc')
         with mock.patch('stripe.Account.retrieve', return_value=account) as retrieve:
             response = self.client.get(self.url + '?check_stripe=1')
         retrieve.assert_called_once_with(api_key='sk_test_abc')
