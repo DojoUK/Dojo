@@ -229,7 +229,7 @@ class CreateSubscriptionView(View):
         session = stripe.checkout.Session.create(
             api_key=keys.secret,
             customer=customer_id,
-            payment_method_types=['card'],
+            # Payment methods come from the Stripe dashboard; the API no longer accepts a list here.
             line_items=[{
                 'price_data': {
                     'currency': 'gbp',
