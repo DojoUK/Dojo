@@ -33,9 +33,11 @@ class SetupView(View):
 
     def get(self, request):
         from .features import FEATURES, default_enabled, feature_rows
+        from .optional_fields import effective_fields, field_groups
         return render(request, self.template_name, {
             'demo_mode': request.GET.get('demo') == '1',
             'feature_rows': feature_rows({f.key for f in FEATURES if default_enabled(f)}),
+            'field_groups': field_groups(effective_fields({})),
         })
 
     def post(self, request):
@@ -76,11 +78,16 @@ class SetupView(View):
             errors.append('Password must be at least 8 characters.')
 
         from .features import choices_from_keys, effective_features, feature_rows
+        from .optional_fields import choices_from_keys as field_choices
+        from .optional_fields import effective_fields, field_groups, labels_from_post
         feature_choices = choices_from_keys(request.POST.getlist('features'))
+        optional_field_choices = field_choices(request.POST.getlist('optional_fields'))
+        labels = labels_from_post(request.POST)
 
         if errors:
             return render(request, self.template_name, {
                 'feature_rows': feature_rows(effective_features(feature_choices)),
+                'field_groups': field_groups(effective_fields(optional_field_choices), labels),
                 'errors': errors,
                 'demo_mode': request.GET.get('demo') == '1',
                 'org_name': org_name,
@@ -98,6 +105,8 @@ class SetupView(View):
             phone=request.POST.get('org_phone', '').strip(),
             website=request.POST.get('org_website', '').strip(),
             features=feature_choices,
+            optional_fields=optional_field_choices,
+            settings=labels,
         )
         OrganisationMember.objects.create(user=user, organisation=org, role=OrganisationMember.Role.ORG_ADMIN)
 
@@ -221,24 +230,32 @@ class DashboardView(OrgMixin, TemplateView):
         ).count() if is_admin and self.org.has_feature('applications') else 0
 
         thirty_days = today + timedelta(days=30)
+        track_licences = is_admin and self.org.has_field('licence')
         licences_expiring = active_members.filter(
             licence_expiry__lte=thirty_days, licence_expiry__gte=today
-        ).count() if is_admin else 0
+        ).count() if track_licences else 0
         licences_expired = active_members.filter(
             licence_expiry__lt=today
-        ).count() if is_admin else 0
+        ).count() if track_licences else 0
 
-        staff_expiring = OrganisationMember.objects.filter(
-            organisation=self.org
-        ).filter(
-            Q(dbs_expiry__lte=thirty_days, dbs_expiry__gte=today) |
-            Q(coaching_licence_expiry__lte=thirty_days, coaching_licence_expiry__gte=today)
-        ).count() if is_admin else 0
-        staff_expired = OrganisationMember.objects.filter(
-            organisation=self.org
-        ).filter(
-            Q(dbs_expiry__lt=today) | Q(coaching_licence_expiry__lt=today)
-        ).count() if is_admin else 0
+        # Staff expiry warnings only cover the checks the club has switched on.
+        staff_checks = [
+            (expiry_field, label)
+            for key, expiry_field, label in (
+                ('dbs', 'dbs_expiry', 'DBS'),
+                ('coaching_licence', 'coaching_licence_expiry', self.org.coaching_licence_label),
+            )
+            if self.org.has_field(key)
+        ]
+        staff_expiring = staff_expired = 0
+        if is_admin and staff_checks:
+            staff = OrganisationMember.objects.filter(organisation=self.org)
+            expiring_q, expired_q = Q(pk__in=[]), Q(pk__in=[])
+            for expiry_field, _ in staff_checks:
+                expiring_q |= Q(**{f'{expiry_field}__lte': thirty_days, f'{expiry_field}__gte': today})
+                expired_q |= Q(**{f'{expiry_field}__lt': today})
+            staff_expiring = staff.filter(expiring_q).count()
+            staff_expired = staff.filter(expired_q).count()
 
         onboarding = None
         if is_admin and not self.org.settings.get('onboarding_dismissed'):
@@ -292,6 +309,7 @@ class DashboardView(OrgMixin, TemplateView):
             'licences_expired': licences_expired,
             'staff_expiring': staff_expiring,
             'staff_expired': staff_expired,
+            'staff_check_names': ' or '.join(label for _, label in staff_checks),
             'unsigned_waivers_count': unsigned_waivers_count,
             'onboarding': onboarding,
         })
@@ -423,19 +441,20 @@ class StaffListView(OrgAdminMixin, View):
         elif action == 'update_qualifications':
             member_pk = request.POST.get('member_pk')
             om = get_object_or_404(OrganisationMember, pk=member_pk, organisation=self.org)
-            om.dbs_number = request.POST.get('dbs_number', '').strip()
-            om.coaching_licence = request.POST.get('coaching_licence', '').strip()
-            dbs_exp = request.POST.get('dbs_expiry', '').strip()
-            cl_exp = request.POST.get('coaching_licence_expiry', '').strip()
-            om.dbs_expiry = dbs_exp or None
-            om.coaching_licence_expiry = cl_exp or None
-            om.emergency_contact_name = request.POST.get('emergency_contact_name', '').strip()
-            om.emergency_contact_phone = request.POST.get('emergency_contact_phone', '').strip()
-            om.save(update_fields=[
-                'dbs_number', 'dbs_expiry', 'coaching_licence', 'coaching_licence_expiry',
-                'emergency_contact_name', 'emergency_contact_phone',
-            ])
-            messages.success(request, 'Qualifications updated.')
+            # Only fields the club has switched on are on the form; leave the rest untouched.
+            from .optional_fields import OPTIONAL_FIELDS, STAFF
+            fields = [
+                name
+                for f in OPTIONAL_FIELDS
+                if f.group == STAFF and self.org.has_field(f.key)
+                for name in f.model_fields
+            ]
+            for name in fields:
+                value = request.POST.get(name, '').strip()
+                setattr(om, name, (value or None) if name.endswith('_expiry') else value)
+            if fields:
+                om.save(update_fields=fields)
+            messages.success(request, 'Details updated.')
 
         elif action == 'update_capabilities':
             member_pk = request.POST.get('member_pk')
@@ -521,11 +540,13 @@ class OrgSettingsView(OrgAdminMixin, View):
 
     def _context(self):
         from .features import feature_rows
+        from .optional_fields import field_groups
         return {
             'org': self.org,
             'org_membership': self.org_membership,
             'presets': self.PRESETS,
             'feature_rows': feature_rows(self.org.enabled_features),
+            'field_groups': field_groups(self.org.enabled_fields, self.org.settings),
         }
 
     def get(self, request, org_slug):
@@ -541,6 +562,15 @@ class OrgSettingsView(OrgAdminMixin, View):
             self.org.save(update_fields=['features'])
             messages.success(request, 'Features saved.')
             return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#features")
+
+        if action == 'fields':
+            from .optional_fields import choices_from_keys as field_choices
+            from .optional_fields import labels_from_post
+            self.org.set_optional_fields(field_choices(request.POST.getlist('optional_fields')))
+            self.org.settings = {**(self.org.settings or {}), **labels_from_post(request.POST)}
+            self.org.save(update_fields=['optional_fields', 'settings'])
+            messages.success(request, 'Fields saved.')
+            return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#fields")
 
         if action == 'theme':
             sidebar_color = request.POST.get('sidebar_color', '#1E3A5F').strip()

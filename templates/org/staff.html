@@ -65,9 +65,9 @@
                     <th class="ps-3 small fw-semibold">Name</th>
                     <th class="small fw-semibold">Role</th>
                     <th class="small fw-semibold">Permissions</th>
-                    <th class="small fw-semibold">DBS</th>
-                    <th class="small fw-semibold">Coaching licence</th>
-                    <th class="small fw-semibold">Emergency contact</th>
+                    {% if 'dbs' in org.enabled_fields %}<th class="small fw-semibold">DBS</th>{% endif %}
+                    {% if 'coaching_licence' in org.enabled_fields %}<th class="small fw-semibold">{{ org.coaching_licence_label }}</th>{% endif %}
+                    {% if 'staff_emergency_contact' in org.enabled_fields %}<th class="small fw-semibold">Emergency contact</th>{% endif %}
                     <th></th>
                 </tr>
             </thead>
@@ -111,6 +111,7 @@
                             {% endfor %}
                         {% endif %}
                     </td>
+                    {% if 'dbs' in org.enabled_fields %}
                     <td class="py-2 small">
                         {% if om.dbs_number %}
                             <div>{{ om.dbs_number }}</div>
@@ -129,6 +130,8 @@
                             <span class="text-muted">—</span>
                         {% endif %}
                     </td>
+                    {% endif %}
+                    {% if 'coaching_licence' in org.enabled_fields %}
                     <td class="py-2 small">
                         {% if om.coaching_licence %}
                             <div>{{ om.coaching_licence }}</div>
@@ -147,6 +150,8 @@
                             <span class="text-muted">—</span>
                         {% endif %}
                     </td>
+                    {% endif %}
+                    {% if 'staff_emergency_contact' in org.enabled_fields %}
                     <td class="py-2 small">
                         {% if om.emergency_contact_name %}
                             <div>{{ om.emergency_contact_name }}</div>
@@ -158,6 +163,7 @@
                             <span class="text-muted">—</span>
                         {% endif %}
                     </td>
+                    {% endif %}
                     <td class="py-2 pe-3 text-end">
                         <div class="d-flex gap-1 justify-content-end">
                             <button class="btn btn-sm btn-outline-secondary" type="button"
@@ -181,40 +187,54 @@
                 </tr>
                 <tr class="collapse" id="quals-{{ om.pk }}">
                     <td colspan="7" class="bg-light px-3 py-3">
+                        {% if 'dbs' in org.enabled_fields or 'coaching_licence' in org.enabled_fields or 'staff_emergency_contact' in org.enabled_fields %}
                         <form method="post">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="update_qualifications">
                             <input type="hidden" name="member_pk" value="{{ om.pk }}">
                             <div class="row g-2">
+                                {% if 'dbs' in org.enabled_fields %}
                                 <div class="col-sm-3">
                                     <label class="form-label small fw-semibold">DBS number</label>
                                     <input type="text" name="dbs_number" value="{{ om.dbs_number }}" class="form-control form-control-sm">
                                 </div>
+                                {% endif %}
+                                {% if 'dbs' in org.enabled_fields %}
                                 <div class="col-sm-3">
                                     <label class="form-label small fw-semibold">DBS expiry</label>
                                     <input type="date" name="dbs_expiry" value="{{ om.dbs_expiry|date:'Y-m-d' }}" class="form-control form-control-sm">
                                 </div>
+                                {% endif %}
+                                {% if 'coaching_licence' in org.enabled_fields %}
                                 <div class="col-sm-3">
-                                    <label class="form-label small fw-semibold">Coaching licence</label>
+                                    <label class="form-label small fw-semibold">{{ org.coaching_licence_label }}</label>
                                     <input type="text" name="coaching_licence" value="{{ om.coaching_licence }}" class="form-control form-control-sm">
                                 </div>
+                                {% endif %}
+                                {% if 'coaching_licence' in org.enabled_fields %}
                                 <div class="col-sm-3">
-                                    <label class="form-label small fw-semibold">Coaching licence expiry</label>
+                                    <label class="form-label small fw-semibold">{{ org.coaching_licence_label }} expiry</label>
                                     <input type="date" name="coaching_licence_expiry" value="{{ om.coaching_licence_expiry|date:'Y-m-d' }}" class="form-control form-control-sm">
                                 </div>
+                                {% endif %}
+                                {% if 'staff_emergency_contact' in org.enabled_fields %}
                                 <div class="col-sm-3">
                                     <label class="form-label small fw-semibold">Emergency contact name</label>
                                     <input type="text" name="emergency_contact_name" value="{{ om.emergency_contact_name }}" class="form-control form-control-sm">
                                 </div>
+                                {% endif %}
+                                {% if 'staff_emergency_contact' in org.enabled_fields %}
                                 <div class="col-sm-3">
                                     <label class="form-label small fw-semibold">Emergency contact phone</label>
                                     <input type="text" name="emergency_contact_phone" value="{{ om.emergency_contact_phone }}" class="form-control form-control-sm">
                                 </div>
+                                {% endif %}
                                 <div class="col-12">
-                                    <button type="submit" class="btn btn-sm btn-dark">Save qualifications</button>
+                                    <button type="submit" class="btn btn-sm btn-dark">Save details</button>
                                 </div>
                             </div>
                         </form>
+                        {% endif %}
                         {% if not om.is_org_admin %}
                         <form method="post" class="mt-3 pt-3 border-top">
                             {% csrf_token %}

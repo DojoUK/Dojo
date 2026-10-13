@@ -159,7 +159,9 @@ class MemberCreateView(OrgAdminMixin, CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = 'Add member'
-        if self.request.POST:
+        if not self.org.has_field('guardians'):
+            context['guardian_formset'] = None
+        elif self.request.POST:
             context['guardian_formset'] = GuardianFormSet(self.request.POST)
         else:
             context['guardian_formset'] = GuardianFormSet()
@@ -169,14 +171,15 @@ class MemberCreateView(OrgAdminMixin, CreateView):
     def form_valid(self, form):
         context = self.get_context_data()
         guardian_formset = context['guardian_formset']
-        if not guardian_formset.is_valid():
+        if guardian_formset is not None and not guardian_formset.is_valid():
             return self.form_invalid(form)
         member = form.save(commit=False)
         member.organisation = self.org
         member.custom_field_values = extract_custom_field_values(self.org, self.request.POST)
         member.save()
-        guardian_formset.instance = member
-        guardian_formset.save()
+        if guardian_formset is not None:
+            guardian_formset.instance = member
+            guardian_formset.save()
         self._auto_assign_progression(member)
         messages.success(self.request, f'{member.name} added successfully.')
         return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
@@ -278,9 +281,14 @@ class MemberUpdateView(OrgAdminMixin, UpdateView):
         context['title'] = f'Edit {self.object.name}'
         context['member'] = self.object
         if self.request.POST:
-            context['guardian_formset'] = GuardianFormSet(self.request.POST, instance=self.object)
+            context['guardian_formset'] = (
+                GuardianFormSet(self.request.POST, instance=self.object)
+                if self.org.has_field('guardians') else None
+            )
         else:
-            context['guardian_formset'] = GuardianFormSet(instance=self.object)
+            context['guardian_formset'] = (
+                GuardianFormSet(instance=self.object) if self.org.has_field('guardians') else None
+            )
         context['custom_fields'] = build_custom_field_widgets(
             self.org,
             self.request.POST or None,
@@ -291,13 +299,14 @@ class MemberUpdateView(OrgAdminMixin, UpdateView):
     def form_valid(self, form):
         context = self.get_context_data()
         guardian_formset = context['guardian_formset']
-        if not guardian_formset.is_valid():
+        if guardian_formset is not None and not guardian_formset.is_valid():
             return self.form_invalid(form)
         member = form.save(commit=False)
         member.custom_field_values = extract_custom_field_values(self.org, self.request.POST)
         member.save()
-        guardian_formset.instance = member
-        guardian_formset.save()
+        if guardian_formset is not None:
+            guardian_formset.instance = member
+            guardian_formset.save()
         messages.success(self.request, f'{member.name} updated successfully.')
         return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
 
@@ -503,29 +512,30 @@ class MemberExportView(OrgAdminMixin, View):
         )
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = f'attachment; filename="{self.org.slug}-members.csv"'
+        # (header, value) per column; switched-off fields and features are left out.
+        org = self.org
+        columns = [
+            ('Name', lambda m, g: m.name),
+            ('Date of birth', lambda m, g: m.date_of_birth.isoformat() if m.date_of_birth else '')
+            if org.has_field('date_of_birth') else None,
+            ('Email', lambda m, g: m.email),
+            ('Phone', lambda m, g: m.phone) if org.has_field('phone') else None,
+            ('Joined date', lambda m, g: m.joined_date.isoformat() if m.joined_date else '')
+            if org.has_field('joined_date') else None,
+            ('Active', lambda m, g: 'Yes' if m.is_active else 'No'),
+            ('Monthly fee', lambda m, g: str(m.monthly_fee) if m.monthly_fee else '')
+            if org.has_feature('billing') else None,
+            ('Guardian name', lambda m, g: g.name if g else '') if org.has_field('guardians') else None,
+            ('Guardian email', lambda m, g: g.email if g else '') if org.has_field('guardians') else None,
+            ('Guardian phone', lambda m, g: g.phone if g else '') if org.has_field('guardians') else None,
+            ('Classes', lambda m, g: ', '.join(e.assigned_class.name for e in m.enrolments.all())),
+        ]
+        columns = [c for c in columns if c]
         writer = csv.writer(response)
-        writer.writerow([
-            'Name', 'Date of birth', 'Email', 'Phone',
-            'Joined date', 'Active', 'Monthly fee',
-            'Guardian name', 'Guardian email', 'Guardian phone',
-            'Classes',
-        ])
+        writer.writerow([header for header, _ in columns])
         for m in members:
             guardian = m.guardians.first()
-            classes = ', '.join(e.assigned_class.name for e in m.enrolments.all())
-            writer.writerow([
-                m.name,
-                m.date_of_birth.isoformat() if m.date_of_birth else '',
-                m.email,
-                m.phone,
-                m.joined_date.isoformat() if m.joined_date else '',
-                'Yes' if m.is_active else 'No',
-                str(m.monthly_fee) if m.monthly_fee else '',
-                guardian.name if guardian else '',
-                guardian.email if guardian else '',
-                guardian.phone if guardian else '',
-                classes,
-            ])
+            writer.writerow([value(m, guardian) for _, value in columns])
         return response
 
 
@@ -602,12 +612,13 @@ class MemberImportView(OrgAdminMixin, View):
                     except ValueError:
                         continue
 
+            # Columns for switched-off fields are ignored.
             rows.append({
                 'name': name,
                 'email': (row.get('email') or '').strip(),
-                'phone': (row.get('phone') or '').strip(),
-                'date_of_birth': dob,
-                'joined_date': joined,
+                'phone': (row.get('phone') or '').strip() if self.org.has_field('phone') else '',
+                'date_of_birth': dob if self.org.has_field('date_of_birth') else None,
+                'joined_date': joined if self.org.has_field('joined_date') else None,
             })
 
         if action == 'preview':

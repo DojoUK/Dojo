@@ -74,6 +74,10 @@ class MemberForm(forms.ModelForm):
             else:
                 field.widget.attrs['class'] = 'form-control'
         self.fields['name'].widget.attrs['autofocus'] = True
+        if org:
+            from organisations.optional_fields import MEMBER, disabled_model_fields
+            for name in disabled_model_fields(org, MEMBER):
+                del self.fields[name]
         if org and not org.has_feature('billing'):
             del self.fields['monthly_fee']
             del self.fields['billing_policy']

@@ -16,6 +16,10 @@ class Organisation(models.Model):
         default=dict, blank=True,
         help_text='Optional features switched on or off, {key: bool}. See organisations/features.py.',
     )
+    optional_fields = models.JSONField(
+        default=dict, blank=True,
+        help_text='Optional built-in fields switched on or off, {key: bool}. See organisations/optional_fields.py.',
+    )
     logo = models.ImageField(upload_to='logos/', null=True, blank=True)
     custom_css = models.TextField(blank=True)
     subscription_tier = models.CharField(max_length=50, default='free')
@@ -47,6 +51,36 @@ class Organisation(models.Model):
         """Store {key: bool} choices and drop the cached effective set."""
         self.features = dict(choices)
         self.__dict__.pop('enabled_features', None)
+
+    @cached_property
+    def enabled_fields(self):
+        """Keys of the optional built-in fields switched on. In templates:
+        {% if 'phone' in org.enabled_fields %}"""
+        from .optional_fields import effective_fields
+        return effective_fields(self.optional_fields)
+
+    def has_field(self, key):
+        from .optional_fields import OPTIONAL_FIELDS_BY_KEY
+        if key not in OPTIONAL_FIELDS_BY_KEY:
+            raise ValueError(f'Unknown optional field: {key}')
+        return key in self.enabled_fields
+
+    def set_optional_fields(self, choices):
+        self.optional_fields = dict(choices)
+        self.__dict__.pop('enabled_fields', None)
+
+    def field_label(self, key):
+        """The club's own name for a renamable field, else its default label."""
+        from .optional_fields import OPTIONAL_FIELDS_BY_KEY
+        return (self.settings or {}).get(f'{key}_label') or OPTIONAL_FIELDS_BY_KEY[key].label
+
+    @property
+    def licence_label(self):
+        return self.field_label('licence')
+
+    @property
+    def coaching_licence_label(self):
+        return self.field_label('coaching_licence')
 
     def save(self, *args, **kwargs):
         if not self.slug:

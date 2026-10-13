@@ -45,7 +45,11 @@ class SignupView(View):
                 'org': org, 'waivers': waivers, 'errors': errors, 'data': request.POST,
             })
 
-        dob_raw = request.POST.get('date_of_birth', '').strip()
+        def posted(name, field_key):
+            """A submitted value, or blank when the club has that field switched off."""
+            return request.POST.get(name, '').strip() if org.has_field(field_key) else ''
+
+        dob_raw = posted('date_of_birth', 'date_of_birth')
         dob = None
         if dob_raw:
             try:
@@ -62,16 +66,16 @@ class SignupView(View):
             name=name,
             date_of_birth=dob,
             email=request.POST.get('email', '').strip(),
-            phone=request.POST.get('phone', '').strip(),
-            address_line1=request.POST.get('address_line1', '').strip(),
-            address_line2=request.POST.get('address_line2', '').strip(),
-            city=request.POST.get('city', '').strip(),
-            county=request.POST.get('county', '').strip(),
-            postcode=request.POST.get('postcode', '').strip(),
-            guardian_name=request.POST.get('guardian_name', '').strip(),
-            guardian_email=request.POST.get('guardian_email', '').strip(),
-            guardian_phone=request.POST.get('guardian_phone', '').strip(),
-            medical_info=request.POST.get('medical_info', '').strip(),
+            phone=posted('phone', 'phone'),
+            address_line1=posted('address_line1', 'address'),
+            address_line2=posted('address_line2', 'address'),
+            city=posted('city', 'address'),
+            county=posted('county', 'address'),
+            postcode=posted('postcode', 'address'),
+            guardian_name=posted('guardian_name', 'guardians'),
+            guardian_email=posted('guardian_email', 'guardians'),
+            guardian_phone=posted('guardian_phone', 'guardians'),
+            medical_info=posted('medical_info', 'medical_info'),
             notes=request.POST.get('notes', '').strip(),
             signature_data=signature_data,
         )

@@ -51,14 +51,18 @@
                         <label class="form-label small fw-semibold">Full name <span class="text-danger">*</span></label>
                         <input type="text" name="name" class="form-control" value="{{ data.name|default:'' }}" required autofocus>
                     </div>
+                    {% if 'date_of_birth' in org.enabled_fields %}
                     <div class="col-sm-6">
                         <label class="form-label small fw-semibold">Date of birth</label>
                         <input type="date" name="date_of_birth" id="dobInput" class="form-control" value="{{ data.date_of_birth|default:'' }}">
                     </div>
+                    {% endif %}
+                    {% if 'phone' in org.enabled_fields %}
                     <div class="col-sm-6">
                         <label class="form-label small fw-semibold">Phone</label>
                         <input type="tel" name="phone" class="form-control" value="{{ data.phone|default:'' }}">
                     </div>
+                    {% endif %}
                     <div class="col-12">
                         <label class="form-label small fw-semibold">Email</label>
                         <input type="email" name="email" class="form-control" value="{{ data.email|default:'' }}">
@@ -68,6 +72,7 @@
         </div>
 
         {# ── Address ── #}
+        {% if 'address' in org.enabled_fields %}
         <div class="card mb-4">
             <div class="card-header bg-white py-3"><h6 class="mb-0">Address</h6></div>
             <div class="card-body">
@@ -95,8 +100,10 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         {# ── Guardian (shown for under-18s via JS) ── #}
+        {% if 'guardians' in org.enabled_fields %}
         <div class="card mb-4" id="guardianCard" style="display:none;">
             <div class="card-header bg-white py-3">
                 <h6 class="mb-0">Parent / Guardian details</h6>
@@ -119,8 +126,10 @@
                 </div>
             </div>
         </div>
+        {% endif %}
 
         {# ── Medical info ── #}
+        {% if 'medical_info' in org.enabled_fields %}
         <div class="card mb-4" style="border-color:#fca5a5!important;">
             <div class="card-header py-3" style="background:#fff5f5;border-bottom-color:#fca5a5;">
                 <h6 class="mb-0"><i class="bi bi-heart-pulse text-danger me-2"></i>Medical information</h6>
@@ -131,6 +140,7 @@
                 <textarea name="medical_info" rows="3" class="form-control" placeholder="e.g. Asthma (uses inhaler), nut allergy, epilepsy. Leave blank if none.">{{ data.medical_info|default:'' }}</textarea>
             </div>
         </div>
+        {% endif %}
 
         {# ── Additional notes ── #}
         <div class="card mb-4">
@@ -193,15 +203,17 @@
 
 {% block extra_scripts %}
 <script>
-// Show guardian card for under-18s
+// Show guardian card for under-18s. Without a date of birth to go on, it's always shown.
 const dobInput = document.getElementById('dobInput');
 const guardianCard = document.getElementById('guardianCard');
 function checkAge() {
+    if (!guardianCard) return;
+    if (!dobInput) { guardianCard.style.display = 'block'; return; }
     if (!dobInput.value) { guardianCard.style.display = 'none'; return; }
     const age = (new Date() - new Date(dobInput.value)) / (1000 * 60 * 60 * 24 * 365.25);
     guardianCard.style.display = age < 18 ? 'block' : 'none';
 }
-dobInput.addEventListener('change', checkAge);
+if (dobInput) dobInput.addEventListener('change', checkAge);
 checkAge();
 
 {% if waivers %}
