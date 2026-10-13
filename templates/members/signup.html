@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load branding %}
 {% block title %}Register interest{% endblock %}
 
 {% block body %}
@@ -11,9 +12,7 @@
 
 <div class="signup-header mb-5">
     <div class="container" style="max-width:680px;">
-        {% if org.logo %}
-        <img src="{{ org.logo.url }}" style="width:44px;height:44px;border-radius:10px;object-fit:cover;margin-bottom:14px;">
-        {% endif %}
+        {% if org.logo %}<div class="mb-3">{% org_logo org org.theme.sidebar_color 56 220 %}</div>{% endif %}
         <h2 class="fw-bold mb-1">Register interest</h2>
         <p style="color:rgba(255,255,255,.7);margin:0;">{{ org.name }}{% if org.website %} · <a href="{{ org.website }}" style="color:rgba(255,255,255,.6);">{{ org.website }}</a>{% endif %}</p>
     </div>

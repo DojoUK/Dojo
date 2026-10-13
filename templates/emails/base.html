@@ -14,7 +14,8 @@
         <!-- Header -->
         <tr>
           <td style="background:#1a1a1a;padding:24px 32px;border-radius:8px 8px 0 0;">
-            <span style="color:#ffffff;font-size:20px;font-weight:700;letter-spacing:-0.3px;">{{ org_name }}</span>
+            {% if org_logo_url %}<img src="{{ org_logo_url }}" alt="{{ org_name }}" height="40" style="max-height:40px;max-width:160px;height:auto;width:auto;vertical-align:middle;margin-right:12px;border:0;{{ org_logo_backdrop }}">{% endif %}
+            <span style="color:#ffffff;font-size:20px;font-weight:700;letter-spacing:-0.3px;vertical-align:middle;">{{ org_name }}</span>
           </td>
         </tr>
 

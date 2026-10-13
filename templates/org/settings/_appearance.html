@@ -1,3 +1,4 @@
+{% load branding %}
 <div class="form-check form-switch mb-3">
     <input class="form-check-input" type="checkbox" id="devModeToggle">
     <label class="form-check-label small text-muted" for="devModeToggle">Developer mode</label>
@@ -58,7 +59,7 @@
         <label class="form-label small fw-semibold">Logo</label>
         {% if org.logo %}
         <div class="d-flex align-items-center gap-3 mb-2">
-            <img src="{{ org.logo.url }}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;">
+            {% org_logo org org.theme.sidebar_color 48 160 %}
             <div>
                 <div class="small fw-semibold">Current logo</div>
                 <button type="submit" name="remove_logo" value="1" class="btn btn-link btn-sm text-danger p-0"
@@ -66,8 +67,8 @@
             </div>
         </div>
         {% endif %}
-        <input type="file" name="logo" class="form-control form-control-sm" accept="image/*">
-        <div class="form-text">Shown in the sidebar. PNG or SVG works best. Square images recommended.</div>
+        <input type="file" name="logo" class="form-control form-control-sm" accept="image/png,image/jpeg,image/webp">
+        <div class="form-text">PNG, JPG or WebP, up to 2MB. Shown uncropped in the sidebar, on the login and join pages, in the member portal, in emails and on printed registers. If it would be hard to see against a background, Dojo adds a contrasting backing automatically.</div>
     </div>
 
     {# Dev mode: custom CSS #}

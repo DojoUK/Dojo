@@ -18,6 +18,7 @@ from dojo.mixins import CapabilityMixin, OrgAdminMixin, OrgMixin
 from dojo.version import RELEASES_URL, get_version_info
 from .models import Announcement, Organisation, OrganisationMember, StaffHoliday
 from members.models import CustomField
+from .branding import email_branding
 
 
 class SetupView(View):
@@ -621,10 +622,21 @@ class OrgSettingsView(OrgAdminMixin, View):
             self.org.save(update_fields=['settings'])
 
             if 'logo' in request.FILES:
-                self.org.logo = request.FILES['logo']
-                self.org.save(update_fields=['logo'])
+                from .branding import image_luminance, validate_logo
+                upload = request.FILES['logo']
+                error = validate_logo(upload)
+                if error:
+                    messages.error(request, error)
+                    return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#appearance")
+                if self.org.logo:
+                    self.org.logo.delete(save=False)
+                self.org.logo = upload
+                self.org.settings = {**(self.org.settings or {}), 'logo_luminance': round(image_luminance(upload), 3)}
+                self.org.save(update_fields=['logo', 'settings'])
             if request.POST.get('remove_logo'):
-                self.org.logo.delete(save=True)
+                self.org.logo.delete(save=False)
+                self.org.settings = {k: v for k, v in (self.org.settings or {}).items() if k != 'logo_luminance'}
+                self.org.save(update_fields=['logo', 'settings'])
 
             dev_mode = request.POST.get('dev_mode') == '1'
             if dev_mode:
@@ -648,7 +660,11 @@ class OrgSettingsView(OrgAdminMixin, View):
         self.org.email = email
         self.org.phone = phone
         self.org.website = website
-        self.org.save(update_fields=['name', 'email', 'phone', 'website'])
+        short_name = request.POST.get('short_name', '').strip()[:40]
+        self.org.settings = {k: v for k, v in (self.org.settings or {}).items() if k != 'short_name'}
+        if short_name:
+            self.org.settings['short_name'] = short_name
+        self.org.save(update_fields=['name', 'email', 'phone', 'website', 'settings'])
         messages.success(request, 'Settings saved.')
         return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#general")
 
@@ -765,6 +781,7 @@ class AnnouncementListView(OrgMixin, View):
             html_body = render_to_string('emails/announcement.html', {
                 'member': member,
                 'org_name': org_name,
+                **email_branding(self.org),
                 'org_email': self.org.email,
                 'subject': subject,
                 'body': body,

@@ -10,6 +10,7 @@ from dojo.mixins import ClassCoachMixin, OrgAdminMixin, OrgMixin
 from members.models import Member
 
 from .models import Attendance, Class, ClassCoach, ClassMember, Session, SessionCoach, WaitingList
+from organisations.branding import email_branding
 
 
 DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -525,6 +526,7 @@ class CancelSessionView(OrgAdminMixin, View):
             subject = f'{org_name} — {cls.name} session cancelled ({session.date.strftime("%d %b %Y")})'
             context = {
                 'org_name': org_name,
+                **email_branding(self.org),
                 'org_email': self.org.email,
                 'class_name': cls.name,
                 'session': session,

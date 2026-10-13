@@ -3,6 +3,7 @@ from django.template.loader import render_to_string
 from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
+from organisations.branding import email_branding
 
 
 def portal_url_for(member, request=None):
@@ -37,6 +38,7 @@ def send_invoice_email(invoice, request=None):
     context = {
         'invoice': invoice,
         'org_name': org_name,
+        **email_branding(invoice.organisation),
         'org_email': invoice.organisation.email,
         'member': member,
         'portal_url': portal_url,
@@ -84,6 +86,7 @@ def send_reminder_email(invoice, request=None):
     context = {
         'invoice': invoice,
         'org_name': org.name,
+        **email_branding(org),
         'org_email': org.email or settings.DEFAULT_FROM_EMAIL,
         'member': member,
         'portal_url': portal_url,

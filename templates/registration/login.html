@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load branding %}
 
 {% block title %}Log in{% endblock %}
 {% block body_class %}{% endblock %}
@@ -12,8 +13,15 @@
 
         <div class="text-center mb-5">
             {% load static %}
+            {% only_organisation as club %}
+            {% if club and club.logo %}
+            <div class="mb-3">{% org_logo club '#1E3A5F' 72 240 %}</div>
+            <p style="color:#fff;font-weight:600;font-size:1.05rem;margin:0 0 2px;">{{ club.name }}</p>
+            <p style="color:rgba(255,255,255,.45);font-size:0.8rem;margin:0;">Sign in with Dojo</p>
+            {% else %}
             <img src="{% static 'img/dojo-wordmark.png' %}" alt="Dojo" style="height:44px;filter:brightness(0) invert(1);opacity:0.9;margin-bottom:12px;">
             <p style="color:rgba(255,255,255,.45);font-size:0.85rem;margin:0;">Club &amp; class management</p>
+            {% endif %}
         </div>
 
         <div class="card" style="border:none!important;box-shadow:0 20px 60px rgba(0,0,0,.3)!important;">
