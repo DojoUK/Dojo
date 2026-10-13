@@ -1,59 +1,35 @@
-{% extends 'base.html' %}
+{% extends 'signin_base.html' %}
 
 {% block title %}Log in{% endblock %}
-{% block body_class %}{% endblock %}
 
-{% block body %}
-<style>
-    body { background: linear-gradient(135deg, #1E3A5F 0%, #0f2139 100%); min-height: 100vh; }
-</style>
-<div class="min-vh-100 d-flex align-items-center justify-content-center px-3">
-    <div class="w-100" style="max-width: 400px;">
+{% block card %}
+<h5 class="fw-semibold mb-4" style="font-size:1rem;">Sign in to your account</h5>
 
-        <div class="text-center mb-5">
-            {% load static %}
-            <img src="{% static 'img/dojo-wordmark.png' %}" alt="Dojo" style="height:44px;filter:brightness(0) invert(1);opacity:0.9;margin-bottom:12px;">
-            <p style="color:rgba(255,255,255,.45);font-size:0.85rem;margin:0;">Club &amp; class management</p>
-        </div>
+<form method="post">
+    {% csrf_token %}
 
-        <div class="card" style="border:none!important;box-shadow:0 20px 60px rgba(0,0,0,.3)!important;">
-            <div class="card-body p-4">
-                <h5 class="fw-semibold mb-4" style="font-size:1rem;">Sign in to your account</h5>
-
-                <form method="post">
-                    {% csrf_token %}
-
-                    {% if form.errors %}
-                    <div class="alert alert-danger py-2 small mb-3">
-                        Username or password incorrect. Please try again.
-                    </div>
-                    {% endif %}
-
-                    <div class="mb-3">
-                        <label for="id_username" class="form-label small fw-semibold">Username</label>
-                        <input type="text" name="username" id="id_username"
-                               class="form-control" autocomplete="username" autofocus required>
-                    </div>
-
-                    <div class="mb-4">
-                        <label for="id_password" class="form-label small fw-semibold">Password</label>
-                        <input type="password" name="password" id="id_password"
-                               class="form-control" autocomplete="current-password" required>
-                    </div>
-
-                    <input type="hidden" name="next" value="{{ next }}">
-                    <button type="submit" class="btn btn-dark w-100 py-2">Sign in</button>
-                </form>
-                <div class="text-center mt-3">
-                    <a href="{% url 'password_reset' %}" class="text-muted small">Forgot password?</a>
-                </div>
-            </div>
-        </div>
-
-        <p class="text-center mt-4" style="color:rgba(255,255,255,.25);font-size:0.72rem;">
-            <a href="https://github.com/DojoUK/Dojo" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">AGPL-3.0 &middot; source available</a>
-        </p>
-
+    {% if form.errors %}
+    <div class="alert alert-danger py-2 small mb-3">
+        Username or password incorrect. Please try again.
     </div>
+    {% endif %}
+
+    <div class="mb-3">
+        <label for="id_username" class="form-label small fw-semibold">Username</label>
+        <input type="text" name="username" id="id_username"
+               class="form-control" autocomplete="username" autofocus required>
+    </div>
+
+    <div class="mb-4">
+        <label for="id_password" class="form-label small fw-semibold">Password</label>
+        <input type="password" name="password" id="id_password"
+               class="form-control" autocomplete="current-password" required>
+    </div>
+
+    <input type="hidden" name="next" value="{{ next }}">
+    <button type="submit" class="btn btn-dark w-100 py-2">Sign in</button>
+</form>
+<div class="text-center mt-3">
+    <a href="{% url 'password_reset' %}" class="text-muted small">Forgot password?</a>
 </div>
 {% endblock %}

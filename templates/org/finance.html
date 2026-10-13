@@ -55,9 +55,13 @@
                 {% for row in outstanding_members %}
                 <tr>
                     <td class="ps-3 py-2">
+                        {% if request.user.is_superuser or org_membership.is_org_admin %}
                         <a href="{% url 'member_detail' org_slug=org.slug pk=row.member__pk %}" class="text-decoration-none fw-semibold small text-dark">
                             {{ row.member__name }}
                         </a>
+                        {% else %}
+                        <span class="fw-semibold small">{{ row.member__name }}</span>
+                        {% endif %}
                     </td>
                     <td class="py-2 text-end pe-3 small fw-semibold">£{{ row.total|floatformat:2 }}</td>
                 </tr>

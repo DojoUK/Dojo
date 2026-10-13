@@ -10,6 +10,8 @@ from dojo.mixins import ClassCoachMixin, OrgAdminMixin, OrgMixin
 from members.models import Member
 
 from .models import Attendance, Class, ClassCoach, ClassMember, Session, SessionCoach, WaitingList
+from mailer import blocks as email_blocks
+from mailer import compose
 
 
 DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -59,12 +61,17 @@ def _class_form_class(org=None):
             super().__init__(*args, **kwargs)
             for field in self.fields.values():
                 field.widget.attrs['class'] = 'form-control'
-            if org:
-                self.fields['billing_policy'].queryset = BillingPolicy.objects.filter(
-                    organisation=org, is_active=True
-                )
-            self.fields['billing_policy'].required = False
-            self.fields['billing_policy'].empty_label = '— No policy —'
+            if org and not org.has_feature('waiting_lists'):
+                del self.fields['max_capacity']
+            if org and not org.has_feature('billing'):
+                del self.fields['billing_policy']
+            if 'billing_policy' in self.fields:
+                if org:
+                    self.fields['billing_policy'].queryset = BillingPolicy.objects.filter(
+                        organisation=org, is_active=True
+                    )
+                self.fields['billing_policy'].required = False
+                self.fields['billing_policy'].empty_label = '— No policy —'
 
     return ClassForm
 
@@ -185,7 +192,10 @@ class ClassDetailView(OrgAdminMixin, DetailView):
         )
         context['sessions'] = self.object.sessions.order_by('-date')[:10]
         context['days'] = DAYS
-        context['waiting_list'] = self.object.waiting_list.select_related('member')
+        context['waiting_list'] = (
+            self.object.waiting_list.select_related('member')
+            if self.org.has_feature('waiting_lists') else []
+        )
         return context
 
 
@@ -224,8 +234,6 @@ class UnenrolMemberView(OrgAdminMixin, View):
 
 
     def _notify_waitlist_promoted(self, request, member, cls):
-        from django.conf import settings
-        from django.core.mail import EmailMultiAlternatives
         has_guardians = member.guardians.exists()
         if has_guardians:
             guardian = member.guardians.filter(email__gt='').first()
@@ -234,32 +242,16 @@ class UnenrolMemberView(OrgAdminMixin, View):
             recipient = member.email or None
         if not recipient:
             return
-        org_name = self.org.name
-        subject = f"A spot has opened up — {cls.name} ({org_name})"
-        greeting = f"Dear guardian of {member.name}" if has_guardians else f"Hi {member.name}"
-        contact_line = (
-            f"To stop receiving non-essential emails like this, contact {self.org.email}."
-            if self.org.email else
-            f"To stop receiving non-essential emails like this, contact {org_name} directly."
-        )
-        body = (
-            f"{greeting},\n\n"
-            f"Great news! A spot has opened up in {cls.name} at {org_name} "
-            f"and {member.name} has been moved off the waiting list and into the class.\n\n"
-            f"No action is needed — you're all set.\n\n"
-            f"Thanks,\n{org_name}\n\n"
-            f"{contact_line}"
-        )
         try:
-            EmailMultiAlternatives(
-                subject=subject, body=body,
-                from_email=settings.DEFAULT_FROM_EMAIL, to=[recipient],
-            ).send()
-        except Exception:
+            compose.send(self.org, 'waiting_list_place', [recipient],
+                         {**compose.member_values(member, to_guardian=has_guardians), 'class_name': cls.name})
+        except Exception:  # the move itself has happened; a failed email mustn't undo it
             pass
 
 
 class RemoveFromWaitingListView(OrgAdminMixin, View):
+    required_feature = 'waiting_lists'
+
     def post(self, request, org_slug, pk, member_pk):
         cls = get_object_or_404(Class, pk=pk, organisation=self.org)
         WaitingList.objects.filter(assigned_class=cls, member_id=member_pk).delete()
@@ -301,6 +293,8 @@ class AttendanceRegisterView(ClassCoachMixin, View):
 
     def _unsigned_waiver_ids(self, enrolled):
         from documents.models import SignedWaiver, WaiverTemplate
+        if not self.org.has_feature('documents'):
+            return set()
         has_required_waivers = WaiverTemplate.objects.filter(
             organisation=self.org, is_active=True, is_required=True
         ).exists()
@@ -488,9 +482,6 @@ class CancelSessionView(OrgAdminMixin, View):
         return redirect('class_detail', org_slug=self.org.slug, pk=cls.pk)
 
     def _send_cancellation_emails(self, request, cls, session):
-        from django.core.mail import EmailMultiAlternatives
-        from django.template.loader import render_to_string
-
         enrolled = (
             ClassMember.objects.filter(assigned_class=cls)
             .select_related('member')
@@ -509,40 +500,40 @@ class CancelSessionView(OrgAdminMixin, View):
             if not recipient:
                 continue
 
-            org_name = self.org.name
-            subject = f'{org_name} — {cls.name} session cancelled ({session.date.strftime("%d %b %Y")})'
-            context = {
-                'org_name': org_name,
-                'org_email': self.org.email,
-                'class_name': cls.name,
-                'session': session,
-                'member': member,
-                'has_guardians': has_guardians,
-            }
-            html_body = render_to_string('emails/session_cancelled.html', context)
-            text_body = (
-                f"{'Hi' if not has_guardians else 'Dear guardian of'} {member.name},\n\n"
-                f"This is to let you know that the {cls.name} session on "
-                f"{session.date.strftime('%d %b %Y')} has been cancelled.\n\n"
-                f"— {org_name}"
-            )
-            msg = EmailMultiAlternatives(
-                subject=subject, body=text_body,
-                from_email=self.org.email or None,
-                to=[recipient],
-            )
-            msg.attach_alternative(html_body, 'text/html')
+            session_date = session.date.strftime('%A %-d %B %Y')
             try:
-                msg.send()
+                compose.send(self.org, 'session_cancelled', [recipient],
+                             {**compose.member_values(member, to_guardian=has_guardians),
+                              'class_name': cls.name, 'session_date': session_date},
+                             {'session_box': email_blocks.session_box(cls.name, session_date)})
                 sent += 1
-            except Exception:
+            except Exception:  # one bad address mustn't stop the other notices
                 pass
 
         if sent:
             messages.success(request, f'Cancellation notice sent to {sent} member{"s" if sent != 1 else ""}.')
 
 
-class AttendanceAnalyticsView(OrgAdminMixin, View):
+class AttendanceScopeMixin(OrgMixin):
+    """
+    Attendance reporting is open to all staff, but coaches only see the
+    classes they're assigned to unless granted `view_all_attendance`.
+    """
+    def visible_classes(self):
+        classes = Class.objects.filter(organisation=self.org)
+        if not self.can('view_all_attendance'):
+            classes = classes.filter(pk__in=self.coached_class_ids())
+        return classes
+
+    def selected_class_pk(self):
+        """The ?class= filter, ignored unless it's one of the visible classes."""
+        class_pk = self.request.GET.get('class', '')
+        if class_pk.isdigit() and self.visible_classes().filter(pk=class_pk).exists():
+            return class_pk
+        return ''
+
+
+class AttendanceAnalyticsView(AttendanceScopeMixin, View):
     template_name = 'classes/attendance_analytics.html'
 
     def get(self, request, org_slug):
@@ -553,13 +544,18 @@ class AttendanceAnalyticsView(OrgAdminMixin, View):
         eight_weeks_ago = today - timedelta(weeks=8)
         two_weeks_ago = today - timedelta(weeks=2)
 
-        class_pk = request.GET.get('class')
+        class_pk = self.selected_class_pk()
         sort = request.GET.get('sort', 'status')
+        classes = self.visible_classes().order_by('name')
 
+        # Filter by subquery rather than joining enrolments, so a member in
+        # several visible classes isn't counted more than once below.
+        enrolled_ids = ClassMember.objects.filter(
+            assigned_class_id__in=[class_pk] if class_pk else classes.values('pk'),
+        ).values('member_id')
         members = Member.objects.filter(organisation=self.org, is_active=True)
-
-        if class_pk:
-            members = members.filter(enrolments__assigned_class_id=class_pk)
+        if class_pk or not self.can('view_all_attendance'):
+            members = members.filter(pk__in=enrolled_ids)
 
         members = members.annotate(
             last_attended=Max(
@@ -616,14 +612,12 @@ class AttendanceAnalyticsView(OrgAdminMixin, View):
         count_at_risk = sum(1 for m in member_list if m.attendance_status == 'at_risk')
         count_absent = sum(1 for m in member_list if m.attendance_status in ('absent', 'never'))
 
-        # Total sessions run in the last 4 weeks across all org classes
+        # Total sessions run in the last 4 weeks across the visible classes
         total_sessions_4w = Session.objects.filter(
-            assigned_class__organisation=self.org,
+            assigned_class__in=classes,
             date__gte=four_weeks_ago,
             is_cancelled=False,
         ).count()
-
-        classes = Class.objects.filter(organisation=self.org).order_by('name')
 
         return render(request, self.template_name, {
             'org': self.org,
@@ -641,7 +635,7 @@ class AttendanceAnalyticsView(OrgAdminMixin, View):
         })
 
 
-class AttendanceExportView(OrgAdminMixin, View):
+class AttendanceExportView(AttendanceScopeMixin, View):
     def get(self, request, org_slug):
         import csv
         from django.http import HttpResponse
@@ -649,10 +643,10 @@ class AttendanceExportView(OrgAdminMixin, View):
 
         date_from_raw = request.GET.get('date_from', '')
         date_to_raw = request.GET.get('date_to', '')
-        class_pk = request.GET.get('class', '')
+        class_pk = self.selected_class_pk()
 
         sessions = Session.objects.filter(
-            assigned_class__organisation=self.org,
+            assigned_class__in=self.visible_classes(),
             is_cancelled=False,
         ).select_related('assigned_class').order_by('date')
 

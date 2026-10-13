@@ -3,22 +3,39 @@ import json
 from django.conf import settings
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views import View
 
 from billing.models import Invoice
+from billing.payments import pay_token, stripe_keys
+from billing.payments import settings_for as payments_settings_for
+from dojo.mixins import require_features
+
 from .models import Member
+
+
+def _portal_member(token, *features):
+    """The active member for a portal token, 404 unless the member portal and
+    any other given features are switched on for their organisation."""
+    member = get_object_or_404(Member.objects.select_related('organisation'), token=token, is_active=True)
+    require_features(member.organisation, ('member_portal',) + features)
+    return member
 
 
 class PortalView(View):
     def get(self, request, token):
-        member = get_object_or_404(Member, token=token, is_active=True)
+        member = _portal_member(token)
         org = member.organisation
 
         guardian = member.guardians.filter(email__gt='').first()
         has_guardians = member.guardians.exists()
 
-        invoices = member.invoices.order_by('-created_at')
+        # Invoices an admin hasn't checked and sent yet stay hidden.
+        invoices = member.invoices.exclude(run__status='awaiting_review').order_by('-created_at')
         outstanding = [inv for inv in invoices if inv.status != 'paid']
+        # Each invoice's button opens its payment page: card, bank transfer and in-person options.
+        for inv in outstanding:
+            inv.pay_page = reverse('invoice_pay', kwargs={'token': pay_token(inv)})
         paid = [inv for inv in invoices if inv.status == 'paid']
 
         from progression.models import MemberProgression
@@ -44,8 +61,13 @@ class PortalView(View):
 
         outstanding_total = sum(inv.amount for inv in outstanding)
 
-        stripe_enabled = bool(settings.STRIPE_PUBLIC_KEY and settings.STRIPE_SECRET_KEY)
-        subscription_enabled = stripe_enabled and bool(member.monthly_fee)
+        stripe_enabled = org.has_feature('billing') and stripe_keys(org) is not None
+        from billing import autopay
+        autopay_enabled = autopay.enabled(org)
+        autopay_just_set_up = None
+        if autopay_enabled and request.GET.get('autopay_session'):
+            autopay_just_set_up = autopay.finish_setup(org, request.GET['autopay_session'])
+        payment_settings = payments_settings_for(org)
 
         return render(request, 'portal/index.html', {
             'member': member,
@@ -58,7 +80,12 @@ class PortalView(View):
             'progressions': progressions,
             'outstanding_total': outstanding_total,
             'stripe_enabled': stripe_enabled,
-            'subscription_enabled': subscription_enabled,
+            'autopay_enabled': autopay_enabled,
+            'autopay': autopay.active_autopay(member),
+            'autopay_just_set_up': autopay_just_set_up,
+            'autopay_expected': bool(payment_settings and payment_settings.auto_pay == 'encouraged'),
+            # Monthly Stripe subscriptions from before automatic payments: still shown so they can be cancelled.
+            'legacy_subscription': bool(member.stripe_subscription_id) and stripe_enabled,
             'enrolments': enrolments,
             'recent_attendance': recent_attendance,
         })
@@ -68,7 +95,7 @@ class DownloadDataView(View):
     """Self-service subject access / portability export (Art. 15/20) — everything held on this member,
     except internal coach/admin notes, which are excluded here and available on request from the club."""
     def get(self, request, token):
-        member = get_object_or_404(Member, token=token, is_active=True)
+        member = _portal_member(token)
 
         from classes.models import Attendance
         from documents.models import Document, SignedWaiver
@@ -142,19 +169,18 @@ class CreateCheckoutView(View):
     def post(self, request, token, invoice_pk):
         import stripe
 
-        member = get_object_or_404(Member, token=token, is_active=True)
+        member = _portal_member(token, 'billing')
         invoice = get_object_or_404(Invoice, pk=invoice_pk, member=member, status='unpaid')
 
-        if not (settings.STRIPE_PUBLIC_KEY and settings.STRIPE_SECRET_KEY):
+        keys = stripe_keys(member.organisation)
+        if keys is None:
             return redirect('member_portal', token=token)
-
-        stripe.api_key = settings.STRIPE_SECRET_KEY
 
         site_url = settings.SITE_URL.rstrip('/')
         portal_url = f"{site_url}/p/{token}/"
 
         session = stripe.checkout.Session.create(
-            payment_method_types=['card'],
+            api_key=keys.secret,
             line_items=[{
                 'price_data': {
                     'currency': 'gbp',
@@ -180,79 +206,45 @@ class CreateCheckoutView(View):
         return redirect(session.url)
 
 
-class CreateSubscriptionView(View):
+class AutoPaySetupView(View):
+    """Sends the member to Stripe to save a card or set up a Direct Debit for automatic payments."""
+
     def post(self, request, token):
+        from billing import autopay
+        member = _portal_member(token, 'billing')
+        portal_url = request.build_absolute_uri(reverse('member_portal', kwargs={'token': token}))
+        if not autopay.enabled(member.organisation):
+            return redirect('member_portal', token=token)
         import stripe
+        try:
+            return redirect(autopay.start_setup(member, portal_url))
+        except stripe.error.StripeError:
+            return redirect(reverse('member_portal', kwargs={'token': token}) + '?payment_error=1')
 
-        member = get_object_or_404(Member, token=token, is_active=True)
 
-        if not (settings.STRIPE_PUBLIC_KEY and settings.STRIPE_SECRET_KEY):
-            return redirect('member_portal', token=token)
-        if not member.monthly_fee:
-            return redirect('member_portal', token=token)
-
-        stripe.api_key = settings.STRIPE_SECRET_KEY
-
-        site_url = settings.SITE_URL.rstrip('/')
-        portal_url = f"{site_url}/p/{token}/"
-
-        # Create or reuse Stripe Customer
-        if member.stripe_customer_id:
-            customer_id = member.stripe_customer_id
-        else:
-            customer_email = (
-                member.guardians.filter(email__gt='').first().email
-                if member.guardians.exists()
-                else member.email or None
-            )
-            customer = stripe.Customer.create(
-                email=customer_email,
-                name=member.name,
-                metadata={'member_pk': str(member.pk)},
-            )
-            member.stripe_customer_id = customer.id
-            member.save(update_fields=['stripe_customer_id'])
-            customer_id = customer.id
-
-        session = stripe.checkout.Session.create(
-            customer=customer_id,
-            payment_method_types=['card'],
-            line_items=[{
-                'price_data': {
-                    'currency': 'gbp',
-                    'unit_amount': int(member.monthly_fee * 100),
-                    'product_data': {
-                        'name': f"{member.organisation.name} — Monthly membership",
-                        'description': f"Monthly membership for {member.name}",
-                    },
-                    'recurring': {'interval': 'month'},
-                },
-                'quantity': 1,
-            }],
-            mode='subscription',
-            success_url=portal_url + '?subscribed=1',
-            cancel_url=portal_url,
-            metadata={'member_pk': str(member.pk)},
-        )
-
-        return redirect(session.url)
+class AutoPayOffView(View):
+    def post(self, request, token):
+        from billing import autopay
+        member = _portal_member(token, 'billing')
+        autopay.turn_off(member)
+        return redirect(reverse('member_portal', kwargs={'token': token}) + '?autopay_off=1')
 
 
 class BillingPortalView(View):
     def post(self, request, token):
         import stripe
 
-        member = get_object_or_404(Member, token=token, is_active=True)
+        member = _portal_member(token, 'billing')
 
-        if not member.stripe_customer_id or not settings.STRIPE_SECRET_KEY:
+        keys = stripe_keys(member.organisation)
+        if not member.stripe_customer_id or keys is None:
             return redirect('member_portal', token=token)
-
-        stripe.api_key = settings.STRIPE_SECRET_KEY
 
         site_url = settings.SITE_URL.rstrip('/')
         portal_url = f"{site_url}/p/{token}/"
 
         session = stripe.billing_portal.Session.create(
+            api_key=keys.secret,
             customer=member.stripe_customer_id,
             return_url=portal_url,
         )
@@ -264,14 +256,15 @@ class CancelSubscriptionView(View):
     def post(self, request, token):
         import stripe
 
-        member = get_object_or_404(Member, token=token, is_active=True)
+        member = _portal_member(token, 'billing')
 
-        if not member.stripe_subscription_id:
+        keys = stripe_keys(member.organisation)
+        if not member.stripe_subscription_id or keys is None:
             return redirect('member_portal', token=token)
 
-        stripe.api_key = settings.STRIPE_SECRET_KEY
         stripe.Subscription.modify(
             member.stripe_subscription_id,
+            api_key=keys.secret,
             cancel_at_period_end=True,
         )
         member.subscription_status = 'cancelling'

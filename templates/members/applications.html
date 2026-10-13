@@ -33,7 +33,7 @@
                 <tr>
                     <th class="ps-3 small">Name</th>
                     <th class="small">Contact</th>
-                    <th class="small">Guardian</th>
+                    {% if 'guardians' in org.enabled_fields %}<th class="small">Guardian</th>{% endif %}
                     <th class="small">Notes</th>
                     <th class="small">Submitted</th>
                     {% if status_filter == 'pending' %}<th class="pe-3"></th>{% endif %}
@@ -44,12 +44,13 @@
                 <tr>
                     <td class="ps-3 py-2">
                         <div class="small fw-semibold">{{ app.name }}</div>
-                        {% if app.date_of_birth %}<div class="text-muted" style="font-size:0.75rem;">DOB {{ app.date_of_birth|date:"d M Y" }}</div>{% endif %}
+                        {% if app.date_of_birth and 'date_of_birth' in org.enabled_fields %}<div class="text-muted" style="font-size:0.75rem;">DOB {{ app.date_of_birth|date:"d M Y" }}</div>{% endif %}
                     </td>
                     <td class="py-2 small text-muted">
                         {% if app.email %}<div>{{ app.email }}</div>{% endif %}
-                        {% if app.phone %}<div>{{ app.phone }}</div>{% endif %}
+                        {% if app.phone and 'phone' in org.enabled_fields %}<div>{{ app.phone }}</div>{% endif %}
                     </td>
+                    {% if 'guardians' in org.enabled_fields %}
                     <td class="py-2 small text-muted">
                         {% if app.guardian_name %}
                         <div class="fw-semibold text-dark">{{ app.guardian_name }}</div>
@@ -57,6 +58,7 @@
                         {% if app.guardian_phone %}<div>{{ app.guardian_phone }}</div>{% endif %}
                         {% else %}—{% endif %}
                     </td>
+                    {% endif %}
                     <td class="py-2 small text-muted" style="max-width:200px;">
                         {{ app.notes|truncatechars:80|default:"—" }}
                     </td>

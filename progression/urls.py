@@ -6,6 +6,7 @@ urlpatterns = [
     path('systems/add/', views.AddSystemView.as_view(), name='progression_system_add'),
     path('systems/<int:pk>/delete/', views.DeleteSystemView.as_view(), name='progression_system_delete'),
     path('systems/<int:pk>/toggle-auto/', views.ToggleAutoAssignView.as_view(), name='progression_system_toggle_auto'),
+    path('systems/<int:pk>/toggle-gradings/', views.ToggleUsesGradingsView.as_view(), name='progression_system_toggle_gradings'),
     path('systems/<int:system_pk>/stages/add/', views.AddStageView.as_view(), name='progression_stage_add'),
     path('systems/<int:system_pk>/stages/<int:pk>/delete/', views.DeleteStageView.as_view(), name='progression_stage_delete'),
     path('systems/<int:system_pk>/stages/<int:pk>/move/', views.MoveStageView.as_view(), name='progression_stage_move'),

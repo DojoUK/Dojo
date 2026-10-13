@@ -1,0 +1,13 @@
+{% extends 'accounts/base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block page %}
+<h5 class="fw-semibold mb-1" style="font-size:1rem;">{{ title }}</h5>
+{% if refusal %}
+<p class="small mb-3">{{ refusal }}</p>
+<a href="{{ next }}" class="btn btn-outline-secondary w-100">Back</a>
+{% else %}
+<p class="text-muted small mb-4">{{ explanation }} To confirm, enter a code from your authenticator app.</p>
+{% include 'accounts/_code_form.html' with label='Code' %}
+<a href="{{ next }}" class="btn btn-link btn-sm w-100 mt-2 text-muted">Cancel</a>
+{% endif %}
+{% endblock %}

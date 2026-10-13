@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% load branding %}
+
+{% block title %}Pay {{ org.name }}{% endblock %}
+
+{% block body %}
+<div class="min-vh-100 d-flex align-items-start align-items-sm-center justify-content-center px-3 py-4">
+    <div class="w-100" style="max-width: 440px;">
+        <div class="text-center mb-3">
+            {% if org.logo %}<div class="mb-2">{% org_logo org '#F1F5F9' 56 200 %}</div>{% endif %}
+            <div class="fw-semibold">{{ org.name }}</div>
+        </div>
+
+        <div class="card">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <div class="text-muted small">Invoice {{ payment_reference }}</div>
+                        <h1 class="h5 mb-0">{{ invoice.period }}</h1>
+                        <div class="text-muted small">For {{ first_name }} · due {{ invoice.due_date|date:"j M Y" }}</div>
+                    </div>
+                    {% if balance_due == 0 %}<span class="badge bg-success-subtle text-success">Paid</span>{% endif %}
+                </div>
+
+                {% if payment_error %}
+                <div class="alert alert-warning small"><i class="bi bi-exclamation-triangle me-1"></i> Card payments aren't working right now. Please use another way to pay below, or try again later.</div>
+                {% endif %}
+                {% if autopay_just_set_up %}
+                <div class="alert alert-success small"><i class="bi bi-check-circle me-1"></i> Automatic payments are set up with your {{ autopay_just_set_up.label }}. Future invoices will be paid automatically.</div>
+                {% endif %}
+                {% if balance_due == 0 %}
+                <div class="alert alert-success small mb-0"><i class="bi bi-check-circle me-1"></i> This invoice is paid. Thank you!</div>
+                {% elif invoice.autopay_status == 'processing' %}
+                <div class="alert alert-info small mb-0"><i class="bi bi-hourglass-split me-1"></i> This is being collected by Direct Debit from your {{ autopay.label }}. It usually takes about 3 working days. Nothing else to do.</div>
+                {% elif invoice.autopay_status == 'due' or invoice.autopay_status == 'collecting' %}
+                <div class="alert alert-info small mb-0"><i class="bi bi-arrow-repeat me-1"></i> This will be collected automatically from your {{ autopay.label }} in the next few minutes.</div>
+                {% else %}
+                {% if invoice.autopay_status == 'failed' %}
+                <div class="alert alert-danger small"><i class="bi bi-exclamation-triangle me-1"></i> We couldn't take this automatically: {{ invoice.autopay_error }} Please pay below.</div>
+                {% endif %}
+                {% if just_paid %}
+                <div class="alert alert-info small"><i class="bi bi-hourglass-split me-1"></i> Thanks! Your payment is being confirmed. This page will show "Paid" shortly.</div>
+                {% endif %}
+                <div class="d-flex justify-content-between align-items-baseline border-top border-bottom py-3 mb-3">
+                    <span class="fw-semibold">Amount due</span>
+                    <span class="h3 mb-0">£{{ balance_due|floatformat:2 }}</span>
+                </div>
+
+                {% if card_payments %}
+                <form method="post" action="{% url 'invoice_pay_card' token=token %}" class="mb-3">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-dark w-100 py-2">
+                        <i class="bi bi-credit-card me-1"></i> Pay £{{ balance_due|floatformat:2 }} by card
+                    </button>
+                    <div class="form-text text-center">Card, Apple Pay or Google Pay, through Stripe.</div>
+                </form>
+                {% endif %}
+
+                {% if bank_transfer %}
+                <div class="{% if card_payments %}border-top pt-3 {% endif %}mb-3">
+                    <div class="small fw-semibold mb-2">{% if card_payments %}Or pay by bank transfer{% else %}Pay by bank transfer{% endif %}</div>
+                    <dl class="row small mb-0 bank-details">
+                        <dt class="col-5 fw-normal text-muted">Account name</dt><dd class="col-7 mb-1">{{ bank_transfer.account_name }}</dd>
+                        <dt class="col-5 fw-normal text-muted">Sort code</dt><dd class="col-7 mb-1 font-monospace user-select-all">{{ bank_transfer.sort_code }}</dd>
+                        <dt class="col-5 fw-normal text-muted">Account number</dt><dd class="col-7 mb-1 font-monospace user-select-all">{{ bank_transfer.account_number }}</dd>
+                        <dt class="col-5 fw-normal text-muted">Reference</dt><dd class="col-7 mb-0 font-monospace fw-semibold user-select-all">{{ payment_reference }}</dd>
+                    </dl>
+                    <div class="form-text">Please use the reference exactly, so we can match your payment.</div>
+                </div>
+                {% endif %}
+
+                {% if cash_payments %}
+                <div class="{% if card_payments or bank_transfer %}border-top pt-3 {% endif %}mb-3 small">
+                    <span class="fw-semibold">{% if card_payments or bank_transfer %}Or pay in person{% else %}Pay in person{% endif %}</span>
+                    <span class="d-block text-muted">Cash or card at the club. Mention reference {{ payment_reference }}.</span>
+                </div>
+                {% endif %}
+
+                {% if payment_instructions %}
+                <div class="border-top pt-3 small text-muted" style="white-space:pre-line;">{{ payment_instructions }}</div>
+                {% endif %}
+
+                {% if autopay_enabled and not autopay %}
+                <div class="border-top pt-3 mt-3 {% if autopay_expected %}bg-light rounded p-3{% endif %}">
+                    <div class="small fw-semibold">{% if autopay_expected %}{{ org.name }} asks members to pay automatically{% else %}Pay automatically from now on{% endif %}</div>
+                    <p class="small text-muted mb-2">Save a card or set up a Direct Debit once, and this invoice and future ones are paid automatically. You can turn it off any time in the member portal.</p>
+                    <form method="post" action="{% url 'invoice_pay_autopay' token=token %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm {% if autopay_expected %}btn-dark{% else %}btn-outline-secondary{% endif %}"><i class="bi bi-arrow-repeat me-1"></i> Set up automatic payments</button>
+                    </form>
+                </div>
+                {% endif %}
+
+                {% if not card_payments and not bank_transfer and not cash_payments and not payment_instructions %}
+                <p class="small text-muted mb-0">Contact {{ org.name }}{% if org.email %} at <a href="mailto:{{ org.email }}">{{ org.email }}</a>{% endif %} to pay.</p>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        <p class="text-center text-muted mt-3" style="font-size:0.72rem;">Questions about this invoice? Contact {{ org.name }}{% if org.email %} at <a href="mailto:{{ org.email }}" class="text-muted">{{ org.email }}</a>{% endif %}.</p>
+    </div>
+</div>
+{% endblock %}

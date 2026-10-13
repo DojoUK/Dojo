@@ -7,8 +7,7 @@
 {% block main_content %}
 <div class="row g-4">
 
-    {# ── Left column ── #}
-    <div class="col-lg-6">
+    <div class="col-12" style="max-width: 860px;">
 
         {# Your details #}
         <div class="card mb-4">
@@ -43,6 +42,45 @@
             </div>
         </div>
 
+        {# Emergency contacts #}
+        {% if org_membership %}{% if 'staff_emergency_contact' in org.enabled_fields or 'staff_emergency_contact_2' in org.enabled_fields %}
+        <div class="card mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">My emergency contacts</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">Who the club should contact if something happens to you at a session.</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_emergency_contacts">
+                    <div class="row g-3">
+                        {% if 'staff_emergency_contact' in org.enabled_fields %}
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Contact name</label>
+                            <input type="text" name="emergency_contact_name" value="{{ org_membership.emergency_contact_name }}" class="form-control">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Contact phone</label>
+                            <input type="tel" name="emergency_contact_phone" value="{{ org_membership.emergency_contact_phone }}" class="form-control">
+                        </div>
+                        {% endif %}
+                        {% if 'staff_emergency_contact_2' in org.enabled_fields %}
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Second contact name</label>
+                            <input type="text" name="emergency_contact_2_name" value="{{ org_membership.emergency_contact_2_name }}" class="form-control">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Second contact phone</label>
+                            <input type="tel" name="emergency_contact_2_phone" value="{{ org_membership.emergency_contact_2_phone }}" class="form-control">
+                        </div>
+                        {% endif %}
+                    </div>
+                    <button type="submit" class="btn btn-dark btn-sm mt-3">Save contacts</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}{% endif %}
+
         {# Password #}
         <div class="card mb-4">
             <div class="card-header bg-white border-bottom py-3">
@@ -56,10 +94,37 @@
             </div>
         </div>
 
-    </div>
 
-    {# ── Right column ── #}
-    <div class="col-lg-6">
+        {# Two-step sign-in #}
+        {% url 'account_settings' org_slug=org.slug as account_url %}
+        <div class="card mb-4" id="two-factor">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Two-step sign-in</h6>
+                {% if two_factor %}<span class="badge bg-success-subtle text-success">On</span>{% else %}<span class="badge bg-secondary-subtle text-secondary">Off</span>{% endif %}
+            </div>
+            <div class="card-body">
+                {% if two_factor %}
+                <p class="text-muted small mb-3">
+                    You sign in with your password and a code from your authenticator app.
+                    {{ two_factor.recovery_codes_left }} recovery code{{ two_factor.recovery_codes_left|pluralize }} left.
+                </p>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{% url 'two_factor_recovery_codes' %}?next={{ account_url|urlencode }}%23two-factor" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-list-ol me-1"></i> New recovery codes
+                    </a>
+                    {% if not two_factor_required %}
+                    <a href="{% url 'two_factor_disable' %}?next={{ account_url|urlencode }}%23two-factor" class="btn btn-outline-danger btn-sm">Turn off</a>
+                    {% endif %}
+                </div>
+                {% if two_factor_required %}<div class="form-text mt-2">Your club requires it. New phone? Ask an admin to reset it, then set it up again.</div>{% endif %}
+                {% else %}
+                <p class="text-muted small mb-3">Protect your account with a code from your phone as well as your password.</p>
+                <a href="{% url 'two_factor_setup' %}?next={{ account_url|urlencode }}%23two-factor" class="btn btn-dark btn-sm">
+                    <i class="bi bi-shield-lock me-1"></i> Set up
+                </a>
+                {% endif %}
+            </div>
+        </div>
 
         {# Organisations #}
         <div class="card mb-4">

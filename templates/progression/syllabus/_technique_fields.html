@@ -1,0 +1,17 @@
+{# Name / category / description / link inputs for a technique. Expects `categories`; optional `technique`. #}
+<div class="col-sm-6">
+    <label class="form-label small">Name</label>
+    <input type="text" name="name" value="{{ technique.name|default:'' }}" class="form-control form-control-sm" required>
+</div>
+<div class="col-sm-6">
+    <label class="form-label small">Category</label>
+    <input type="text" name="category" value="{{ technique.category|default:'' }}" class="form-control form-control-sm" list="technique-categories" placeholder="e.g. Nage Waza">
+</div>
+<div class="col-12">
+    <label class="form-label small">Description</label>
+    <textarea name="description" rows="2" class="form-control form-control-sm">{{ technique.description|default:'' }}</textarea>
+</div>
+<div class="col-12">
+    <label class="form-label small">Link</label>
+    <input type="url" name="link" value="{{ technique.link|default:'' }}" class="form-control form-control-sm" placeholder="https://… e.g. a video">
+</div>

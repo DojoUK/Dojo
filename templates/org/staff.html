@@ -64,9 +64,10 @@
                 <tr>
                     <th class="ps-3 small fw-semibold">Name</th>
                     <th class="small fw-semibold">Role</th>
-                    <th class="small fw-semibold">DBS</th>
-                    <th class="small fw-semibold">Coaching licence</th>
-                    <th class="small fw-semibold">Emergency contact</th>
+                    <th class="small fw-semibold">Permissions</th>
+                    {% if 'dbs' in org.enabled_fields %}<th class="small fw-semibold">DBS</th>{% endif %}
+                    {% if 'coaching_licence' in org.enabled_fields %}<th class="small fw-semibold">{{ org.coaching_licence_label }}</th>{% endif %}
+                    {% if 'staff_emergency_contact' in org.enabled_fields or 'staff_emergency_contact_2' in org.enabled_fields %}<th class="small fw-semibold">Emergency contacts</th>{% endif %}
                     <th></th>
                 </tr>
             </thead>
@@ -81,6 +82,11 @@
                             {% endif %}
                         </div>
                         <div class="text-muted" style="font-size:0.75rem;">{{ om.user.username }}</div>
+                        <div class="d-flex flex-wrap gap-1 mt-1">
+                            {% if not om.user.is_active %}<span class="badge bg-danger-subtle text-danger" style="font-size:0.65rem;"><i class="bi bi-lock"></i> Locked out</span>{% endif %}
+                            {% if om.user.two_factor %}<span class="badge bg-success-subtle text-success" style="font-size:0.65rem;" title="Signs in with an authenticator app"><i class="bi bi-shield-check"></i> 2-step</span>
+                            {% elif om.user.is_active %}<span class="badge bg-warning-subtle text-warning-emphasis" style="font-size:0.65rem;" title="Hasn't set up two-step sign-in"><i class="bi bi-shield-exclamation"></i> No 2-step</span>{% endif %}
+                        </div>
                     </td>
                     <td class="py-2 small">
                         {% if om.user == request.user %}
@@ -100,6 +106,18 @@
                         {% endif %}
                     </td>
                     <td class="py-2 small">
+                        {% if om.is_org_admin %}
+                            <span class="text-muted">Everything</span>
+                        {% else %}
+                            {% for name, label in om.granted_capabilities %}
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle fw-normal">{{ label }}</span>
+                            {% empty %}
+                            <span class="text-muted">Own classes only</span>
+                            {% endfor %}
+                        {% endif %}
+                    </td>
+                    {% if 'dbs' in org.enabled_fields %}
+                    <td class="py-2 small">
                         {% if om.dbs_number %}
                             <div>{{ om.dbs_number }}</div>
                         {% endif %}
@@ -117,6 +135,8 @@
                             <span class="text-muted">—</span>
                         {% endif %}
                     </td>
+                    {% endif %}
+                    {% if 'coaching_licence' in org.enabled_fields %}
                     <td class="py-2 small">
                         {% if om.coaching_licence %}
                             <div>{{ om.coaching_licence }}</div>
@@ -135,17 +155,28 @@
                             <span class="text-muted">—</span>
                         {% endif %}
                     </td>
+                    {% endif %}
+                    {% if 'staff_emergency_contact' in org.enabled_fields or 'staff_emergency_contact_2' in org.enabled_fields %}
                     <td class="py-2 small">
+                        {% if 'staff_emergency_contact' in org.enabled_fields %}
                         {% if om.emergency_contact_name %}
                             <div>{{ om.emergency_contact_name }}</div>
                         {% endif %}
                         {% if om.emergency_contact_phone %}
                             <div class="text-muted" style="font-size:0.75rem;">{{ om.emergency_contact_phone }}</div>
                         {% endif %}
-                        {% if not om.emergency_contact_name and not om.emergency_contact_phone %}
+                        {% endif %}
+                        {% if 'staff_emergency_contact_2' in org.enabled_fields %}
+                        {% if om.emergency_contact_2_name or om.emergency_contact_2_phone %}
+                            <div class="mt-1">{{ om.emergency_contact_2_name }}</div>
+                            {% if om.emergency_contact_2_phone %}<div class="text-muted" style="font-size:0.75rem;">{{ om.emergency_contact_2_phone }}</div>{% endif %}
+                        {% endif %}
+                        {% endif %}
+                        {% if not om.emergency_contact_name and not om.emergency_contact_phone and not om.emergency_contact_2_name %}
                             <span class="text-muted">—</span>
                         {% endif %}
                     </td>
+                    {% endif %}
                     <td class="py-2 pe-3 text-end">
                         <div class="d-flex gap-1 justify-content-end">
                             <button class="btn btn-sm btn-outline-secondary" type="button"
@@ -167,47 +198,152 @@
                         </div>
                     </td>
                 </tr>
-                <tr class="collapse" id="quals-{{ om.pk }}">
-                    <td colspan="6" class="bg-light px-3 py-3">
-                        <form method="post">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="update_qualifications">
-                            <input type="hidden" name="member_pk" value="{{ om.pk }}">
-                            <div class="row g-2">
-                                <div class="col-sm-3">
-                                    <label class="form-label small fw-semibold">DBS number</label>
-                                    <input type="text" name="dbs_number" value="{{ om.dbs_number }}" class="form-control form-control-sm">
-                                </div>
-                                <div class="col-sm-3">
-                                    <label class="form-label small fw-semibold">DBS expiry</label>
-                                    <input type="date" name="dbs_expiry" value="{{ om.dbs_expiry|date:'Y-m-d' }}" class="form-control form-control-sm">
-                                </div>
-                                <div class="col-sm-3">
-                                    <label class="form-label small fw-semibold">Coaching licence</label>
-                                    <input type="text" name="coaching_licence" value="{{ om.coaching_licence }}" class="form-control form-control-sm">
-                                </div>
-                                <div class="col-sm-3">
-                                    <label class="form-label small fw-semibold">Coaching licence expiry</label>
-                                    <input type="date" name="coaching_licence_expiry" value="{{ om.coaching_licence_expiry|date:'Y-m-d' }}" class="form-control form-control-sm">
-                                </div>
-                                <div class="col-sm-3">
-                                    <label class="form-label small fw-semibold">Emergency contact name</label>
-                                    <input type="text" name="emergency_contact_name" value="{{ om.emergency_contact_name }}" class="form-control form-control-sm">
-                                </div>
-                                <div class="col-sm-3">
-                                    <label class="form-label small fw-semibold">Emergency contact phone</label>
-                                    <input type="text" name="emergency_contact_phone" value="{{ om.emergency_contact_phone }}" class="form-control form-control-sm">
-                                </div>
-                                <div class="col-12">
-                                    <button type="submit" class="btn btn-sm btn-dark">Save qualifications</button>
-                                </div>
-                            </div>
-                        </form>
-                    </td>
-                </tr>
                 {% endfor %}
             </tbody>
         </table>
+        </div>
+        {# Edit panels live outside the table so on a phone they use the full card width. #}
+        <div id="staff-panels">
+        {% for om in staff %}
+        <div class="collapse border-top bg-light px-3 py-3" id="quals-{{ om.pk }}" data-bs-parent="#staff-panels">
+            <div class="small fw-semibold mb-2">{{ om.user.get_full_name|default:om.user.username }}</div>
+            {% if 'dbs' in org.enabled_fields or 'coaching_licence' in org.enabled_fields or 'staff_emergency_contact' in org.enabled_fields or 'staff_emergency_contact_2' in org.enabled_fields %}
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update_qualifications">
+                <input type="hidden" name="member_pk" value="{{ om.pk }}">
+                <div class="row g-2">
+                    {% if 'dbs' in org.enabled_fields %}
+                    <div class="col-sm-3">
+                        <label class="form-label small fw-semibold">DBS number</label>
+                        <input type="text" name="dbs_number" value="{{ om.dbs_number }}" class="form-control form-control-sm">
+                    </div>
+                    {% endif %}
+                    {% if 'dbs' in org.enabled_fields %}
+                    <div class="col-sm-3">
+                        <label class="form-label small fw-semibold">DBS expiry</label>
+                        <input type="date" name="dbs_expiry" value="{{ om.dbs_expiry|date:'Y-m-d' }}" class="form-control form-control-sm">
+                    </div>
+                    {% endif %}
+                    {% if 'coaching_licence' in org.enabled_fields %}
+                    <div class="col-sm-3">
+                        <label class="form-label small fw-semibold">{{ org.coaching_licence_label }}</label>
+                        <input type="text" name="coaching_licence" value="{{ om.coaching_licence }}" class="form-control form-control-sm">
+                    </div>
+                    {% endif %}
+                    {% if 'coaching_licence' in org.enabled_fields %}
+                    <div class="col-sm-3">
+                        <label class="form-label small fw-semibold">{{ org.coaching_licence_label }} expiry</label>
+                        <input type="date" name="coaching_licence_expiry" value="{{ om.coaching_licence_expiry|date:'Y-m-d' }}" class="form-control form-control-sm">
+                    </div>
+                    {% endif %}
+                    {% if 'staff_emergency_contact' in org.enabled_fields %}
+                    <div class="col-sm-3">
+                        <label class="form-label small fw-semibold">Emergency contact name</label>
+                        <input type="text" name="emergency_contact_name" value="{{ om.emergency_contact_name }}" class="form-control form-control-sm">
+                    </div>
+                    {% endif %}
+                    {% if 'staff_emergency_contact' in org.enabled_fields %}
+                    <div class="col-sm-3">
+                        <label class="form-label small fw-semibold">Emergency contact phone</label>
+                        <input type="text" name="emergency_contact_phone" value="{{ om.emergency_contact_phone }}" class="form-control form-control-sm">
+                    </div>
+                    {% endif %}
+                    {% if 'staff_emergency_contact_2' in org.enabled_fields %}
+                    <div class="col-sm-3">
+                        <label class="form-label small fw-semibold">Second contact name</label>
+                        <input type="text" name="emergency_contact_2_name" value="{{ om.emergency_contact_2_name }}" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-sm-3">
+                        <label class="form-label small fw-semibold">Second contact phone</label>
+                        <input type="text" name="emergency_contact_2_phone" value="{{ om.emergency_contact_2_phone }}" class="form-control form-control-sm">
+                    </div>
+                    {% endif %}
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-sm btn-dark">Save details</button>
+                    </div>
+                </div>
+            </form>
+            {% endif %}
+            <div class="mt-3 pt-3 border-top">
+                <div class="small fw-semibold mb-1">Sign-in</div>
+                {% if om.user == request.user %}
+                <div class="text-muted" style="font-size:0.75rem;">Change your own password and two-step sign-in on <a href="{% url 'account_settings' org_slug=org.slug %}">your account page</a>.</div>
+                {% else %}
+                <div class="text-muted mb-2" style="font-size:0.75rem;">
+                    {% if om.user.two_factor %}Uses two-step sign-in.{% else %}Hasn't set up two-step sign-in.{% endif %}
+                    {% if not om.user.is_active %}Locked out: can't sign in.{% endif %}
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    {% with who=om.user.get_full_name|default:om.user.username %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="send_password_reset">
+                        <input type="hidden" name="member_pk" value="{{ om.pk }}">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary" {% if not om.user.email %}disabled title="No email address"{% endif %}>
+                            <i class="bi bi-envelope me-1"></i> Email password reset link
+                        </button>
+                    </form>
+                    {% if om.user.two_factor %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="reset_two_factor">
+                        <input type="hidden" name="member_pk" value="{{ om.pk }}">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                onclick="return confirm('Reset two-step sign-in for {{ who|escapejs }}? Their app and recovery codes stop working.')">
+                            <i class="bi bi-phone me-1"></i> Reset two-step sign-in
+                        </button>
+                    </form>
+                    {% endif %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="member_pk" value="{{ om.pk }}">
+                        {% if om.user.is_active %}
+                        <input type="hidden" name="action" value="lock_account">
+                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                onclick="return confirm('Lock {{ who|escapejs }} out? They\'ll be signed out and unable to sign in until unlocked.')">
+                            <i class="bi bi-lock me-1"></i> Lock out
+                        </button>
+                        {% else %}
+                        <input type="hidden" name="action" value="unlock_account">
+                        <button type="submit" class="btn btn-sm btn-outline-success"><i class="bi bi-unlock me-1"></i> Unlock</button>
+                        {% endif %}
+                    </form>
+                    {% endwith %}
+                </div>
+                {% endif %}
+            </div>
+            {% if not om.is_org_admin %}
+            <form method="post" class="mt-3 pt-3 border-top">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update_capabilities">
+                <input type="hidden" name="member_pk" value="{{ om.pk }}">
+                <div class="small fw-semibold mb-1">Permissions</div>
+                <div class="text-muted mb-2" style="font-size:0.75rem;">
+                    Coaches can always take registers, add helpers, and view attendance and send announcements for their own classes. Tick anything extra this person needs.
+                </div>
+                <div class="row g-2">
+                    {% for name, label, help, granted in om.capability_states %}
+                    <div class="col-sm-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="capabilities" value="{{ name }}"
+                                   id="cap-{{ om.pk }}-{{ name }}"
+                                   {% if granted %}checked{% endif %}>
+                            <label class="form-check-label small" for="cap-{{ om.pk }}-{{ name }}">
+                                <span class="fw-semibold">{{ label }}</span>
+                                <span class="d-block text-muted" style="font-size:0.75rem;">{{ help }}</span>
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-sm btn-dark">Save permissions</button>
+                    </div>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+        {% endfor %}
         </div>
         {% else %}
         <div class="text-center text-muted py-5">No staff members yet.</div>
@@ -304,4 +440,15 @@
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// The edit panel opens below the staff table, so bring it into view.
+document.querySelectorAll('#staff-panels .collapse').forEach(function (panel) {
+    panel.addEventListener('shown.bs.collapse', function () {
+        panel.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    });
+});
+</script>
 {% endblock %}

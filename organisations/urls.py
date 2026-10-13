@@ -1,10 +1,16 @@
 from django.urls import include, path
+
+from mailer import views as mailer_views
+
 from . import views
 
 urlpatterns = [
     path('', views.DashboardView.as_view(), name='org_dashboard'),
+    path('keep-alive/', views.KeepAliveView.as_view(), name='org_keep_alive'),
     path('members/', include('members.urls')),
     path('classes/', include('classes.urls')),
+    path('gradings/', include('progression.grading_urls')),
+    path('syllabus/', include('progression.syllabus_urls')),
     path('billing/', include('billing.urls')),
     path('inventory/', include('inventory.urls')),
     path('audit/', views.AuditLogView.as_view(), name='org_audit_log'),
@@ -13,6 +19,10 @@ urlpatterns = [
     path('reseed-demo/', views.ReseedDemoView.as_view(), name='org_reseed_demo'),
     path('onboarding/dismiss/', views.DismissOnboardingView.as_view(), name='org_onboarding_dismiss'),
     path('settings/test-email/', views.TestEmailView.as_view(), name='org_test_email'),
+    path('settings/emails/', mailer_views.EmailTemplateListView.as_view(), name='org_email_templates'),
+    path('settings/emails/<slug:key>/', mailer_views.EmailTemplateEditView.as_view(), name='org_email_template_edit'),
+    path('settings/emails/<slug:key>/preview/', mailer_views.EmailTemplatePreviewView.as_view(),
+         name='org_email_template_preview'),
     path('settings/fields/', views.CustomFieldSettingsView.as_view(), name='org_custom_fields'),
     path('settings/progression/', include('progression.urls')),
     path('announcements/', views.AnnouncementListView.as_view(), name='org_announcements'),

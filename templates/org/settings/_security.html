@@ -1,0 +1,31 @@
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="security">
+
+    <label class="form-label small fw-semibold" for="two-factor">Two-step sign-in</label>
+    <select name="two_factor" id="two-factor" class="form-select form-select-sm" style="max-width:280px;">
+        {% for value, label in two_factor_choices %}
+        <option value="{{ value }}" {% if org.two_factor_policy == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <div class="form-text">
+        Staff enter a code from an authenticator app on their phone after their password. Anyone required who
+        hasn't set it up is walked through it the next time they open Dojo.
+        {% if staff_without_two_factor %}
+        <span class="d-block mt-1">Not set up yet:
+            {% for om in staff_without_two_factor %}{{ om.user.get_full_name|default:om.user.username }}{% if not forloop.last %}, {% endif %}{% endfor %}.
+        </span>
+        {% else %}
+        <span class="d-block mt-1 text-success"><i class="bi bi-check-circle me-1"></i>All staff have set it up.</span>
+        {% endif %}
+    </div>
+
+    <label class="form-label small fw-semibold mt-3" for="session-timeout">Log staff out after inactivity</label>
+    <select name="session_timeout_minutes" id="session-timeout" class="form-select form-select-sm" style="max-width:280px;">
+        {% for minutes, label in session_timeout_choices %}
+        <option value="{{ minutes }}" {% if org.session_timeout_minutes == minutes %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <div class="form-text">Protects member data if Dojo is left open on a shared computer. Staff get a warning a minute before.</div>
+    <button type="submit" class="btn btn-dark btn-sm mt-3">Save</button>
+</form>

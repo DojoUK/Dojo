@@ -1,10 +1,12 @@
 {% extends 'org/base.html' %}
+{% load staff_permissions %}
 
 {% block title %}Invoice{% endblock %}
 {% block page_title %}Invoice{% endblock %}
 {% block page_subtitle %}{{ invoice.member.name }} &mdash; {{ invoice.period }}{% endblock %}
 
 {% block page_actions %}
+{% can 'manage_billing' as can_manage_billing %}
 <div class="d-flex gap-2">
     <a href="{% url 'invoice_list' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left me-1"></i> Billing
@@ -16,12 +18,13 @@
             <i class="bi bi-check2 me-1"></i> Mark as paid
         </button>
     </form>
-    {% else %}
+    {% elif can_manage_billing %}
     <form method="post" action="{% url 'invoice_mark_unpaid' org_slug=org.slug pk=invoice.pk %}">
         {% csrf_token %}
         <button type="submit" class="btn btn-outline-secondary btn-sm">Mark as unpaid</button>
     </form>
     {% endif %}
+    {% if can_manage_billing %}
     <form method="post" action="{% url 'invoice_send_email' org_slug=org.slug pk=invoice.pk %}">
         {% csrf_token %}
         <button type="submit" class="btn btn-outline-secondary btn-sm">
@@ -36,6 +39,7 @@
             {% if invoice.reminder_sent_at %}<span class="opacity-75 ms-1" style="font-size:0.75rem;">(last {{ invoice.reminder_sent_at|date:"d M" }})</span>{% endif %}
         </button>
     </form>
+    {% endif %}
     {% endif %}
 </div>
 {% endblock %}
@@ -52,7 +56,9 @@
                 <dl class="row mb-0">
                     <dt class="col-sm-4 text-muted fw-normal small">Member</dt>
                     <dd class="col-sm-8 small">
+{% if request.user.is_superuser or org_membership.is_org_admin %}
                         <a href="{% url 'member_detail' org_slug=org.slug pk=invoice.member.pk %}">{{ invoice.member.name }}</a>
+                        {% else %}{{ invoice.member.name }}{% endif %}
                     </dd>
 
                     <dt class="col-sm-4 text-muted fw-normal small">Period</dt>
@@ -81,6 +87,8 @@
                         {% else %}
                         <span class="badge bg-secondary-subtle text-secondary">Unpaid</span>
                         {% endif %}
+                        {% include 'billing/_autopay_badge.html' %}
+                        {% if invoice.autopay_status == 'failed' and invoice.status != 'paid' %}<div class="text-danger mt-1" style="font-size:0.75rem;">{{ invoice.autopay_error }} The member was emailed the invoice to pay another way.</div>{% endif %}
                     </dd>
 
                     <dt class="col-sm-4 text-muted fw-normal small">Created</dt>

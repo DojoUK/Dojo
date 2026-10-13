@@ -66,6 +66,20 @@
             </div>
         </div>
         {% endif %}
+
+        <div class="card mb-4">
+            <div class="card-header bg-white py-3"><h6 class="mb-0">Registration link</h6></div>
+            <div class="card-body">
+                <p class="text-muted small mb-2">Share this link with prospective members:</p>
+                <div class="input-group input-group-sm">
+                    <input type="text" class="form-control font-monospace" id="signupLink"
+                           value="{{ request.scheme }}://{{ request.get_host }}{% url 'member_signup' org_slug=org.slug %}" readonly>
+                    <button class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('signupLink').value);this.textContent='Copied!'">
+                        Copy
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="col-lg-5">
@@ -96,20 +110,6 @@
                     </div>
                     <button type="submit" class="btn btn-dark btn-sm w-100">Upload template</button>
                 </form>
-            </div>
-        </div>
-
-        <div class="card mt-4">
-            <div class="card-header bg-white py-3"><h6 class="mb-0">Registration link</h6></div>
-            <div class="card-body">
-                <p class="text-muted small mb-2">Share this link with prospective members:</p>
-                <div class="input-group input-group-sm">
-                    <input type="text" class="form-control font-monospace" id="signupLink"
-                           value="{{ request.scheme }}://{{ request.get_host }}{% url 'member_signup' org_slug=org.slug %}" readonly>
-                    <button class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('signupLink').value);this.textContent='Copied!'">
-                        Copy
-                    </button>
-                </div>
             </div>
         </div>
     </div>

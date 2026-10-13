@@ -1,0 +1,22 @@
+{# Optional field switches, shared by the setup wizard and Settings → Fields. Expects `field_groups`. #}
+{% for group_label, rows in field_groups %}
+<div class="small fw-semibold text-muted text-uppercase mb-2{% if not forloop.first %} mt-3{% endif %}" style="font-size:0.7rem;letter-spacing:.05em;">{{ group_label }}</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.6rem 1.5rem;">
+    {% for row in rows %}
+    <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="optional_fields" value="{{ row.key }}"
+               id="field-{{ row.key }}" {% if row.enabled %}checked{% endif %}>
+        <label class="form-check-label small" for="field-{{ row.key }}">
+            <span class="fw-semibold">{{ row.label }}</span>
+            <span class="d-block text-muted" style="font-size:0.75rem;">{{ row.help }}</span>
+        </label>
+        {% if row.renamable %}
+        <input type="text" name="{{ row.key }}_label" value="{{ row.custom_label }}" maxlength="50"
+               class="form-control form-control-sm mt-1" style="max-width:260px;"
+               placeholder="Call it… e.g. {% if row.key == 'licence' %}BJA licence{% else %}BJA coaching licence{% endif %}"
+               aria-label="Name for {{ row.label }}">
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endfor %}

@@ -11,5 +11,11 @@ def dojo_licence(request):
     return {'dojo_licence': licence}
 
 
+def dojo_version(request):
+    """Which Dojo is running, for the sidebar footer. Read once per process."""
+    from .version import get_version_info
+    return {'dojo_version': get_version_info()}
+
+
 def dojo_debug(request):
     return {'DOJO_DEBUG': settings.DEBUG}

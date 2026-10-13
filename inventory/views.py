@@ -9,6 +9,7 @@ from .models import Product, ProductVariant, StockMovement
 
 
 class ProductListView(OrgAdminMixin, View):
+    required_feature = 'inventory'
     template_name = 'inventory/list.html'
 
     def get(self, request, org_slug):
@@ -32,6 +33,8 @@ class ProductListView(OrgAdminMixin, View):
 
 
 class ProductCreateView(OrgAdminMixin, View):
+    required_feature = 'inventory'
+
     def post(self, request, org_slug):
         name = request.POST.get('name', '').strip()
         category = request.POST.get('category', Product.Category.OTHER)
@@ -52,6 +55,8 @@ class ProductCreateView(OrgAdminMixin, View):
 
 
 class ProductEditView(OrgAdminMixin, View):
+    required_feature = 'inventory'
+
     def post(self, request, org_slug, pk):
         product = get_object_or_404(Product, pk=pk, organisation=self.org)
         product.name = request.POST.get('name', product.name).strip()
@@ -64,6 +69,8 @@ class ProductEditView(OrgAdminMixin, View):
 
 
 class ProductDeleteView(OrgAdminMixin, View):
+    required_feature = 'inventory'
+
     def post(self, request, org_slug, pk):
         product = get_object_or_404(Product, pk=pk, organisation=self.org)
         name = product.name
@@ -80,6 +87,8 @@ class ProductDeleteView(OrgAdminMixin, View):
 
 
 class VariantCreateView(OrgAdminMixin, View):
+    required_feature = 'inventory'
+
     def post(self, request, org_slug, product_pk):
         product = get_object_or_404(Product, pk=product_pk, organisation=self.org)
         size = request.POST.get('size', '').strip()
@@ -131,6 +140,7 @@ class VariantCreateView(OrgAdminMixin, View):
 class VariantEditView(OrgAdminMixin, View):
     """Edits the catalogue details of a variant. Stock levels are changed only via VariantAdjustStockView
     so every change to quantity_in_stock is logged as a StockMovement."""
+    required_feature = 'inventory'
 
     def post(self, request, org_slug, pk):
         variant = get_object_or_404(ProductVariant, pk=pk, product__organisation=self.org)
@@ -154,6 +164,8 @@ class VariantEditView(OrgAdminMixin, View):
 
 
 class VariantDeleteView(OrgAdminMixin, View):
+    required_feature = 'inventory'
+
     def post(self, request, org_slug, pk):
         variant = get_object_or_404(ProductVariant, pk=pk, product__organisation=self.org)
         label = str(variant)
@@ -172,6 +184,7 @@ class VariantDeleteView(OrgAdminMixin, View):
 class VariantAdjustStockView(OrgAdminMixin, View):
     """Restock, correct, or write off stock for one variant. Always goes through
     ProductVariant.adjust_stock() so the change is locked and logged."""
+    required_feature = 'inventory'
 
     def post(self, request, org_slug, pk):
         variant = get_object_or_404(ProductVariant, pk=pk, product__organisation=self.org)

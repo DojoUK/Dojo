@@ -1,0 +1,27 @@
+{% extends 'accounts/base.html' %}
+{% block title %}Recovery codes{% endblock %}
+{% block width %}460px{% endblock %}
+{% block page %}
+{% if just_set_up %}
+<div class="alert alert-success py-2 small"><i class="bi bi-check-circle me-1"></i> Two-step sign-in is on.</div>
+{% endif %}
+<h5 class="fw-semibold mb-1" style="font-size:1rem;">Your recovery codes</h5>
+<p class="text-muted small mb-3">If you lose your phone, sign in with one of these instead of a code. Each works once.
+    <strong>Save them somewhere safe now</strong>: a password manager, or printed and kept at home. They won't be shown again.</p>
+<div class="bg-light border rounded p-3 mb-3">
+    <div class="row g-1 font-monospace text-center" id="recovery-codes">
+        {% for code in codes %}<div class="col-6">{{ code }}</div>{% endfor %}
+    </div>
+</div>
+<div class="d-flex gap-2 mb-3">
+    <button type="button" class="btn btn-outline-secondary btn-sm flex-fill" id="copy-codes"><i class="bi bi-clipboard me-1"></i> Copy</button>
+    <button type="button" class="btn btn-outline-secondary btn-sm flex-fill" onclick="window.print()"><i class="bi bi-printer me-1"></i> Print</button>
+</div>
+<a href="{{ next }}" class="btn btn-dark w-100 py-2">I've saved them, continue</a>
+<script>
+document.getElementById('copy-codes').addEventListener('click', function () {
+    const codes = [...document.querySelectorAll('#recovery-codes div')].map(el => el.textContent).join('\n');
+    navigator.clipboard.writeText(codes).then(() => { this.innerHTML = '<i class="bi bi-check me-1"></i> Copied'; });
+});
+</script>
+{% endblock %}

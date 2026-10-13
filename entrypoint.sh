@@ -20,6 +20,9 @@ else:
     sys.exit(f"Timed out waiting for database at {host}:{port}")
 PYEOF
 
-python manage.py migrate --noinput
+# The scheduler container leaves migrations to web, so they never run twice at once.
+if [ -z "$SKIP_MIGRATE" ]; then
+    python manage.py migrate --noinput
+fi
 
 exec "$@"

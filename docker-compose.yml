@@ -29,9 +29,55 @@ services:
     depends_on:
       - db
 
+  # Runs scheduled jobs (collecting automatic payments) every minute. Same code
+  # and settings as web; it leaves migrations to web.
+  scheduler:
+    build: .
+    command: python manage.py run_scheduler
+    restart: always
+    volumes:
+      - .:/app
+    environment:
+      - DB_NAME=${DB_NAME:-dojo}
+      - DB_USER=${DB_USER:-dojo_user}
+      - DB_PASSWORD=${DB_PASSWORD:-dojo_password}
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DEBUG=${DEBUG:-True}
+      - SKIP_MIGRATE=1
+    depends_on:
+      - db
+      - web
+
+  # Mail container for the "Built-in mail server" option in Settings → Email.
+  # Dojo signs each email (DKIM) and hands it here; Postfix queues and delivers
+  # it on port 25, retrying if a receiving server is busy. No ports are published:
+  # only Dojo can reach it.
+  mail:
+    image: boky/postfix:5.1.0-alpine
+    restart: always
+    environment:
+      ALLOW_EMPTY_SENDER_DOMAINS: "true"
+      POSTFIX_myhostname: ${MAIL_HOSTNAME:-localhost}
+    volumes:
+      - mail_queue:/var/spool/postfix
+
+  # Local testing only (docker compose --profile dev up -d). Catches every email
+  # Dojo sends and shows it at http://localhost:8025 instead of delivering it.
+  # Point Settings → Email at it: "Another SMTP server", server mailpit, port
+  # 1025, security None.
+  mailpit:
+    image: axllent/mailpit:v1.31.2
+    profiles: ["dev"]
+    ports:
+      - "127.0.0.1:8025:8025"
+
+  # Forwards Stripe test-mode events to Dojo. Set STRIPE_FORWARD_TO to a club's
+  # own webhook address (http://web:8000/stripe/webhook/<club>/) to test card and
+  # automatic payments set up in Settings → Payments.
   stripe:
     image: stripe/stripe-cli:latest
-    command: listen --forward-to http://web:8000/stripe/webhook/ --skip-verify
+    command: listen --forward-to ${STRIPE_FORWARD_TO:-http://web:8000/stripe/webhook/} --skip-verify
     environment:
       - STRIPE_API_KEY=${STRIPE_SECRET_KEY}
     depends_on:
@@ -39,3 +85,4 @@ services:
 
 volumes:
   mysql_data:
+  mail_queue:

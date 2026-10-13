@@ -1,0 +1,199 @@
+{% extends 'org/base.html' %}
+
+{% block title %}{{ syllabus.name }}{% endblock %}
+{% block page_title %}{{ syllabus.name }}{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2">
+    <a href="{% url 'syllabus_home' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Syllabus</a>
+    <form method="post" action="{% url 'syllabus_delete' org_slug=org.slug pk=syllabus.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Delete {{ syllabus.name|escapejs }}? Its techniques stay in the library.')">
+            <i class="bi bi-trash"></i>
+        </button>
+    </form>
+</div>
+{% endblock %}
+
+{% block main_content %}
+<datalist id="technique-categories">{% for c in categories %}<option value="{{ c }}">{% endfor %}</datalist>
+<div class="row g-4">
+    <div class="col-lg-8">
+
+        {# Techniques, grouped under headings #}
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom py-3"><h6 class="mb-0">Techniques</h6></div>
+            {% for heading, entries in groups %}
+            <div class="px-3 pt-3 pb-1 d-flex align-items-center gap-2 border-top">
+                {% if heading %}
+                <form method="post" action="{% url 'syllabus_heading_edit' org_slug=org.slug pk=syllabus.pk heading_pk=heading.pk %}" class="d-flex flex-wrap gap-1 align-items-center flex-grow-1">
+                    {% csrf_token %}
+                    <input type="text" name="name" value="{{ heading.name }}" class="form-control form-control-sm fw-semibold border-0 bg-transparent px-0" style="flex:1 1 14rem;min-width:0;" aria-label="Heading name">
+                    <div class="d-flex gap-1 ms-auto">
+                        <button type="submit" class="btn btn-sm btn-link text-muted" title="Save heading name"><i class="bi bi-check2"></i></button>
+                        <button type="submit" name="action" value="up" class="btn btn-sm btn-link text-muted" title="Move heading up"><i class="bi bi-arrow-up"></i></button>
+                        <button type="submit" name="action" value="down" class="btn btn-sm btn-link text-muted" title="Move heading down"><i class="bi bi-arrow-down"></i></button>
+                        <button type="submit" name="action" value="delete" class="btn btn-sm btn-link text-danger" title="Remove heading"
+                                onclick="return confirm('Remove this heading? Its techniques stay in the syllabus.')"><i class="bi bi-x-lg"></i></button>
+                    </div>
+                </form>
+                {% else %}
+                <span class="small text-muted fw-semibold">No heading</span>
+                {% endif %}
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for entry in entries %}
+                <li class="list-group-item">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                        <div style="min-width:0;overflow-wrap:anywhere;">
+                            <span class="small fw-semibold">{{ entry.technique.name }}</span>
+                            {% if entry.technique.category %}<span class="badge bg-light text-secondary border ms-1">{{ entry.technique.category }}</span>{% endif %}
+                            {% if entry.technique.link %}<a href="{{ entry.technique.link }}" target="_blank" rel="noopener noreferrer" class="ms-1 small" title="Open link"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+                            {% if entry.notes %}<div class="text-muted small">{{ entry.notes }}</div>{% endif %}
+                        </div>
+                        <form method="post" action="{% url 'syllabus_entry_edit' org_slug=org.slug pk=syllabus.pk entry_pk=entry.pk %}" class="d-flex gap-1 flex-shrink-0 ms-auto">
+                            {% csrf_token %}
+                            <button type="submit" name="action" value="up" class="btn btn-sm btn-link text-muted" title="Move up"><i class="bi bi-arrow-up"></i></button>
+                            <button type="submit" name="action" value="down" class="btn btn-sm btn-link text-muted" title="Move down"><i class="bi bi-arrow-down"></i></button>
+                            <button type="button" class="btn btn-sm btn-link text-muted" data-bs-toggle="collapse" data-bs-target="#entry-{{ entry.pk }}" title="Edit"><i class="bi bi-pencil"></i></button>
+                            <button type="submit" name="action" value="delete" class="btn btn-sm btn-link text-danger" title="Remove from this syllabus"
+                                    onclick="return confirm('Remove {{ entry.technique.name|escapejs }} from this syllabus?')"><i class="bi bi-x-lg"></i></button>
+                        </form>
+                    </div>
+                    <div class="collapse mt-2" id="entry-{{ entry.pk }}">
+                        <form method="post" action="{% url 'syllabus_entry_edit' org_slug=org.slug pk=syllabus.pk entry_pk=entry.pk %}" class="row g-2 align-items-end">
+                            {% csrf_token %}
+                            <div class="col-sm-5">
+                                <label class="form-label small">Heading</label>
+                                <select name="heading_id" class="form-select form-select-sm">
+                                    <option value="">No heading</option>
+                                    {% for h in headings %}<option value="{{ h.pk }}" {% if entry.heading_id == h.pk %}selected{% endif %}>{{ h.name }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-sm-5">
+                                <label class="form-label small">Notes for this syllabus</label>
+                                <input type="text" name="notes" value="{{ entry.notes }}" class="form-control form-control-sm" placeholder="e.g. both sides">
+                            </div>
+                            <div class="col-sm-2"><button type="submit" class="btn btn-sm btn-dark w-100">Save</button></div>
+                        </form>
+                    </div>
+                </li>
+                {% empty %}
+                <li class="list-group-item small text-muted">Nothing under this heading yet.</li>
+                {% endfor %}
+            </ul>
+            {% empty %}
+            <div class="card-body small text-muted">No techniques yet. Add some on the right.</div>
+            {% endfor %}
+            <div class="card-footer bg-white">
+                <form method="post" action="{% url 'syllabus_heading_add' org_slug=org.slug pk=syllabus.pk %}" class="d-flex gap-2">
+                    {% csrf_token %}
+                    <input type="text" name="name" class="form-control form-control-sm" placeholder="New heading, e.g. Nage Waza - Throwing Techniques" aria-label="New heading" required>
+                    <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap">Add heading</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        {# Add a technique #}
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom py-3"><h6 class="mb-0">Add a technique</h6></div>
+            <div class="card-body">
+                <form method="post" action="{% url 'syllabus_entry_add' org_slug=org.slug pk=syllabus.pk %}" class="row g-2">
+                    {% csrf_token %}
+                    <div class="col-12">
+                        <label class="form-label small">From the library</label>
+                        <select name="technique_id" class="form-select form-select-sm" id="technique-pick">
+                            <option value="">— New technique —</option>
+                            {% regroup available_techniques by category as by_category %}
+                            {% for group in by_category %}
+                            <optgroup label="{{ group.grouper|default:'Uncategorised' }}">
+                                {% for t in group.list %}<option value="{{ t.pk }}">{{ t.name }}</option>{% endfor %}
+                            </optgroup>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 row g-2 m-0 p-0" id="new-technique-fields">
+                        {% include 'progression/syllabus/_technique_fields.html' %}
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small">Heading</label>
+                        <select name="heading_id" class="form-select form-select-sm">
+                            <option value="">No heading</option>
+                            {% for h in headings %}<option value="{{ h.pk }}">{{ h.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small">Notes for this syllabus</label>
+                        <input type="text" name="notes" class="form-control form-control-sm" placeholder="e.g. both sides">
+                    </div>
+                    <div class="col-12"><button type="submit" class="btn btn-dark btn-sm">Add</button></div>
+                </form>
+            </div>
+        </div>
+
+        {# Grades #}
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-bottom py-3"><h6 class="mb-0">For grades</h6></div>
+            <div class="card-body">
+                <form method="post" action="{% url 'syllabus_stages' org_slug=org.slug pk=syllabus.pk %}">
+                    {% csrf_token %}
+                    <p class="text-muted small">Members at these grades see this syllabus. Ticking a grade moves it off any other syllabus.</p>
+                    {% for system in systems %}
+                    <div class="small fw-semibold mt-2">{{ system.name }}</div>
+                    {% for stage in system.stages.all %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="stage_ids" value="{{ stage.pk }}" id="stage-{{ stage.pk }}" {% if stage.syllabus_id == syllabus.pk %}checked{% endif %}>
+                        <label class="form-check-label small" for="stage-{{ stage.pk }}">
+                            {{ stage.name }}
+                            {% if stage.syllabus and stage.syllabus_id != syllabus.pk %}<span class="text-muted">(now: {{ stage.syllabus.name }})</span>{% endif %}
+                        </label>
+                    </div>
+                    {% endfor %}
+                    {% empty %}
+                    <p class="small text-muted">Set up grades in <a href="{% url 'progression_settings' org_slug=org.slug %}">Progression settings</a> first.</p>
+                    {% endfor %}
+                    {% if systems %}<button type="submit" class="btn btn-dark btn-sm mt-3">Save grades</button>{% endif %}
+                </form>
+            </div>
+        </div>
+
+        {# Name and introduction #}
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom py-3"><h6 class="mb-0">Details</h6></div>
+            <div class="card-body">
+                <form method="post" action="{% url 'syllabus_edit' org_slug=org.slug pk=syllabus.pk %}">
+                    {% csrf_token %}
+                    <div class="mb-2">
+                        <label class="form-label small">Name</label>
+                        <input type="text" name="name" value="{{ syllabus.name }}" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Introduction</label>
+                        <textarea name="introduction" rows="3" class="form-control form-control-sm">{{ syllabus.introduction }}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-dark btn-sm">Save</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Picking a library technique hides the "new technique" fields.
+(function () {
+    var pick = document.getElementById('technique-pick');
+    var fields = document.getElementById('new-technique-fields');
+    function sync() {
+        var isNew = !pick.value;
+        fields.style.display = isNew ? '' : 'none';
+        fields.querySelectorAll('input, textarea').forEach(function (el) { el.disabled = !isNew; });
+    }
+    pick.addEventListener('change', sync);
+    sync();
+})();
+</script>
+{% endblock %}

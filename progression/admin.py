@@ -1,5 +1,13 @@
 from django.contrib import admin
-from .models import MemberProgression, ProgressionStage, ProgressionSystem
+
+from .models import (
+    Grading,
+    GradingCandidate,
+    GradingSession,
+    MemberProgression,
+    ProgressionStage,
+    ProgressionSystem,
+)
 
 
 class ProgressionStageInline(admin.TabularInline):
@@ -21,3 +29,23 @@ class MemberProgressionAdmin(admin.ModelAdmin):
     list_filter = ('stage__system__organisation', 'stage__system')
     search_fields = ('member__name',)
     date_hierarchy = 'achieved_date'
+
+
+class GradingSessionInline(admin.TabularInline):
+    model = GradingSession
+    extra = 0
+
+
+@admin.register(Grading)
+class GradingAdmin(admin.ModelAdmin):
+    list_display = ('name', 'organisation', 'system', 'created_at')
+    list_filter = ('organisation',)
+    search_fields = ('name',)
+    inlines = (GradingSessionInline,)
+
+
+@admin.register(GradingCandidate)
+class GradingCandidateAdmin(admin.ModelAdmin):
+    list_display = ('member', 'session', 'target_stage', 'result')
+    list_filter = ('result', 'session__grading__organisation')
+    search_fields = ('member__name', 'session__grading__name')

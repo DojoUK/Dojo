@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 from django.core.management.utils import get_random_secret_key
 from dotenv import load_dotenv
+from django.contrib.messages import constants as message_constants
 
 load_dotenv()
 
@@ -40,6 +41,16 @@ if SITE_URL.startswith('https://'):
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+    CSRF_TRUSTED_ORIGINS = [SITE_URL.rstrip('/')]
+
+# Behind a reverse proxy that terminates TLS (Caddy, nginx), requests reach
+# Django over plain HTTP, so with an https:// SITE_URL the redirect above
+# loops and form posts fail the CSRF origin check. TRUST_PROXY_HTTPS makes
+# Django believe the proxy's X-Forwarded-Proto header instead. Only switch it
+# on when a proxy that sets (and overwrites) that header is in front:
+# without one, any client could claim to be on HTTPS.
+if os.environ.get('TRUST_PROXY_HTTPS', '').strip().lower() in ('1', 'true', 'yes', 'on'):
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -55,6 +66,9 @@ INSTALLED_APPS = [
     'billing',
     'documents',
     'inventory',
+    'accounts',
+    'mailer',
+    'jobs',
     'django_htmx',
     'auditlog',
 ]
@@ -65,7 +79,9 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'dojo.middleware.OrgSessionTimeoutMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'accounts.middleware.TwoFactorMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
     'auditlog.middleware.AuditlogMiddleware',
@@ -84,6 +100,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'dojo.context_processors.dojo_licence',
+                'dojo.context_processors.dojo_version',
                 'dojo.context_processors.dojo_debug',
             ],
         },
@@ -129,14 +146,24 @@ DOJO_LICENCE_HOLDER = os.environ.get('DOJO_LICENCE_HOLDER', '')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Bootstrap has no .alert-error, so error messages rendered with no colour.
+MESSAGE_TAGS = {message_constants.ERROR: 'danger'}
+
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = '/'
 
-# Email — defaults to console (prints to docker logs) if SMTP not configured
-EMAIL_BACKEND = os.environ.get(
+# Email. Each club chooses how its emails are sent in the setup wizard or
+# Settings → Email (mailer.backends.ClubBackend). The EMAIL_* variables below
+# are the fallback for clubs that haven't chosen; with none set, emails are
+# printed to the docker logs.
+EMAIL_BACKEND = 'mailer.backends.ClubBackend'
+DOJO_FALLBACK_EMAIL_BACKEND = os.environ.get(
     'EMAIL_BACKEND',
     'django.core.mail.backends.console.EmailBackend',
 )
+# "Built-in mail server" email option (the `mail` container in docker-compose.yml).
+DOJO_MAIL_HOST = os.environ.get('DOJO_MAIL_HOST', 'mail')
+DOJO_MAIL_PORT = int(os.environ.get('DOJO_MAIL_PORT', '25'))
 EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')

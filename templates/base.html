@@ -48,6 +48,8 @@
             .card-header.d-flex { flex-wrap: wrap; gap: 8px !important; }
             .card-header.d-flex h6 { min-width: 0; }
             /* dl label/value pairs stack on mobile */
+            /* The row's negative gutter margins would pull the now-unpadded text to the card's edge. */
+            dl.row { margin-left: 0; margin-right: 0; }
             dl.row dt, dl.row dd { float: none; width: 100%; max-width: 100%; padding: 0; margin: 0; }
             dl.row dd { color: #0f172a; padding-bottom: 10px; }
             dl.row dt { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .05em; padding-top: 6px; }
@@ -63,6 +65,22 @@
     <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
     <script src="{% static 'vendor/htmx/htmx.min.js' %}"></script>
     {% if DOJO_DEBUG %}<script src="{% static 'js/dojo-diagnostics.js' %}"></script>{% endif %}
+    <script>
+    // Tabbed pages (.dojo-tabs): open the tab named in the URL (e.g. #notes after
+    // saving one), follow in-page links to a tab, and keep the URL in step.
+    (function () {
+        const tabFor = key => document.querySelector(`.dojo-tabs [data-section="${key}"]`);
+        const showFromHash = () => {
+            const tab = tabFor(location.hash.slice(1));
+            if (tab) bootstrap.Tab.getOrCreateInstance(tab).show();
+        };
+        showFromHash();
+        window.addEventListener('hashchange', showFromHash);
+        document.querySelectorAll('.dojo-tabs [data-section]').forEach(tab => {
+            tab.addEventListener('shown.bs.tab', () => history.replaceState(null, '', '#' + tab.dataset.section));
+        });
+    })();
+    </script>
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>

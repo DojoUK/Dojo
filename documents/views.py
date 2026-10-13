@@ -9,9 +9,12 @@ from dojo.mixins import OrgAdminMixin, OrgMixin
 from members.models import Member
 from .models import Document, SignedWaiver, WaiverTemplate
 from .pdf_utils import stamp_signature_on_pdf
+from members.navigation import redirect_to_member
 
 
 class DocumentUploadView(OrgAdminMixin, View):
+    required_feature = 'documents'
+
     def post(self, request, org_slug, member_pk):
         member = get_object_or_404(Member, pk=member_pk, organisation=self.org)
         f = request.FILES.get('file')
@@ -20,26 +23,30 @@ class DocumentUploadView(OrgAdminMixin, View):
         notes = request.POST.get('notes', '').strip()
         if not f:
             messages.error(request, 'No file selected.')
-            return redirect('member_detail', org_slug=org_slug, pk=member_pk)
+            return redirect_to_member(org_slug, member_pk, 'documents')
         Document.objects.create(
             member=member, name=name, category=category,
             file=f, uploaded_by=request.user, notes=notes,
         )
         messages.success(request, f'"{name}" uploaded.')
-        return redirect('member_detail', org_slug=org_slug, pk=member_pk)
+        return redirect_to_member(org_slug, member_pk, 'documents')
 
 
 class DocumentDeleteView(OrgAdminMixin, View):
+    required_feature = 'documents'
+
     def post(self, request, org_slug, member_pk, pk):
         member = get_object_or_404(Member, pk=member_pk, organisation=self.org)
         doc = get_object_or_404(Document, pk=pk, member=member)
         doc.file.delete(save=False)
         doc.delete()
         messages.success(request, 'Document deleted.')
-        return redirect('member_detail', org_slug=org_slug, pk=member_pk)
+        return redirect_to_member(org_slug, member_pk, 'documents')
 
 
 class DocumentDownloadView(OrgAdminMixin, View):
+    required_feature = 'documents'
+
     def get(self, request, org_slug, member_pk, pk):
         member = get_object_or_404(Member, pk=member_pk, organisation=self.org)
         doc = get_object_or_404(Document, pk=pk, member=member)
@@ -52,6 +59,7 @@ class DocumentDownloadView(OrgAdminMixin, View):
 # ── Waiver templates ──────────────────────────────────────────────────────────
 
 class WaiverListView(OrgAdminMixin, View):
+    required_feature = 'documents'
     template_name = 'documents/waivers.html'
 
     def get(self, request, org_slug):
@@ -78,6 +86,8 @@ class WaiverListView(OrgAdminMixin, View):
 
 
 class WaiverDeleteView(OrgAdminMixin, View):
+    required_feature = 'documents'
+
     def post(self, request, org_slug, pk):
         waiver = get_object_or_404(WaiverTemplate, pk=pk, organisation=self.org)
         waiver.file.delete(save=False)
@@ -87,6 +97,8 @@ class WaiverDeleteView(OrgAdminMixin, View):
 
 
 class WaiverDownloadView(OrgAdminMixin, View):
+    required_feature = 'documents'
+
     def get(self, request, org_slug, pk):
         waiver = get_object_or_404(WaiverTemplate, pk=pk, organisation=self.org)
         try:
@@ -98,6 +110,8 @@ class WaiverDownloadView(OrgAdminMixin, View):
 # ── Signed waivers ────────────────────────────────────────────────────────────
 
 class SignedWaiverDownloadView(OrgAdminMixin, View):
+    required_feature = 'documents'
+
     def get(self, request, org_slug, pk):
         sw = get_object_or_404(SignedWaiver, pk=pk, template__organisation=self.org)
         try:
@@ -109,13 +123,15 @@ class SignedWaiverDownloadView(OrgAdminMixin, View):
 
 class SignedWaiverOfflineView(OrgAdminMixin, View):
     """Admin uploads a scanned paper waiver for an existing member."""
+    required_feature = 'documents'
+
     def post(self, request, org_slug, member_pk):
         member = get_object_or_404(Member, pk=member_pk, organisation=self.org)
         template_pk = request.POST.get('template_id')
         f = request.FILES.get('file')
         if not template_pk or not f:
             messages.error(request, 'Template and file are required.')
-            return redirect('member_detail', org_slug=org_slug, pk=member_pk)
+            return redirect_to_member(org_slug, member_pk, 'documents')
         template = get_object_or_404(WaiverTemplate, pk=template_pk, organisation=self.org)
         SignedWaiver.objects.create(
             member=member, template=template,
@@ -123,14 +139,16 @@ class SignedWaiverOfflineView(OrgAdminMixin, View):
             signed_at=timezone.now(), offline=True,
         )
         messages.success(request, 'Offline waiver recorded.')
-        return redirect('member_detail', org_slug=org_slug, pk=member_pk)
+        return redirect_to_member(org_slug, member_pk, 'documents')
 
 
 class SignedWaiverDeleteView(OrgAdminMixin, View):
+    required_feature = 'documents'
+
     def post(self, request, org_slug, member_pk, pk):
         member = get_object_or_404(Member, pk=member_pk, organisation=self.org)
         sw = get_object_or_404(SignedWaiver, pk=pk, member=member)
         sw.signed_pdf.delete(save=False)
         sw.delete()
         messages.success(request, 'Signed waiver removed.')
-        return redirect('member_detail', org_slug=org_slug, pk=member_pk)
+        return redirect_to_member(org_slug, member_pk, 'documents')

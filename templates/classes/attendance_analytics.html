@@ -88,9 +88,13 @@
                 {% for member in members %}
                 <tr>
                     <td class="ps-3 py-2">
+                        {% if request.user.is_superuser or org_membership.is_org_admin %}
                         <a href="{% url 'member_detail' org_slug=org.slug pk=member.pk %}" class="text-decoration-none fw-semibold text-dark small">
                             {{ member.name }}
                         </a>
+                        {% else %}
+                        <span class="fw-semibold small">{{ member.name }}</span>
+                        {% endif %}
                     </td>
                     <td class="py-2 small text-muted">
                         {% if member.last_attended %}

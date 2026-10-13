@@ -1,0 +1,178 @@
+{% extends 'org/base.html' %}
+
+{% block title %}{{ email_type.label }} email{% endblock %}
+{% block page_title %}{{ email_type.label }} email{% endblock %}
+{% block page_subtitle %}{{ email_type.when }}{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'org_email_templates' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> All emails</a>
+{% endblock %}
+
+{% block main_content %}
+<style>
+    .email-editor textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.82rem; }
+    .field-chip { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.72rem; }
+    .email-preview-frame { width: 100%; height: 720px; border: 1px solid var(--dojo-border); border-radius: 8px; background: #f1f5f9; }
+    @media (min-width: 992px) { .email-preview-col { position: sticky; top: 16px; align-self: flex-start; } }
+</style>
+<div class="row g-4 email-editor">
+    <div class="col-lg-6">
+        <form method="post" id="email-form">
+            {% csrf_token %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="small">{% if saved %}<span class="badge bg-primary-subtle text-primary">Customised</span> <span class="text-muted">changed {{ saved.updated_at|date:"j M Y" }}</span>{% else %}<span class="badge bg-light text-secondary border">Dojo's default</span>{% endif %}</span>
+                        <div class="btn-group btn-group-sm" role="group" aria-label="How to edit">
+                            <input type="radio" class="btn-check" name="mode" id="mode-wording" value="wording" {% if form.mode != 'html' %}checked{% endif %}>
+                            <label class="btn btn-outline-secondary" for="mode-wording">Wording</label>
+                            <input type="radio" class="btn-check" name="mode" id="mode-html" value="html" {% if form.mode == 'html' %}checked{% endif %}>
+                            <label class="btn btn-outline-secondary" for="mode-html">Full HTML</label>
+                        </div>
+                    </div>
+
+                    <label class="form-label small fw-semibold" for="subject">Subject</label>
+                    <input type="text" name="subject" id="subject" value="{{ form.subject }}" maxlength="200" class="form-control form-control-sm mb-3 insert-target">
+
+                    <div id="wording-panel" {% if form.mode == 'html' %}class="d-none"{% endif %}>
+                        <label class="form-label small fw-semibold" for="body">Wording</label>
+                        <textarea name="body" id="body" rows="16" class="form-control insert-target">{{ form.body }}</textarea>
+                        <div class="form-text">
+                            <code>**bold**</code> · <code>[link text](https://…)</code> · <code>[button: Pay now]({pay_link})</code> on its own line ·
+                            a blank line starts a new paragraph · put a block like <code>{pay_options}</code> on its own line.
+                            The club's header and footer go around it.
+                        </div>
+                    </div>
+
+                    <div id="html-panel" {% if form.mode != 'html' %}class="d-none"{% endif %}>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label small fw-semibold mb-0" for="html">The whole email, as HTML</label>
+                            <button type="button" class="btn btn-link btn-sm p-0" id="start-from-design">Start from Dojo's design</button>
+                        </div>
+                        <textarea name="html" id="html" rows="18" class="form-control insert-target" spellcheck="false">{{ form.html_document }}</textarea>
+                        <div class="form-text">Complete control: nothing is added around it, so include your own header and footer. Fields and blocks work here too. Email apps ignore most modern CSS, so use tables and inline styles.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="small fw-semibold mb-1">Fields</div>
+                    <div class="text-muted mb-2" style="font-size:0.75rem;">Click to insert at the cursor. They're filled in for each person.</div>
+                    <div class="d-flex flex-wrap gap-1 mb-3">
+                        {% for name, help in email_type.all_fields %}
+                        <button type="button" class="btn btn-sm btn-outline-secondary field-chip" data-insert="{{ '{' }}{{ name }}{{ '}' }}" title="{{ help }}">{{ '{' }}{{ name }}{{ '}' }}</button>
+                        {% endfor %}
+                    </div>
+                    {% if email_type.blocks %}
+                    <div class="small fw-semibold mb-1">Blocks</div>
+                    <div class="text-muted mb-2" style="font-size:0.75rem;">Ready-made pieces. In wording, put each on its own line.</div>
+                    <div class="d-flex flex-column gap-1">
+                        {% for name, help in email_type.blocks %}
+                        <div class="d-flex align-items-start gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary field-chip text-nowrap" data-insert="{{ '{' }}{{ name }}{{ '}' }}" data-block="1">{{ '{' }}{{ name }}{{ '}' }}</button>
+                            <span class="text-muted" style="font-size:0.75rem;">{{ help }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+                <button type="submit" name="action" value="save" class="btn btn-dark btn-sm">Save</button>
+                <button type="submit" name="action" value="test" class="btn btn-outline-secondary btn-sm"><i class="bi bi-send me-1"></i> Send me a test</button>
+                {% if saved %}
+                <button type="submit" name="action" value="reset" class="btn btn-outline-danger btn-sm ms-auto"
+                        onclick="return confirm('Go back to Dojo\'s default for this email? Your version will be deleted.')">Reset to default</button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <div class="col-lg-6 email-preview-col">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="small"><span class="text-muted">Subject:</span> <span class="fw-semibold" id="preview-subject"></span></div>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Preview width">
+                <button type="button" class="btn btn-outline-secondary active" data-width="100%">Desktop</button>
+                <button type="button" class="btn btn-outline-secondary" data-width="390px">Phone</button>
+            </div>
+        </div>
+        <div class="alert alert-warning py-1 px-2 small d-none" id="preview-unknown"></div>
+        <div class="text-center"><iframe class="email-preview-frame" id="preview" sandbox="" title="Email preview"></iframe></div>
+        <div class="form-text">Preview with example details. Nothing is sent until the real email goes out.</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+    const form = document.getElementById('email-form');
+    const frame = document.getElementById('preview');
+    const subjectOut = document.getElementById('preview-subject');
+    const unknownOut = document.getElementById('preview-unknown');
+    const url = '{{ preview_url }}';
+    let lastTarget = document.getElementById('body');
+    let timer;
+
+    function mode() { return form.querySelector('input[name=mode]:checked').value; }
+
+    async function post(extra) {
+        const data = new FormData(form);
+        data.delete('action');
+        for (const [k, v] of Object.entries(extra || {})) data.set(k, v);
+        const response = await fetch(url, {method: 'POST', body: data, headers: {'X-CSRFToken': data.get('csrfmiddlewaretoken')}});
+        return response.json();
+    }
+
+    async function refresh() {
+        const result = await post();
+        frame.srcdoc = result.html;
+        subjectOut.textContent = result.subject;
+        if (result.unknown && result.unknown.length) {
+            unknownOut.textContent = 'Not fields this email knows (they\'ll appear as typed): ' + result.unknown.map(n => '{' + n + '}').join(', ');
+            unknownOut.classList.remove('d-none');
+        } else {
+            unknownOut.classList.add('d-none');
+        }
+    }
+    const soon = () => { clearTimeout(timer); timer = setTimeout(refresh, 350); };
+
+    form.addEventListener('input', soon);
+    form.querySelectorAll('input[name=mode]').forEach(radio => radio.addEventListener('change', () => {
+        document.getElementById('wording-panel').classList.toggle('d-none', mode() === 'html');
+        document.getElementById('html-panel').classList.toggle('d-none', mode() !== 'html');
+        lastTarget = document.getElementById(mode() === 'html' ? 'html' : 'body');
+        if (mode() === 'html' && !document.getElementById('html').value.trim()) document.getElementById('start-from-design').click();
+        else soon();
+    }));
+
+    document.querySelectorAll('.insert-target').forEach(el => el.addEventListener('focus', () => { lastTarget = el; }));
+    document.querySelectorAll('[data-insert]').forEach(chip => chip.addEventListener('click', () => {
+        const el = lastTarget;
+        let text = chip.dataset.insert;
+        if (chip.dataset.block && el.id === 'body') text = '\n\n' + text + '\n\n';
+        const start = el.selectionStart ?? el.value.length, end = el.selectionEnd ?? el.value.length;
+        el.value = el.value.slice(0, start) + text + el.value.slice(end);
+        el.focus();
+        el.selectionStart = el.selectionEnd = start + text.length;
+        soon();
+    }));
+
+    document.getElementById('start-from-design').addEventListener('click', async () => {
+        const area = document.getElementById('html');
+        if (area.value.trim() && !confirm('Replace your HTML with Dojo\'s design, based on the wording?')) return;
+        area.value = (await post({start_from_design: '1'})).html;
+        soon();
+    });
+
+    document.querySelectorAll('[data-width]').forEach(button => button.addEventListener('click', () => {
+        document.querySelectorAll('[data-width]').forEach(b => b.classList.toggle('active', b === button));
+        frame.style.width = button.dataset.width;
+    }));
+
+    refresh();
+})();
+</script>
+{% endblock %}

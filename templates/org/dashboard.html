@@ -35,10 +35,12 @@
                     {% if onboarding.has_coach %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-circle text-muted"></i>{% endif %}
                     Assign a coach to a class
                 </a>
+                {% if 'billing' in org.enabled_features %}
                 <a href="{% url 'invoice_create' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-2 {% if onboarding.has_invoice %}text-muted{% endif %}">
                     {% if onboarding.has_invoice %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-circle text-muted"></i>{% endif %}
                     Generate your first invoice
                 </a>
+                {% endif %}
             </div>
             <div class="modal-footer">
                 <form method="post" action="{% url 'org_onboarding_dismiss' org_slug=org.slug %}" class="d-inline">
@@ -92,7 +94,7 @@
             </div>
         </div>
     </div>
-    {% if is_admin %}
+    {% if is_admin and 'billing' in org.enabled_features %}
     <div class="col-sm-6 col-lg-3">
         <a href="{% url 'invoice_list' org_slug=org.slug %}" class="text-decoration-none">
         <div class="card h-100" style="background:linear-gradient(135deg,#059669,#047857);border:none!important;">
@@ -145,28 +147,28 @@
 {% if is_admin and licences_expired %}
 <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-2">
     <i class="bi bi-exclamation-triangle-fill"></i>
-    <span class="small"><strong>{{ licences_expired }} member licence{{ licences_expired|pluralize }} expired.</strong></span>
+    <span class="small"><strong>{{ licences_expired }} member{{ licences_expired|pluralize }}</strong> with an expired {{ org.licence_label }}.</span>
     <a href="{% url 'member_list' org_slug=org.slug %}?licence=expired" class="btn btn-sm btn-danger ms-auto">View</a>
 </div>
 {% endif %}
 {% if is_admin and licences_expiring %}
 <div class="alert alert-warning d-flex align-items-center gap-2 py-2 mb-2">
     <i class="bi bi-card-checklist"></i>
-    <span class="small"><strong>{{ licences_expiring }} member licence{{ licences_expiring|pluralize }}</strong> expiring in the next 30 days.</span>
+    <span class="small"><strong>{{ licences_expiring }} member{{ licences_expiring|pluralize }}</strong> with a {{ org.licence_label }} expiring in the next 30 days.</span>
     <a href="{% url 'member_list' org_slug=org.slug %}?licence=expiring" class="btn btn-sm btn-warning ms-auto">View</a>
 </div>
 {% endif %}
 {% if is_admin and staff_expired %}
 <div class="alert alert-danger d-flex align-items-center gap-2 py-2 mb-2">
     <i class="bi bi-shield-exclamation"></i>
-    <span class="small"><strong>{{ staff_expired }} staff member{{ staff_expired|pluralize }}</strong> with expired DBS or coaching licence.</span>
+    <span class="small"><strong>{{ staff_expired }} staff member{{ staff_expired|pluralize }}</strong> with an expired {{ staff_check_names }}.</span>
     <a href="{% url 'org_staff' org_slug=org.slug %}" class="btn btn-sm btn-danger ms-auto">View staff</a>
 </div>
 {% endif %}
 {% if is_admin and staff_expiring %}
 <div class="alert alert-warning d-flex align-items-center gap-2 py-2 mb-2">
     <i class="bi bi-shield-check"></i>
-    <span class="small"><strong>{{ staff_expiring }} staff member{{ staff_expiring|pluralize }}</strong> with DBS or coaching licence expiring soon.</span>
+    <span class="small"><strong>{{ staff_expiring }} staff member{{ staff_expiring|pluralize }}</strong> with a {{ staff_check_names }} expiring soon.</span>
     <a href="{% url 'org_staff' org_slug=org.slug %}" class="btn btn-sm btn-warning ms-auto">View staff</a>
 </div>
 {% endif %}

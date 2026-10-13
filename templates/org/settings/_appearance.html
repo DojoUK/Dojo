@@ -1,0 +1,92 @@
+{% load branding %}
+<div class="form-check form-switch mb-3">
+    <input class="form-check-input" type="checkbox" id="devModeToggle">
+    <label class="form-check-label small text-muted" for="devModeToggle">Developer mode</label>
+</div>
+<form method="post" enctype="multipart/form-data" id="themeForm">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="theme">
+    <input type="hidden" name="dev_mode" id="devModeInput" value="0">
+
+    {# Preset swatches #}
+    <div class="mb-4" id="presetSection">
+        <label class="form-label small fw-semibold">Preset themes</label>
+        <div class="d-flex flex-wrap gap-2">
+            {% for preset in presets %}
+            <button type="button" class="preset-btn"
+                    data-sidebar="{{ preset.sidebar }}"
+                    data-accent="{{ preset.accent }}"
+                    title="{{ preset.name }}"
+                    style="width:40px;height:40px;border-radius:10px;border:2px solid transparent;background:{{ preset.sidebar }};cursor:pointer;position:relative;overflow:hidden;transition:border-color .15s;">
+                <span style="position:absolute;right:0;bottom:0;width:16px;height:40px;background:{{ preset.accent }};"></span>
+            </button>
+            {% endfor %}
+        </div>
+        <div class="form-text">Click a swatch to preview, then save.</div>
+    </div>
+
+    {# Colour pickers #}
+    <div class="mb-4" id="colourSection">
+        <label class="form-label small fw-semibold">Custom colours</label>
+        <div class="row g-3">
+            <div class="col-6">
+                <label class="form-label small text-muted">Sidebar</label>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="color" name="sidebar_color" id="sidebarColor"
+                           value="{{ org.settings.sidebar_color|default:'#1E3A5F' }}"
+                           class="form-control form-control-color" style="width:44px;height:38px;border-radius:7px;">
+                    <input type="text" id="sidebarColorHex"
+                           value="{{ org.settings.sidebar_color|default:'#1E3A5F' }}"
+                           class="form-control form-control-sm font-monospace" style="max-width:90px;">
+                </div>
+            </div>
+            <div class="col-6">
+                <label class="form-label small text-muted">Accent / buttons</label>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="color" name="accent_color" id="accentColor"
+                           value="{{ org.settings.accent_color|default:'#2563EB' }}"
+                           class="form-control form-control-color" style="width:44px;height:38px;border-radius:7px;">
+                    <input type="text" id="accentColorHex"
+                           value="{{ org.settings.accent_color|default:'#2563EB' }}"
+                           class="form-control form-control-sm font-monospace" style="max-width:90px;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Logo #}
+    <div class="mb-4">
+        <label class="form-label small fw-semibold">Logo</label>
+        {% if org.logo %}
+        <div class="d-flex align-items-center gap-3 mb-2">
+            {% org_logo org org.theme.sidebar_color 48 160 %}
+            <div>
+                <div class="small fw-semibold">Current logo</div>
+                <button type="submit" name="remove_logo" value="1" class="btn btn-link btn-sm text-danger p-0"
+                        onclick="return confirm('Remove logo?')">Remove</button>
+            </div>
+        </div>
+        {% endif %}
+        <input type="file" name="logo" class="form-control form-control-sm" accept="image/png,image/jpeg,image/webp">
+        <div class="form-text">PNG, JPG or WebP, up to 2MB. Shown uncropped in the sidebar, on the login and join pages, in the member portal, in emails and on printed registers. If it would be hard to see against a background, Dojo adds a contrasting backing automatically.</div>
+    </div>
+
+    {# Dev mode: custom CSS #}
+    <div class="mb-4 d-none" id="customCssSection">
+        <label class="form-label small fw-semibold">Custom CSS</label>
+        <textarea name="custom_css" rows="10" class="form-control font-monospace"
+                  style="font-size:0.8rem;"
+                  placeholder="/* Override any styles here */&#10;:root { --dojo-accent: #e11d48; }&#10;.dojo-sidebar { background: #1a1a2e; }">{{ org.custom_css }}</textarea>
+        <div class="form-text">Applied after all default styles. Overrides theme colours.</div>
+    </div>
+
+    {# Live preview strip #}
+    <div class="mb-4 p-3 rounded" id="previewStrip"
+         style="background:var(--dojo-sidebar);display:flex;align-items:center;gap:12px;">
+        <span style="color:#fff;font-weight:600;font-size:0.9rem;">{{ org.name }}</span>
+        <span style="background:rgba(255,255,255,.15);color:#fff;font-size:0.8rem;padding:4px 12px;border-radius:6px;">Dashboard</span>
+        <button type="button" style="background:var(--dojo-accent);color:#fff;border:none;border-radius:6px;padding:4px 14px;font-size:0.8rem;font-weight:500;margin-left:auto;">Save</button>
+    </div>
+
+    <button type="submit" class="btn btn-dark btn-sm">Save theme</button>
+</form>

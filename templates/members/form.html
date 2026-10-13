@@ -33,16 +33,21 @@
                             {{ form.name }}
                             {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>{% endif %}
                         </div>
+                        {% if 'date_of_birth' in form.fields %}
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold small">Date of birth</label>
                             {{ form.date_of_birth }}
                             {% if form.date_of_birth.errors %}<div class="text-danger small mt-1">{{ form.date_of_birth.errors.0 }}</div>{% endif %}
                         </div>
+                        {% endif %}
+                        {% if 'joined_date' in form.fields %}
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold small">Joined date</label>
                             {{ form.joined_date }}
                             {% if form.joined_date.errors %}<div class="text-danger small mt-1">{{ form.joined_date.errors.0 }}</div>{% endif %}
                         </div>
+                        {% endif %}
+                        {% if 'monthly_fee' in form.fields %}
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold small">Monthly fee (£)</label>
                             {{ form.monthly_fee }}
@@ -55,36 +60,48 @@
                             {% if form.billing_policy.errors %}<div class="text-danger small mt-1">{{ form.billing_policy.errors.0 }}</div>{% endif %}
                             <div class="form-text">Override the class policy for this member.</div>
                         </div>
+                        {% endif %}
+                        {% if 'licence_number' in form.fields %}
                         <div class="col-sm-6">
-                            <label class="form-label fw-semibold small">Licence number</label>
+                            <label class="form-label fw-semibold small">{{ org.licence_label }} number</label>
                             {{ form.licence_number }}
                             {% if form.licence_number.errors %}<div class="text-danger small mt-1">{{ form.licence_number.errors.0 }}</div>{% endif %}
                         </div>
+                        {% endif %}
+                        {% if 'licence_expiry' in form.fields %}
                         <div class="col-sm-6">
-                            <label class="form-label fw-semibold small">Licence expiry</label>
+                            <label class="form-label fw-semibold small">{{ org.licence_label }} expiry</label>
                             {{ form.licence_expiry }}
                             {% if form.licence_expiry.errors %}<div class="text-danger small mt-1">{{ form.licence_expiry.errors.0 }}</div>{% endif %}
                         </div>
+                        {% endif %}
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold small">Email</label>
                             {{ form.email }}
                             {% if form.email.errors %}<div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>{% endif %}
                         </div>
+                        {% if 'phone' in form.fields %}
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold small">Phone</label>
                             {{ form.phone }}
                             {% if form.phone.errors %}<div class="text-danger small mt-1">{{ form.phone.errors.0 }}</div>{% endif %}
                         </div>
+                        {% endif %}
+                        {% if 'address_line1' in form.fields %}
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold small">Address line 1</label>
                             {{ form.address_line1 }}
                             {% if form.address_line1.errors %}<div class="text-danger small mt-1">{{ form.address_line1.errors.0 }}</div>{% endif %}
                         </div>
+                        {% endif %}
+                        {% if 'address_line2' in form.fields %}
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold small">Address line 2</label>
                             {{ form.address_line2 }}
                             {% if form.address_line2.errors %}<div class="text-danger small mt-1">{{ form.address_line2.errors.0 }}</div>{% endif %}
                         </div>
+                        {% endif %}
+                        {% if 'medical_info' in form.fields %}
                         <div class="col-12">
                             <label class="form-label fw-semibold small">
                                 <i class="bi bi-heart-pulse text-danger me-1"></i>Medical info
@@ -93,6 +110,7 @@
                             <div class="form-text">Conditions, allergies, or anything coaches must know. Shown on the attendance register.</div>
                             {% if form.medical_info.errors %}<div class="text-danger small mt-1">{{ form.medical_info.errors.0 }}</div>{% endif %}
                         </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -115,6 +133,7 @@
                             {% if form.emergency_contact_phone.errors %}<div class="text-danger small mt-1">{{ form.emergency_contact_phone.errors.0 }}</div>{% endif %}
                         </div>
                     </div>
+                    {% if 'emergency_contact_2_name' in form.fields %}
                     <div class="row g-3 border-top pt-3 mt-3">
                         <div class="col-12"><p class="text-muted small mb-0">Contact 2</p></div>
                         <div class="col-sm-6">
@@ -128,9 +147,11 @@
                             {% if form.emergency_contact_2_phone.errors %}<div class="text-danger small mt-1">{{ form.emergency_contact_2_phone.errors.0 }}</div>{% endif %}
                         </div>
                     </div>
+                    {% endif %}
                 </div>
             </div>
 
+            {% if guardian_formset %}
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-header bg-white border-bottom py-3">
                     <h6 class="mb-0">Guardians <span class="text-muted fw-normal small">(optional — for junior members)</span></h6>
@@ -172,6 +193,7 @@
                     {% endfor %}
                 </div>
             </div>
+            {% endif %}
 
             {% if custom_fields %}
             <div class="card border-0 shadow-sm mb-3">
@@ -233,7 +255,7 @@ document.querySelectorAll('.copy-to-ec').forEach(btn => {
         if (!ec1Name.value) {
             ec1Name.value = name;
             ec1Phone.value = phone;
-        } else if (!ec2Name.value) {
+        } else if (ec2Name && !ec2Name.value) {
             ec2Name.value = name;
             ec2Phone.value = phone;
         } else {

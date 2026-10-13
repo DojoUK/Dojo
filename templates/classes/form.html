@@ -37,18 +37,22 @@
                             {{ form.description }}
                             {% if form.description.errors %}<div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>{% endif %}
                         </div>
+                        {% if 'max_capacity' in form.fields %}
                         <div class="col-sm-4">
                             <label class="form-label fw-semibold small">Max capacity</label>
                             {{ form.max_capacity }}
                             <div class="form-text">Leave blank for unlimited.</div>
                             {% if form.max_capacity.errors %}<div class="text-danger small mt-1">{{ form.max_capacity.errors.0 }}</div>{% endif %}
                         </div>
+                        {% endif %}
+                        {% if 'billing_policy' in form.fields %}
                         <div class="col-sm-4">
                             <label class="form-label fw-semibold small">Billing policy</label>
                             {{ form.billing_policy }}
                             <div class="form-text">Default policy for members enrolled in this class.</div>
                             {% if form.billing_policy.errors %}<div class="text-danger small mt-1">{{ form.billing_policy.errors.0 }}</div>{% endif %}
                         </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>

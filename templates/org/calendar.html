@@ -5,6 +5,13 @@
 {% block page_title %}Calendar{% endblock %}
 
 {% block main_content %}
+<style>
+/* On narrow screens the calendar's three toolbar groups stack instead of overflowing. */
+@media (max-width: 575.98px) {
+    .fc .fc-toolbar { flex-wrap: wrap; justify-content: center; row-gap: .5rem; }
+    .fc .fc-toolbar-title { font-size: 1.1rem; }
+}
+</style>
 <div class="card border-0 shadow-sm">
     <div class="card-body">
         <div id="calendar"></div>

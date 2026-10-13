@@ -55,8 +55,12 @@ Nothing here is required for a basic instance — everything has a sane default.
 | `DB_NAME` / `DB_USER` / `DB_PASSWORD` / `DB_ROOT_PASSWORD` | `dojo` / `dojo_user` / `dojo_password` / `dojo_root_password` | Change these for anything beyond local/trusted use |
 | `ALLOWED_HOSTS` | `*` (all hosts accepted) | Comma-separated list, e.g. `dojo.yourclub.com`. Tightening this is optional today — the codebase notes a browser-configurable allow-list is planned to replace setting it via the environment |
 | `SITE_URL` | `http://localhost:8000` | Used to build links in emails and Stripe redirects. **Also controls security headers** — see below |
-| `EMAIL_*` | console backend | Leave unset to print outgoing mail to `docker compose logs -f web` instead of sending it. Set `EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend` plus the `EMAIL_HOST*` vars for real delivery |
-| `STRIPE_PUBLIC_KEY` / `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | unset | Only needed if you want online payments; get these from your Stripe dashboard |
+| `TRUST_PROXY_HTTPS` | unset (off) | Set to `true` when a reverse proxy handles HTTPS in front of Dojo — see [Running behind a reverse proxy](#running-behind-a-reverse-proxy) |
+| `EMAIL_*` | console backend | **Fallback only.** Each club chooses how its email is sent in the setup wizard or **Settings → Email** (see [Sending email](#sending-email)). These variables are used only by clubs that haven't chosen yet. Leave them unset to print that mail to `docker compose logs -f web` |
+| `MAIL_HOSTNAME` | `localhost` | For **Built-in mail server**: the name the `mail` container introduces itself as, e.g. `mail.yourclub.org.uk`. Set it, and your server's reverse DNS, to a name that points at your server |
+| `DOJO_MAIL_HOST` / `DOJO_MAIL_PORT` | `mail` / `25` | Where Dojo finds its mail container. Only change these if you run your own relay instead of the bundled container |
+| `STRIPE_PUBLIC_KEY` / `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | unset | **Fallback only.** Each club enters its own Stripe keys in the setup wizard or **Settings → Payments** (see [Taking payments](#taking-payments)). These apply only to clubs that haven't |
+| `DOJO_BUILD_REPO` / `DOJO_BUILD_COMMIT` / `DOJO_BUILD_TAG` | unset (read from `.git`) | The version shown under Settings → General. Dojo reads it from the `.git` folder; set these only if your image is built without one. A repository other than `DojoUK/Dojo` shows as "Unofficial Dojo fork" |
 | `DOJO_LICENCE_KEY` / `DOJO_LICENCE_HOLDER` | unset | Self-hosters on the default AGPL-3.0 licence leave both blank |
 
 ### `SITE_URL` and security headers
@@ -103,7 +107,14 @@ server {
 
 Then run [Certbot](https://certbot.eff.org/) against that server block to get HTTPS and have nginx redirect port 80 → 443 for you.
 
-Either way, once TLS is live, set `SITE_URL=https://dojo.yourclub.com` in your `.env` and restart (`docker compose up -d`).
+Either way, once TLS is live, set these in your `.env` and restart (`docker compose up -d`):
+
+```
+SITE_URL=https://dojo.yourclub.com
+TRUST_PROXY_HTTPS=true
+```
+
+`TRUST_PROXY_HTTPS` is needed because the proxy talks to Dojo over plain HTTP. Without it, an `https://` `SITE_URL` makes Dojo redirect every request to HTTPS forever and reject form submissions. With it, Dojo trusts the proxy's `X-Forwarded-Proto` header to know the visitor is on HTTPS. Only set it with a proxy in front that sets that header (Caddy does by default; the nginx example above does via `proxy_set_header X-Forwarded-Proto`). Without a proxy, anyone could send the header and claim to be on HTTPS.
 
 ---
 
@@ -147,7 +158,80 @@ Two things to back up:
 
 2. **The `media/` directory.** Uploaded member documents, signed waivers, and organisation logos live under `media/` in the project directory (bind-mounted into the container, so they're already on the host — just include the folder in whatever you use for filesystem backups).
 
-`.secret_key` is also worth keeping alongside your backups if you ever plan to restore onto a different host — without it, a restored instance would generate a new `SECRET_KEY`, which invalidates existing sessions and signed tokens (including member portal links).
+`.secret_key` is also worth keeping alongside your backups if you ever plan to restore onto a different host — without it, a restored instance would generate a new `SECRET_KEY`, which invalidates existing sessions and signed tokens (including member portal links), and makes staff's two-step sign-in recovery codes stop working.
+
+---
+
+## Sending email
+
+Choose how Dojo sends email (welcome emails, invoices, reminders, announcements) in the setup wizard, and change it any time under **Settings → Email**. Use **Send test email** there to check it works.
+
+| Option | Good for |
+|---|---|
+| **Built-in mail server** | Sending straight from your server, free. Needs outgoing port 25 open (many hosts block it until you ask) and a few DNS records, which Settings → Email lists and checks for you |
+| **Brevo**, **Mailgun**, **Postmark**, **Resend** | Sending services with web APIs. They work even where your host blocks email ports |
+| **Amazon SES** | Cheap at volume. Uses SES SMTP credentials |
+| **Gmail / Google Workspace**, **Microsoft 365** | Sending from a club mailbox. Google and Microsoft limit how many emails a day they'll send |
+| **Another SMTP server** | Anything else: your host's mail server, IONOS, Fastmail, Zoho, SendGrid |
+| **Not yet** | Emails are printed to `docker compose logs -f web` instead of being sent |
+
+Passwords and API keys are stored encrypted with a key derived from `SECRET_KEY`. If `SECRET_KEY` changes (for example, restoring without `.secret_key`), re-enter them in Settings → Email.
+
+**Built-in mail server** uses the `mail` container (Postfix). Dojo signs each email with your domain's DKIM key and hands it over; Postfix queues it and delivers it, retrying if a receiving server is busy. No ports are opened to the internet. For good delivery:
+
+1. Ask your host to allow outgoing port 25 if they block it.
+2. Set `MAIL_HOSTNAME` in `.env` to a name that points at your server (e.g. `mail.yourclub.org.uk`), and ask your host to set your server's reverse DNS to the same name.
+3. Add the DKIM, SPF and DMARC records shown under Settings → Email, then press **Check DNS**.
+
+To see what the mail service is doing: `docker compose logs -f mail`.
+
+**What the emails say and look like** is up to each club: **Settings → Email → Customise emails** lists every email Dojo sends (welcome, portal link, invoice, payment reminder, announcement, session cancelled, waiting-list place). Each can be reworded, with fields like `{first_name}` and ready-made blocks like `{pay_options}`, or replaced entirely with your own HTML, with a live preview, a test send and "Reset to default". The same page sets the header colour, logo, header text and footer message used around every email.
+
+---
+
+## Taking payments
+
+Each club chooses how members pay in the setup wizard, and changes it under **Settings → Payments**:
+
+- **Bank transfer:** invoices show your account name, sort code, account number and a reference (e.g. `INV1234`) to quote.
+- **Card online:** a "Pay now" button for card, Apple Pay and Google Pay, through the club's own Stripe account. Paste the publishable and secret keys from Stripe → Developers → API keys, then press **Set up webhook automatically** so card payments mark invoices paid straight away. That needs Dojo to be reachable from the internet at `SITE_URL`; each club's webhook address is `SITE_URL/stripe/webhook/<club>/`.
+- **In person:** cash or card at the club, marked paid by an admin.
+
+**Paying automatically** (needs card payments): members save a card or set up a Direct Debit once, from the payment page or the member portal, and every invoice Dojo makes for them is charged to it. Choose **Optional** (members decide) or **Expected** (members are asked to set it up on every invoice and in the portal, like a gym membership). Cards are charged within a minute of the invoice being made. Direct Debits take about 3 working days, and Dojo marks the invoice paid when Stripe confirms it. Direct Debit (Bacs) must first be switched on in your Stripe account (Stripe → Settings → Payment methods). If a payment fails, the member is emailed the invoice with the other ways to pay.
+
+Automatic payments are collected by the **`scheduler`** container, which runs alongside `web` and checks every minute.
+
+**Automatic invoices:** under **Billing → Automatic invoices**, each billing plan can make its own invoices on a schedule: monthly plans on a chosen day, termly plans a set number of days before each term (add term dates on the Billing policies page), and annual plans on a date. Each plan either **sends them automatically** or **waits for you to check** (the default). Checked runs stay hidden from members, unemailed and uncharged until you press **Send all**, and the club's admins are emailed when one is ready. Switching a plan on mid-period waits for its next date. The same page switches on **automatic overdue reminders** (after how many days, and how often to repeat). The `scheduler` container does both, so the `send_overdue_reminders` command no longer needs a cron job, though it still works. `docker compose up -d` starts it; Settings → Payments warns if it hasn't run recently. If you set the webhook up before automatic payments existed, press **Set up webhook automatically** again so Dojo hears when Direct Debits clear or fail. Members with an older monthly Stripe subscription can still cancel it from the portal.
+
+Every invoice and reminder email links to a payment page (`SITE_URL/pay/...`) showing the amount still due and the ways to pay. The link is signed, so it can't be guessed or altered. Stripe keys are stored encrypted, like email passwords.
+
+---
+
+## Two-step sign-in
+
+Staff can protect their accounts with a code from an authenticator app (Google Authenticator, Microsoft Authenticator, a password manager). Each club chooses in **Settings → Security** whether it's required for all staff, admins only, or optional. New clubs start with it required; clubs that existed before the feature start optional.
+
+A club admin can reset another person's two-step sign-in from the **Staff** page (for a new or lost phone). If the only admin has lost both their phone and their recovery codes, reset it from the server:
+
+```bash
+docker compose exec web python manage.py reset_two_factor <username>
+```
+
+If their club requires two-step sign-in, they're asked to set it up again the next time they sign in.
+
+---
+
+## Testing emails and payments locally
+
+**Emails:** start Mailpit with `docker compose --profile dev up -d mailpit`, then in Settings → Email choose **Another SMTP server** with server `mailpit`, port `1025` and security **None**. Every email Dojo sends (invoices, reminders, welcomes, password resets, tests) appears at http://localhost:8025 instead of being delivered, so you can check how each one looks.
+
+**Card and automatic payments,** with Stripe's test mode (no real money):
+
+1. In your Stripe dashboard, switch to **test mode** (or a sandbox) and copy the test keys from Developers → API keys.
+2. In Settings → Payments, tick **Card online**, paste the `pk_test_…` and `sk_test_…` keys, and set **Pay automatically** if you want to try it. Save.
+3. In `.env`, set `STRIPE_SECRET_KEY` to the same `sk_test_…` key (the `stripe` container uses it to listen) and `STRIPE_FORWARD_TO=http://web:8000/stripe/webhook/<your-club>/`, then run `docker compose up -d stripe`.
+4. Copy the signing secret from `docker compose logs stripe` (it starts `whsec_`) into Settings → Payments → Webhook signing secret, and save.
+5. Open an invoice's payment page (its "Pay now" link, e.g. from an email in Mailpit) and pay with test card `4242 4242 4242 4242`, any future date and any CVC. For Direct Debit, use sort code `10-88-00` and account number `00012345`.
 
 ---
 

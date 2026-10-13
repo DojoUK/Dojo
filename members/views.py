@@ -1,10 +1,13 @@
 from django.contrib import messages
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 from dojo.mixins import OrgAdminMixin
 from .forms import GuardianFormSet, MemberForm, build_custom_field_widgets, extract_custom_field_values
 from .models import Member
+from .navigation import redirect_to_member
+from mailer import connection_for
 
 
 class MemberListView(OrgAdminMixin, ListView):
@@ -96,12 +99,16 @@ class MemberBulkActionView(OrgAdminMixin, View):
                         EmailMultiAlternatives(
                             subject=subject, body=body,
                             from_email=settings.DEFAULT_FROM_EMAIL, to=[recipient],
+                            connection=connection_for(self.org),
                         ).send()
                         sent += 1
                     except Exception:
                         pass
             messages.success(request, f'Email sent to {sent} member{"s" if sent != 1 else ""}.')
             return redirect('member_list', org_slug=org_slug)
+
+        if action in ('invoice', 'invoice_create') and not self.org.has_feature('billing'):
+            raise Http404
 
         if action == 'invoice':
             request.session['bulk_invoice_members'] = list(members.values_list('pk', flat=True))
@@ -155,7 +162,9 @@ class MemberCreateView(OrgAdminMixin, CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = 'Add member'
-        if self.request.POST:
+        if not self.org.has_field('guardians'):
+            context['guardian_formset'] = None
+        elif self.request.POST:
             context['guardian_formset'] = GuardianFormSet(self.request.POST)
         else:
             context['guardian_formset'] = GuardianFormSet()
@@ -165,14 +174,15 @@ class MemberCreateView(OrgAdminMixin, CreateView):
     def form_valid(self, form):
         context = self.get_context_data()
         guardian_formset = context['guardian_formset']
-        if not guardian_formset.is_valid():
+        if guardian_formset is not None and not guardian_formset.is_valid():
             return self.form_invalid(form)
         member = form.save(commit=False)
         member.organisation = self.org
         member.custom_field_values = extract_custom_field_values(self.org, self.request.POST)
         member.save()
-        guardian_formset.instance = member
-        guardian_formset.save()
+        if guardian_formset is not None:
+            guardian_formset.instance = member
+            guardian_formset.save()
         self._auto_assign_progression(member)
         messages.success(self.request, f'{member.name} added successfully.')
         return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
@@ -180,6 +190,8 @@ class MemberCreateView(OrgAdminMixin, CreateView):
     def _auto_assign_progression(self, member):
         from django.utils import timezone
         from progression.models import MemberProgression, ProgressionSystem
+        if not self.org.has_feature('grades'):
+            return
         today = timezone.localdate()
         for system in ProgressionSystem.objects.filter(organisation=self.org, assign_to_new_members=True):
             default_stage = system.stages.filter(is_default=True).first()
@@ -212,7 +224,7 @@ class MemberDetailView(OrgAdminMixin, DetailView):
         from progression.models import MemberProgression, ProgressionStage, ProgressionSystem
         context['progressions'] = MemberProgression.objects.filter(
             member=self.object
-        ).select_related('stage__system').order_by('-achieved_date')
+        ).select_related('stage__system', 'grading_candidate__session__grading').order_by('-achieved_date')
         context['stages'] = ProgressionStage.objects.filter(
             system__organisation=self.org
         ).select_related('system')
@@ -220,6 +232,10 @@ class MemberDetailView(OrgAdminMixin, DetailView):
             organisation=self.org
         ).prefetch_related('stages')
         context['current_grade'] = context['progressions'].first()
+        context['syllabus_cards'] = []
+        if self.org.has_feature('syllabus'):
+            from progression.syllabus import current_syllabuses
+            context['syllabus_cards'] = current_syllabuses(self.object)
         from .models import MemberNote
         context['notes'] = MemberNote.objects.filter(member=self.object).select_related('author')
         context['custom_fields'] = build_custom_field_widgets(
@@ -272,9 +288,14 @@ class MemberUpdateView(OrgAdminMixin, UpdateView):
         context['title'] = f'Edit {self.object.name}'
         context['member'] = self.object
         if self.request.POST:
-            context['guardian_formset'] = GuardianFormSet(self.request.POST, instance=self.object)
+            context['guardian_formset'] = (
+                GuardianFormSet(self.request.POST, instance=self.object)
+                if self.org.has_field('guardians') else None
+            )
         else:
-            context['guardian_formset'] = GuardianFormSet(instance=self.object)
+            context['guardian_formset'] = (
+                GuardianFormSet(instance=self.object) if self.org.has_field('guardians') else None
+            )
         context['custom_fields'] = build_custom_field_widgets(
             self.org,
             self.request.POST or None,
@@ -285,18 +306,21 @@ class MemberUpdateView(OrgAdminMixin, UpdateView):
     def form_valid(self, form):
         context = self.get_context_data()
         guardian_formset = context['guardian_formset']
-        if not guardian_formset.is_valid():
+        if guardian_formset is not None and not guardian_formset.is_valid():
             return self.form_invalid(form)
         member = form.save(commit=False)
         member.custom_field_values = extract_custom_field_values(self.org, self.request.POST)
         member.save()
-        guardian_formset.instance = member
-        guardian_formset.save()
+        if guardian_formset is not None:
+            guardian_formset.instance = member
+            guardian_formset.save()
         messages.success(self.request, f'{member.name} updated successfully.')
         return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
 
 
 class MemberBillingPolicySetView(OrgAdminMixin, View):
+    required_feature = 'billing'
+
     def post(self, request, org_slug, pk):
         from billing.models import BillingPolicy
         member = get_object_or_404(Member, pk=pk, organisation=self.org)
@@ -307,7 +331,7 @@ class MemberBillingPolicySetView(OrgAdminMixin, View):
             member.billing_policy = None
         member.save(update_fields=['billing_policy'])
         messages.success(request, f'Billing policy updated for {member.name}.')
-        return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
+        return redirect_to_member(self.org.slug, member.pk, 'billing')
 
 
 class MemberArchiveView(OrgAdminMixin, View):
@@ -344,6 +368,8 @@ class EraseMemberView(OrgAdminMixin, View):
 
 
 class RecordPromotionView(OrgAdminMixin, View):
+    required_feature = 'grades'
+
     def post(self, request, org_slug, pk):
         member = get_object_or_404(Member, pk=pk, organisation=self.org)
         from progression.models import MemberProgression, ProgressionStage
@@ -358,20 +384,32 @@ class RecordPromotionView(OrgAdminMixin, View):
             notes=notes,
         )
         messages.success(request, f'{member.name} promoted to {stage.name}.')
-        return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
+        return redirect_to_member(self.org.slug, member.pk, 'grades')
 
 
 class DeleteProgressionView(OrgAdminMixin, View):
+    required_feature = 'grades'
+
     def post(self, request, org_slug, pk, prog_pk):
         member = get_object_or_404(Member, pk=pk, organisation=self.org)
         from progression.models import MemberProgression
         prog = get_object_or_404(MemberProgression, pk=prog_pk, member=member)
+        candidate = getattr(prog, 'grading_candidate', None)
+        if candidate is not None:
+            # Deleting it here would leave the grading saying "passed" with no grade behind it.
+            messages.error(
+                request,
+                f'This grade was awarded at {candidate.session.grading.name}. Change the result there instead.',
+            )
+            return redirect_to_member(self.org.slug, member.pk, 'grades')
         prog.delete()
         messages.success(request, 'Progression record removed.')
-        return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
+        return redirect_to_member(self.org.slug, member.pk, 'grades')
 
 
 class ApplicationListView(OrgAdminMixin, View):
+    required_feature = 'applications'
+
     def get(self, request, org_slug):
         from django.shortcuts import render
         from .models import MemberApplication
@@ -388,6 +426,8 @@ class ApplicationListView(OrgAdminMixin, View):
 
 
 class ApproveApplicationView(OrgAdminMixin, View):
+    required_feature = 'applications'
+
     def post(self, request, org_slug, pk):
         from django.utils import timezone
         from .models import MemberApplication
@@ -436,13 +476,16 @@ class ApproveApplicationView(OrgAdminMixin, View):
                 except Exception:
                     pass  # Don't block approval if PDF stamping fails
 
-        from .emails import send_welcome_email
-        send_welcome_email(member)
+        if self.org.has_feature('member_portal'):
+            from .emails import send_welcome_email
+            send_welcome_email(member)
         messages.success(request, f'{member.name} approved and added as a member.')
         return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
 
 
 class RejectApplicationView(OrgAdminMixin, View):
+    required_feature = 'applications'
+
     def post(self, request, org_slug, pk):
         from django.utils import timezone
         from .models import MemberApplication
@@ -461,7 +504,7 @@ class AddMemberNoteView(OrgAdminMixin, View):
         if body:
             from .models import MemberNote
             MemberNote.objects.create(member=member, author=request.user, body=body)
-        return redirect('member_detail', org_slug=self.org.slug, pk=pk)
+        return redirect_to_member(self.org.slug, pk, 'notes')
 
 
 class DeleteMemberNoteView(OrgAdminMixin, View):
@@ -470,7 +513,7 @@ class DeleteMemberNoteView(OrgAdminMixin, View):
         from .models import MemberNote
         note = get_object_or_404(MemberNote, pk=note_pk, member=member)
         note.delete()
-        return redirect('member_detail', org_slug=self.org.slug, pk=pk)
+        return redirect_to_member(self.org.slug, pk, 'notes')
 
 
 class MemberExportView(OrgAdminMixin, View):
@@ -484,29 +527,30 @@ class MemberExportView(OrgAdminMixin, View):
         )
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = f'attachment; filename="{self.org.slug}-members.csv"'
+        # (header, value) per column; switched-off fields and features are left out.
+        org = self.org
+        columns = [
+            ('Name', lambda m, g: m.name),
+            ('Date of birth', lambda m, g: m.date_of_birth.isoformat() if m.date_of_birth else '')
+            if org.has_field('date_of_birth') else None,
+            ('Email', lambda m, g: m.email),
+            ('Phone', lambda m, g: m.phone) if org.has_field('phone') else None,
+            ('Joined date', lambda m, g: m.joined_date.isoformat() if m.joined_date else '')
+            if org.has_field('joined_date') else None,
+            ('Active', lambda m, g: 'Yes' if m.is_active else 'No'),
+            ('Monthly fee', lambda m, g: str(m.monthly_fee) if m.monthly_fee else '')
+            if org.has_feature('billing') else None,
+            ('Guardian name', lambda m, g: g.name if g else '') if org.has_field('guardians') else None,
+            ('Guardian email', lambda m, g: g.email if g else '') if org.has_field('guardians') else None,
+            ('Guardian phone', lambda m, g: g.phone if g else '') if org.has_field('guardians') else None,
+            ('Classes', lambda m, g: ', '.join(e.assigned_class.name for e in m.enrolments.all())),
+        ]
+        columns = [c for c in columns if c]
         writer = csv.writer(response)
-        writer.writerow([
-            'Name', 'Date of birth', 'Email', 'Phone',
-            'Joined date', 'Active', 'Monthly fee',
-            'Guardian name', 'Guardian email', 'Guardian phone',
-            'Classes',
-        ])
+        writer.writerow([header for header, _ in columns])
         for m in members:
             guardian = m.guardians.first()
-            classes = ', '.join(e.assigned_class.name for e in m.enrolments.all())
-            writer.writerow([
-                m.name,
-                m.date_of_birth.isoformat() if m.date_of_birth else '',
-                m.email,
-                m.phone,
-                m.joined_date.isoformat() if m.joined_date else '',
-                'Yes' if m.is_active else 'No',
-                str(m.monthly_fee) if m.monthly_fee else '',
-                guardian.name if guardian else '',
-                guardian.email if guardian else '',
-                guardian.phone if guardian else '',
-                classes,
-            ])
+            writer.writerow([value(m, guardian) for _, value in columns])
         return response
 
 
@@ -583,12 +627,13 @@ class MemberImportView(OrgAdminMixin, View):
                     except ValueError:
                         continue
 
+            # Columns for switched-off fields are ignored.
             rows.append({
                 'name': name,
                 'email': (row.get('email') or '').strip(),
-                'phone': (row.get('phone') or '').strip(),
-                'date_of_birth': dob,
-                'joined_date': joined,
+                'phone': (row.get('phone') or '').strip() if self.org.has_field('phone') else '',
+                'date_of_birth': dob if self.org.has_field('date_of_birth') else None,
+                'joined_date': joined if self.org.has_field('joined_date') else None,
             })
 
         if action == 'preview':
@@ -615,6 +660,8 @@ class MemberImportView(OrgAdminMixin, View):
 
 
 class SendWelcomeEmailView(OrgAdminMixin, View):
+    required_feature = 'member_portal'
+
     def post(self, request, org_slug, pk):
         member = get_object_or_404(Member, pk=pk, organisation=self.org)
         from .emails import send_welcome_email
@@ -631,6 +678,8 @@ class SendWelcomeEmailView(OrgAdminMixin, View):
 
 class RegeneratePortalTokenView(OrgAdminMixin, View):
     """Invalidates the member's existing portal link and issues a new one — use if a link may have leaked."""
+    required_feature = 'member_portal'
+
     def post(self, request, org_slug, pk):
         from django.utils import timezone
         from .models import generate_token

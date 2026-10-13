@@ -1,0 +1,21 @@
+{% extends 'accounts/base.html' %}
+{% block title %}Set up two-step sign-in{% endblock %}
+{% block width %}460px{% endblock %}
+{% block page %}
+<h5 class="fw-semibold mb-1" style="font-size:1rem;"><i class="bi bi-shield-lock me-1"></i> Set up two-step sign-in</h5>
+<p class="text-muted small mb-3">
+    {% if required %}Your club asks staff to protect their accounts with a code from their phone as well as a password.{% else %}Protect your account with a code from your phone as well as your password.{% endif %}
+</p>
+<ol class="small ps-3 mb-3">
+    <li class="mb-2">Install an authenticator app if you don't have one: Google Authenticator, Microsoft Authenticator, or your password manager's.</li>
+    <li class="mb-2">In the app, add an account and scan this code:
+        <div class="text-center my-2">{{ qr_svg|safe }}</div>
+        <details class="text-muted">
+            <summary>Can't scan it?</summary>
+            <p class="mt-1 mb-0">Choose to enter a key instead, and type: <code class="d-block mt-1 user-select-all">{{ secret }}</code></p>
+        </details>
+    </li>
+    <li>Enter the 6-digit code the app shows.</li>
+</ol>
+{% include 'accounts/_code_form.html' with label='Code from the app' button='Turn on two-step sign-in' digits_only=True %}
+{% endblock %}
