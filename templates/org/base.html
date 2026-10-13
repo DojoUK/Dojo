@@ -43,22 +43,20 @@
     padding: 20px 20px 16px;
     border-bottom: 1px solid rgba(255,255,255,.08);
 }
+.dojo-sidebar-brand .brand-text { min-width: 0; }
+/* Long club names wrap onto a second line; anything longer than that ends in "…". */
 .dojo-sidebar-brand .brand-name {
     font-size: 1.05rem;
     font-weight: 700;
     color: #fff;
     letter-spacing: -.01em;
-    display: block;
-    white-space: nowrap;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     overflow: hidden;
-    text-overflow: ellipsis;
-}
-.dojo-sidebar-brand .brand-sub {
-    font-size: 0.72rem;
-    color: rgba(255,255,255,.45);
-    font-weight: 400;
-    margin-top: 2px;
-    display: block;
+    overflow-wrap: anywhere;
 }
 .sidebar-section-label {
     font-size: 0.68rem;
@@ -132,6 +130,22 @@
 .dojo-page-title { font-size: 1.1rem; font-weight: 700; margin: 0; color: var(--dojo-text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dojo-topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
 .dojo-content { padding: 28px; flex: 1; }
+/* Action button groups in the top bar wrap onto a second line rather than run off the edge. */
+.dojo-topbar-actions > .d-flex { flex-wrap: wrap; justify-content: flex-end; }
+
+/* ── Tablet: sidebar showing, so the top bar has little room ── */
+@media (min-width: 768px) and (max-width: 1199.98px) {
+    .dojo-topbar {
+        height: auto;
+        min-height: 60px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        flex-wrap: wrap;
+        row-gap: 8px;
+    }
+    .dojo-topbar > p { flex-shrink: 1; min-width: 0; }
+    .dojo-topbar-actions { flex-shrink: 1; max-width: 100%; }
+}
 
 /* ── Mobile ──────────────────────────────────────── */
 @media (max-width: 767px) {
@@ -170,13 +184,12 @@
 
 <aside class="dojo-sidebar" id="sidebar">
     <div class="dojo-sidebar-brand">
-        <a href="{% url 'org_dashboard' org_slug=org.slug %}" style="text-decoration:none;display:flex;align-items:center;gap:10px;">
+        <a href="{% url 'org_dashboard' org_slug=org.slug %}" title="{{ org.name }}" style="text-decoration:none;display:flex;align-items:center;gap:10px;">
             {% if org.logo %}
             <img src="{{ org.logo.url }}" alt="{{ org.name }}" style="width:32px;height:32px;border-radius:8px;object-fit:cover;flex-shrink:0;">
             {% endif %}
-            <div>
+            <div class="brand-text">
                 <span class="brand-name">{{ org.name }}</span>
-                <span class="brand-sub">dojoapp.co.uk</span>
             </div>
         </a>
     </div>
