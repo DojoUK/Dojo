@@ -130,8 +130,9 @@
                         </td>
                         <td class="py-3 fw-bold">£{{ invoice.amount|floatformat:2 }}</td>
                         <td class="py-3 pe-3 text-end">
-                            <a href="{{ invoice.pay_page }}" class="btn btn-dark btn-sm">
-                                {% if stripe_enabled %}Pay £{{ invoice.balance_due|floatformat:2 }}{% else %}How to pay{% endif %}
+                            {# The amount is already in the row, so the button stays short enough for one line on a phone. #}
+                            <a href="{{ invoice.pay_page }}" class="btn btn-dark btn-sm text-nowrap">
+                                {% if stripe_enabled %}Pay{% else %}How to pay{% endif %}
                             </a>
                         </td>
                     </tr>
