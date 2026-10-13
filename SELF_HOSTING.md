@@ -55,6 +55,7 @@ Nothing here is required for a basic instance — everything has a sane default.
 | `DB_NAME` / `DB_USER` / `DB_PASSWORD` / `DB_ROOT_PASSWORD` | `dojo` / `dojo_user` / `dojo_password` / `dojo_root_password` | Change these for anything beyond local/trusted use |
 | `ALLOWED_HOSTS` | `*` (all hosts accepted) | Comma-separated list, e.g. `dojo.yourclub.com`. Tightening this is optional today — the codebase notes a browser-configurable allow-list is planned to replace setting it via the environment |
 | `SITE_URL` | `http://localhost:8000` | Used to build links in emails and Stripe redirects. **Also controls security headers** — see below |
+| `TRUST_PROXY_HTTPS` | unset (off) | Set to `true` when a reverse proxy handles HTTPS in front of Dojo — see [Running behind a reverse proxy](#running-behind-a-reverse-proxy) |
 | `EMAIL_*` | console backend | **Fallback only.** Each club chooses how its email is sent in the setup wizard or **Settings → Email** (see [Sending email](#sending-email)). These variables are used only by clubs that haven't chosen yet. Leave them unset to print that mail to `docker compose logs -f web` |
 | `MAIL_HOSTNAME` | `localhost` | For **Built-in mail server**: the name the `mail` container introduces itself as, e.g. `mail.yourclub.org.uk`. Set it, and your server's reverse DNS, to a name that points at your server |
 | `DOJO_MAIL_HOST` / `DOJO_MAIL_PORT` | `mail` / `25` | Where Dojo finds its mail container. Only change these if you run your own relay instead of the bundled container |
@@ -106,7 +107,14 @@ server {
 
 Then run [Certbot](https://certbot.eff.org/) against that server block to get HTTPS and have nginx redirect port 80 → 443 for you.
 
-Either way, once TLS is live, set `SITE_URL=https://dojo.yourclub.com` in your `.env` and restart (`docker compose up -d`).
+Either way, once TLS is live, set these in your `.env` and restart (`docker compose up -d`):
+
+```
+SITE_URL=https://dojo.yourclub.com
+TRUST_PROXY_HTTPS=true
+```
+
+`TRUST_PROXY_HTTPS` is needed because the proxy talks to Dojo over plain HTTP. Without it, an `https://` `SITE_URL` makes Dojo redirect every request to HTTPS forever and reject form submissions. With it, Dojo trusts the proxy's `X-Forwarded-Proto` header to know the visitor is on HTTPS. Only set it with a proxy in front that sets that header (Caddy does by default; the nginx example above does via `proxy_set_header X-Forwarded-Proto`). Without a proxy, anyone could send the header and claim to be on HTTPS.
 
 ---
 
