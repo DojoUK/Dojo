@@ -120,6 +120,19 @@ class Invoice(models.Model):
     reminder_sent_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class AutoPayStatus(models.TextChoices):
+        NONE = '', 'Not collected automatically'
+        DUE = 'due', 'Waiting to be collected'
+        COLLECTING = 'collecting', 'Being collected'
+        PROCESSING = 'processing', 'Direct Debit in progress'
+        PAID = 'paid', 'Collected'
+        FAILED = 'failed', 'Collection failed'
+
+    autopay_status = models.CharField(max_length=12, choices=AutoPayStatus.choices, blank=True, default='')
+    autopay_payment_intent = models.CharField(max_length=255, blank=True)
+    autopay_error = models.CharField(max_length=255, blank=True)
+    autopay_attempts = models.PositiveSmallIntegerField(default=0)
+
     def __str__(self):
         return f"{self.member} — {self.period} — £{self.amount} ({self.get_status_display()})"
 
@@ -219,6 +232,13 @@ class PaymentSettings(models.Model):
                                         help_text='Payment references are this followed by the invoice number.')
     instructions = models.TextField(blank=True, help_text='Anything else members should know, shown with every invoice.')
     stripe_publishable_key = models.CharField(max_length=255, blank=True)
+
+    class AutoPayPolicy(models.TextChoices):
+        OFF = 'off', 'Off'
+        OPTIONAL = 'optional', 'Optional: members choose'
+        ENCOURAGED = 'encouraged', 'Expected: members are asked to set it up'
+
+    auto_pay = models.CharField(max_length=12, choices=AutoPayPolicy.choices, default=AutoPayPolicy.OFF)
     # The Stripe secret key and webhook signing secret, encrypted (see mailer.crypto).
     secrets = models.TextField(blank=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -246,5 +266,26 @@ class PaymentSettings(models.Model):
         return self.get_secrets().get('stripe_webhook_secret', '')
 
     @property
+    def stripe_webhook_needs_update(self):
+        """True when the webhook was set up before Dojo listened for automatic payment results."""
+        from .stripe_setup import WEBHOOK_EVENTS
+        secrets = self.get_secrets()
+        return bool(secrets.get('stripe_webhook_secret')) and secrets.get('stripe_webhook_events', '').split() != WEBHOOK_EVENTS
+
+    @property
     def stripe_test_mode(self):
         return self.stripe_publishable_key.startswith('pk_test_')
+
+
+class AutoPay(models.Model):
+    """A member's saved card or Direct Debit, charged when an invoice is made for them."""
+    member = models.OneToOneField(Member, on_delete=models.CASCADE, related_name='autopay')
+    payment_method_id = models.CharField(max_length=255)
+    mandate_id = models.CharField(max_length=255, blank=True)
+    method_type = models.CharField(max_length=32, help_text='Stripe payment method type, e.g. card or bacs_debit')
+    label = models.CharField(max_length=100, help_text='e.g. Visa ending 4242')
+    active = models.BooleanField(default=True)
+    set_up_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'{self.member}: {self.label}'

@@ -11,6 +11,12 @@
     {% if stripe_check %}
     <p class="small mb-2">{% if stripe_check.0 %}<i class="bi bi-check-circle-fill text-success me-1"></i>{% else %}<i class="bi bi-x-circle-fill text-danger me-1"></i>{% endif %}{{ stripe_check.1 }}</p>
     {% endif %}
+    {% if payment_settings.stripe_webhook_needs_update %}
+    <div class="alert alert-warning py-2 small">Your webhook was set up before automatic payments existed. Press <strong>Set up webhook automatically</strong> again so Dojo hears when Direct Debits clear or fail.</div>
+    {% endif %}
+    {% if payment_settings.auto_pay != 'off' and not scheduler_running %}
+    <div class="alert alert-warning py-2 small">Automatic payments are collected by Dojo's <code>scheduler</code> container, which hasn't run in the last 10 minutes. Start it with <code>docker compose up -d scheduler</code>.</div>
+    {% endif %}
     <p class="small text-muted mb-2">
         Webhook: {% if payment_settings.stripe_webhook_secret %}<span class="text-success">set up</span>{% else %}<span class="text-danger">not set up yet</span>: invoices paid by card won't be marked paid automatically{% endif %}.<br>
         Address: <code class="user-select-all">{{ stripe_webhook_url }}</code>

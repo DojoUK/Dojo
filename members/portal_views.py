@@ -8,6 +8,7 @@ from django.views import View
 
 from billing.models import Invoice
 from billing.payments import pay_token, stripe_keys
+from billing.payments import settings_for as payments_settings_for
 from dojo.mixins import require_features
 
 from .models import Member
@@ -60,7 +61,12 @@ class PortalView(View):
         outstanding_total = sum(inv.amount for inv in outstanding)
 
         stripe_enabled = org.has_feature('billing') and stripe_keys(org) is not None
-        subscription_enabled = stripe_enabled and bool(member.monthly_fee)
+        from billing import autopay
+        autopay_enabled = autopay.enabled(org)
+        autopay_just_set_up = None
+        if autopay_enabled and request.GET.get('autopay_session'):
+            autopay_just_set_up = autopay.finish_setup(org, request.GET['autopay_session'])
+        payment_settings = payments_settings_for(org)
 
         return render(request, 'portal/index.html', {
             'member': member,
@@ -73,7 +79,12 @@ class PortalView(View):
             'progressions': progressions,
             'outstanding_total': outstanding_total,
             'stripe_enabled': stripe_enabled,
-            'subscription_enabled': subscription_enabled,
+            'autopay_enabled': autopay_enabled,
+            'autopay': autopay.active_autopay(member),
+            'autopay_just_set_up': autopay_just_set_up,
+            'autopay_expected': bool(payment_settings and payment_settings.auto_pay == 'encouraged'),
+            # Monthly Stripe subscriptions from before automatic payments: still shown so they can be cancelled.
+            'legacy_subscription': bool(member.stripe_subscription_id) and stripe_enabled,
             'enrolments': enrolments,
             'recent_attendance': recent_attendance,
         })
@@ -194,61 +205,28 @@ class CreateCheckoutView(View):
         return redirect(session.url)
 
 
-class CreateSubscriptionView(View):
+class AutoPaySetupView(View):
+    """Sends the member to Stripe to save a card or set up a Direct Debit for automatic payments."""
+
     def post(self, request, token):
-        import stripe
-
+        from billing import autopay
         member = _portal_member(token, 'billing')
-
-        keys = stripe_keys(member.organisation)
-        if keys is None or not member.monthly_fee:
+        portal_url = request.build_absolute_uri(reverse('member_portal', kwargs={'token': token}))
+        if not autopay.enabled(member.organisation):
             return redirect('member_portal', token=token)
+        import stripe
+        try:
+            return redirect(autopay.start_setup(member, portal_url))
+        except stripe.error.StripeError:
+            return redirect(reverse('member_portal', kwargs={'token': token}) + '?payment_error=1')
 
-        site_url = settings.SITE_URL.rstrip('/')
-        portal_url = f"{site_url}/p/{token}/"
 
-        # Create or reuse Stripe Customer
-        if member.stripe_customer_id:
-            customer_id = member.stripe_customer_id
-        else:
-            customer_email = (
-                member.guardians.filter(email__gt='').first().email
-                if member.guardians.exists()
-                else member.email or None
-            )
-            customer = stripe.Customer.create(
-                api_key=keys.secret,
-                email=customer_email,
-                name=member.name,
-                metadata={'member_pk': str(member.pk)},
-            )
-            member.stripe_customer_id = customer.id
-            member.save(update_fields=['stripe_customer_id'])
-            customer_id = customer.id
-
-        session = stripe.checkout.Session.create(
-            api_key=keys.secret,
-            customer=customer_id,
-            # Payment methods come from the Stripe dashboard; the API no longer accepts a list here.
-            line_items=[{
-                'price_data': {
-                    'currency': 'gbp',
-                    'unit_amount': int(member.monthly_fee * 100),
-                    'product_data': {
-                        'name': f"{member.organisation.name} — Monthly membership",
-                        'description': f"Monthly membership for {member.name}",
-                    },
-                    'recurring': {'interval': 'month'},
-                },
-                'quantity': 1,
-            }],
-            mode='subscription',
-            success_url=portal_url + '?subscribed=1',
-            cancel_url=portal_url,
-            metadata={'member_pk': str(member.pk)},
-        )
-
-        return redirect(session.url)
+class AutoPayOffView(View):
+    def post(self, request, token):
+        from billing import autopay
+        member = _portal_member(token, 'billing')
+        autopay.turn_off(member)
+        return redirect(reverse('member_portal', kwargs={'token': token}) + '?autopay_off=1')
 
 
 class BillingPortalView(View):

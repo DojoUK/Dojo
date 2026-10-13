@@ -178,6 +178,10 @@ Each club chooses how members pay in the setup wizard, and changes it under **Se
 - **Card online:** a "Pay now" button for card, Apple Pay and Google Pay, through the club's own Stripe account. Paste the publishable and secret keys from Stripe → Developers → API keys, then press **Set up webhook automatically** so card payments mark invoices paid straight away. That needs Dojo to be reachable from the internet at `SITE_URL`; each club's webhook address is `SITE_URL/stripe/webhook/<club>/`.
 - **In person:** cash or card at the club, marked paid by an admin.
 
+**Paying automatically** (needs card payments): members save a card or set up a Direct Debit once, from the payment page or the member portal, and every invoice Dojo makes for them is charged to it. Choose **Optional** (members decide) or **Expected** (members are asked to set it up on every invoice and in the portal, like a gym membership). Cards are charged within a minute of the invoice being made. Direct Debits take about 3 working days, and Dojo marks the invoice paid when Stripe confirms it. Direct Debit (Bacs) must first be switched on in your Stripe account (Stripe → Settings → Payment methods). If a payment fails, the member is emailed the invoice with the other ways to pay.
+
+Automatic payments are collected by the **`scheduler`** container, which runs alongside `web` and checks every minute. `docker compose up -d` starts it; Settings → Payments warns if it hasn't run recently. If you set the webhook up before automatic payments existed, press **Set up webhook automatically** again so Dojo hears when Direct Debits clear or fail. Members with an older monthly Stripe subscription can still cancel it from the portal.
+
 Every invoice and reminder email links to a payment page (`SITE_URL/pay/...`) showing the amount still due and the ways to pay. The link is signed, so it can't be guessed or altered. Stripe keys are stored encrypted, like email passwords.
 
 ---

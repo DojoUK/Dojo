@@ -29,6 +29,26 @@ services:
     depends_on:
       - db
 
+  # Runs scheduled jobs (collecting automatic payments) every minute. Same code
+  # and settings as web; it leaves migrations to web.
+  scheduler:
+    build: .
+    command: python manage.py run_scheduler
+    restart: always
+    volumes:
+      - .:/app
+    environment:
+      - DB_NAME=${DB_NAME:-dojo}
+      - DB_USER=${DB_USER:-dojo_user}
+      - DB_PASSWORD=${DB_PASSWORD:-dojo_password}
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DEBUG=${DEBUG:-True}
+      - SKIP_MIGRATE=1
+    depends_on:
+      - db
+      - web
+
   # Mail container for the "Built-in mail server" option in Settings → Email.
   # Dojo signs each email (DKIM) and hands it here; Postfix queues and delivers
   # it on port 25, retrying if a receiving server is busy. No ports are published:

@@ -26,12 +26,19 @@ def form_context(payment_settings=None, post=None):
             'reference_prefix': value('reference_prefix', 'INV') or 'INV',
             'instructions': value('instructions'),
             'stripe_publishable_key': value('stripe_publishable_key'),
+            'auto_pay': value('auto_pay', 'off') or 'off',
         },
+        'pay_auto_pay_choices': _auto_pay_choices(),
         'pay_saved': {
             'stripe_secret_key': bool(secrets.get('stripe_secret_key')),
             'stripe_webhook_secret': bool(secrets.get('stripe_webhook_secret')),
         },
     }
+
+
+def _auto_pay_choices():
+    from .models import PaymentSettings
+    return PaymentSettings.AutoPayPolicy.choices
 
 
 def _mode(key):
@@ -72,9 +79,15 @@ def apply_post(ps, post):
             errors.append('Card payments: one key is a test key and the other is live. Use a matching pair.')
         if webhook_secret and not webhook_secret.startswith('whsec_'):
             errors.append('Card payments: the webhook signing secret starts with whsec_.')
+    auto_pay = get('auto_pay') or 'off'
+    if auto_pay not in dict(_auto_pay_choices()):
+        errors.append('Choose whether members can pay automatically.')
+    elif auto_pay != 'off' and not accept['card']:
+        errors.append('Paying automatically needs card payments (Stripe) switched on.')
     if errors:
         return errors
 
+    ps.auto_pay = auto_pay
     ps.accept_bank_transfer = accept['bank_transfer']
     ps.accept_card = accept['card']
     ps.accept_cash = accept['cash']
@@ -84,5 +97,5 @@ def apply_post(ps, post):
     ps.reference_prefix = prefix
     ps.instructions = get('instructions')
     ps.stripe_publishable_key = publishable
-    ps.set_secrets({'stripe_secret_key': secret, 'stripe_webhook_secret': webhook_secret})
+    ps.set_secrets({**stored, 'stripe_secret_key': secret, 'stripe_webhook_secret': webhook_secret})
     return []

@@ -642,8 +642,9 @@ class OrgSettingsView(OrgAdminMixin, View):
         from billing.payments import settings_for
         from billing.stripe_setup import check_connection, webhook_url
         payment_settings = settings_for(self.org)
+        from jobs.registry import is_running
         context = {**form_context(payment_settings), 'payment_settings': payment_settings,
-                   'stripe_webhook_url': webhook_url(self.org)}
+                   'stripe_webhook_url': webhook_url(self.org), 'scheduler_running': is_running()}
         if payment_settings and payment_settings.accept_card and self.request.GET.get('check_stripe'):
             context['stripe_check'] = check_connection(payment_settings.stripe_secret_key)
         return context
@@ -736,7 +737,9 @@ class OrgSettingsView(OrgAdminMixin, View):
                 except stripe.error.StripeError as error:
                     messages.error(request, f'Stripe couldn\'t set up the webhook: {error.user_message or error}')
                 else:
-                    payment_settings.set_secrets({**payment_settings.get_secrets(), 'stripe_webhook_secret': secret})
+                    from billing.stripe_setup import WEBHOOK_EVENTS
+                    payment_settings.set_secrets({**payment_settings.get_secrets(), 'stripe_webhook_secret': secret,
+                                                  'stripe_webhook_events': ' '.join(WEBHOOK_EVENTS)})
                     payment_settings.save(update_fields=['secrets'])
                     messages.success(request, 'Webhook set up: invoices paid by card will now be marked paid automatically.')
             return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#payments")

@@ -10,6 +10,7 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
 from .models import Invoice, Payment
+from .payments import field
 
 
 class StripeWebhookView(View):
@@ -47,8 +48,19 @@ class StripeWebhookView(View):
         event_type = event['type']
         obj = event['data']['object']
 
-        if event_type == 'checkout.session.completed':
+        if event_type == 'checkout.session.completed' and field(obj, 'mode') == 'setup':
+            self._handle_autopay_setup(obj)
+
+        elif event_type == 'checkout.session.completed':
             self._handle_checkout_completed(obj)
+
+        elif event_type == 'payment_intent.succeeded' and self.organisation is not None:
+            from .autopay import payment_intent_succeeded
+            payment_intent_succeeded(self.organisation, obj)
+
+        elif event_type == 'payment_intent.payment_failed' and self.organisation is not None:
+            from .autopay import payment_intent_failed
+            payment_intent_failed(self.organisation, obj)
 
         elif event_type in ('customer.subscription.created', 'customer.subscription.updated'):
             self._handle_subscription_updated(obj)
@@ -60,6 +72,19 @@ class StripeWebhookView(View):
             self._handle_subscription_invoice_paid(obj)
 
         return HttpResponse(status=200)
+
+    def _handle_autopay_setup(self, session):
+        """A member saved a card or set up a Direct Debit for automatic payments."""
+        if self.organisation is None or not field(session, 'setup_intent'):
+            return
+        import stripe
+
+        from .autopay import save_from_setup_intent
+        from .payments import stripe_keys
+        keys = stripe_keys(self.organisation)
+        setup_intent = stripe.SetupIntent.retrieve(session['setup_intent'], api_key=keys.secret,
+                                                   expand=['payment_method'])
+        save_from_setup_intent(self.organisation, setup_intent)
 
     def _handle_checkout_completed(self, session):
         try:

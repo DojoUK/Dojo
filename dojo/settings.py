@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     'inventory',
     'accounts',
     'mailer',
+    'jobs',
     'django_htmx',
     'auditlog',
 ]
