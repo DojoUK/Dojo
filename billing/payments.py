@@ -54,15 +54,17 @@ def stripe_keys(org):
 
 
 def pay_token(invoice):
-    return signing.dumps(invoice.pk, salt=PAY_LINK_SALT)
+    """A signed token for the invoice's pay link. It never expires, so it has no timestamp: the same
+    invoice always gets the same link."""
+    return signing.Signer(salt=PAY_LINK_SALT).sign(str(invoice.pk))
 
 
 def invoice_from_token(token):
     """The invoice a pay link is for, or None if the link isn't genuine."""
     from .models import Invoice
     try:
-        pk = signing.loads(token, salt=PAY_LINK_SALT)
-    except signing.BadSignature:
+        pk = int(signing.Signer(salt=PAY_LINK_SALT).unsign(token))
+    except (signing.BadSignature, ValueError):
         return None
     return Invoice.objects.select_related('organisation', 'member').filter(pk=pk).first()
 
