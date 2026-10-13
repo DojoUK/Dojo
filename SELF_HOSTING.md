@@ -127,6 +127,23 @@ docker compose up -d --build
 
 Migrations run automatically on container start via `entrypoint.sh` — you don't need a separate migrate step after pulling.
 
+### Upgrading from MySQL 8.0 to 8.4
+
+Older versions of Dojo ran `mysql:8.0`; Dojo now runs `mysql:8.4` (Django 6.1 needs it). Your data is upgraded in place the first time MySQL 8.4 starts, which takes a minute or so. **The upgrade can't be undone**: MySQL 8.0 can't open the database afterwards, so take a backup first.
+
+1. Back up the database (see [Backups](#backups)) and keep the file somewhere safe.
+2. If you changed the `db` service in your own `docker-compose.yml`: MySQL 8.4 won't start with `--default-authentication-plugin`, and switches off `mysql_native_password` logins by default. Remove that option and recreate any such users with the default method.
+3. Pull and rebuild as usual:
+
+   ```bash
+   git pull
+   docker compose up -d --build
+   ```
+
+4. Check `docker compose logs db` shows `Server upgrade from '80…' to '804…' completed` and `ready for connections`, then sign in to Dojo.
+
+If something goes wrong, stop the stack, delete the `mysql_data` volume, start `db` with `mysql:8.4`, and restore your backup into it.
+
 ---
 
 ## Backups
