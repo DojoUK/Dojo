@@ -6,6 +6,14 @@ from django.utils.functional import cached_property
 
 
 class Organisation(models.Model):
+    # Choices for logging staff out after inactivity, in minutes. 0 means
+    # never: the session then lasts the default two weeks.
+    SESSION_TIMEOUT_CHOICES = (
+        (15, '15 minutes'), (30, '30 minutes'), (60, '1 hour'), (120, '2 hours'),
+        (240, '4 hours'), (480, '8 hours'), (0, "Don't log out automatically"),
+    )
+    DEFAULT_SESSION_TIMEOUT = 120
+
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True)
     email = models.EmailField(blank=True)
@@ -81,6 +89,12 @@ class Organisation(models.Model):
     @property
     def coaching_licence_label(self):
         return self.field_label('coaching_licence')
+
+    @property
+    def session_timeout_minutes(self):
+        value = (self.settings or {}).get('session_timeout_minutes', self.DEFAULT_SESSION_TIMEOUT)
+        allowed = {minutes for minutes, _ in self.SESSION_TIMEOUT_CHOICES}
+        return value if value in allowed else self.DEFAULT_SESSION_TIMEOUT
 
     def save(self, *args, **kwargs):
         if not self.slug:

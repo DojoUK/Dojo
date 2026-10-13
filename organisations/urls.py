@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path('', views.DashboardView.as_view(), name='org_dashboard'),
+    path('keep-alive/', views.KeepAliveView.as_view(), name='org_keep_alive'),
     path('members/', include('members.urls')),
     path('classes/', include('classes.urls')),
     path('gradings/', include('progression.grading_urls')),
