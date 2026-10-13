@@ -11,6 +11,7 @@ from members.models import Member
 
 from .models import Attendance, Class, ClassCoach, ClassMember, Session, SessionCoach, WaitingList
 from organisations.branding import email_branding
+from mailer import connection_for
 
 
 DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -263,6 +264,7 @@ class UnenrolMemberView(OrgAdminMixin, View):
             EmailMultiAlternatives(
                 subject=subject, body=body,
                 from_email=settings.DEFAULT_FROM_EMAIL, to=[recipient],
+                connection=connection_for(self.org),
             ).send()
         except Exception:
             pass
@@ -542,8 +544,9 @@ class CancelSessionView(OrgAdminMixin, View):
             )
             msg = EmailMultiAlternatives(
                 subject=subject, body=text_body,
-                from_email=self.org.email or None,
+                from_email=None,
                 to=[recipient],
+                connection=connection_for(self.org),
             )
             msg.attach_alternative(html_body, 'text/html')
             try:

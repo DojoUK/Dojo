@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     'documents',
     'inventory',
     'accounts',
+    'mailer',
     'django_htmx',
     'auditlog',
 ]
@@ -150,11 +151,18 @@ MESSAGE_TAGS = {message_constants.ERROR: 'danger'}
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = '/'
 
-# Email — defaults to console (prints to docker logs) if SMTP not configured
-EMAIL_BACKEND = os.environ.get(
+# Email. Each club chooses how its emails are sent in the setup wizard or
+# Settings → Email (mailer.backends.ClubBackend). The EMAIL_* variables below
+# are the fallback for clubs that haven't chosen; with none set, emails are
+# printed to the docker logs.
+EMAIL_BACKEND = 'mailer.backends.ClubBackend'
+DOJO_FALLBACK_EMAIL_BACKEND = os.environ.get(
     'EMAIL_BACKEND',
     'django.core.mail.backends.console.EmailBackend',
 )
+# "Built-in mail server" email option (the `mail` container in docker-compose.yml).
+DOJO_MAIL_HOST = os.environ.get('DOJO_MAIL_HOST', 'mail')
+DOJO_MAIL_PORT = int(os.environ.get('DOJO_MAIL_PORT', '25'))
 EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')

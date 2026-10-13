@@ -11,3 +11,6 @@ Pillow>=12,<13
 pypdf>=6,<7
 reportlab>=5,<6
 segno>=1.6,<2
+cryptography>=50,<51
+dkimpy>=1.1,<2
+dnspython>=2.9,<3

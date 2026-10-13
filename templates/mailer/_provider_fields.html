@@ -1,0 +1,70 @@
+{# Email sending form fields: the setup wizard and Settings → Email. Context from mailer.forms.provider_rows. #}
+<div class="mb-3">
+    <label class="form-label small fw-semibold" for="email-provider">Send emails with</label>
+    <select name="email_provider" id="email-provider" class="form-select form-select-sm">
+        {% for row in email_provider_rows %}
+        <option value="{{ row.provider.key }}" {% if row.provider.key == email_selected %}selected{% endif %}>{{ row.provider.label }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+{% for row in email_provider_rows %}
+<div class="email-provider-panel border rounded p-3 mb-3 bg-light{% if row.provider.key != email_selected %} d-none{% endif %}" data-provider="{{ row.provider.key }}">
+    <p class="small text-muted mb-{% if row.fields %}3{% else %}0{% endif %}">
+        {{ row.provider.summary }}
+        {% if row.provider.signup_url %}<a href="{{ row.provider.signup_url }}" target="_blank" rel="noopener">Sign up <i class="bi bi-box-arrow-up-right" style="font-size:.7em;"></i></a>{% endif %}
+    </p>
+    {% if row.fields %}
+    <div class="row g-2">
+        {% for field in row.fields %}
+        <div class="col-sm-6">
+            <label class="form-label small fw-semibold" for="{{ field.input_name }}">{{ field.setting.label }}{% if not field.setting.required %} <span class="text-muted fw-normal">(optional)</span>{% endif %}</label>
+            {% if field.setting.kind == 'select' %}
+            <select name="{{ field.input_name }}" id="{{ field.input_name }}" class="form-select form-select-sm">
+                {% for value, label in field.setting.choices %}
+                <option value="{{ value }}" {% if value == field.value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            {% else %}
+            <input type="{% if field.setting.kind == 'password' %}password{% elif field.setting.kind == 'number' %}number{% elif field.setting.kind == 'email' %}email{% else %}text{% endif %}"
+                   name="{{ field.input_name }}" id="{{ field.input_name }}" value="{{ field.value }}"
+                   class="form-control form-control-sm" autocomplete="off"
+                   {% if field.saved %}placeholder="Saved: leave blank to keep"{% endif %}>
+            {% endif %}
+            {% if field.setting.help %}<div class="form-text">{{ field.setting.help }}</div>{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endfor %}
+
+<div class="row g-2 email-from-fields">
+    <div class="col-sm-4">
+        <label class="form-label small fw-semibold" for="email-from-name">From name</label>
+        <input type="text" name="email_from_name" id="email-from-name" value="{{ email_from_name }}" class="form-control form-control-sm" placeholder="Your club's name">
+    </div>
+    <div class="col-sm-4">
+        <label class="form-label small fw-semibold" for="email-from-email">From address</label>
+        <input type="email" name="email_from_email" id="email-from-email" value="{{ email_from_email }}" class="form-control form-control-sm" placeholder="noreply@yourclub.org.uk">
+    </div>
+    <div class="col-sm-4">
+        <label class="form-label small fw-semibold" for="email-reply-to">Replies go to <span class="text-muted fw-normal">(optional)</span></label>
+        <input type="email" name="email_reply_to" id="email-reply-to" value="{{ email_reply_to }}" class="form-control form-control-sm" placeholder="secretary@yourclub.org.uk">
+    </div>
+    <div class="col-12 form-text mt-1">Use an address at a domain your club owns. Most services make you verify the domain before they'll send from it.</div>
+</div>
+
+<script>
+(function () {
+    const select = document.getElementById('email-provider');
+    const sync = () => {
+        document.querySelectorAll('.email-provider-panel').forEach(panel => {
+            panel.classList.toggle('d-none', panel.dataset.provider !== select.value);
+        });
+        document.querySelector('.email-from-fields').classList.toggle('d-none', select.value === 'log');
+    };
+    select.addEventListener('change', sync);
+    sync();
+})();
+</script>

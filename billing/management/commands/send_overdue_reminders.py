@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from billing.emails import portal_url_for
 from billing.models import Invoice
+from mailer import connection_for
 from organisations.branding import email_branding
 
 
@@ -96,6 +97,7 @@ class Command(BaseCommand):
                 ),
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 to=[recipient],
+                connection=connection_for(org),
             )
             msg.attach_alternative(html, 'text/html')
             msg.send()
