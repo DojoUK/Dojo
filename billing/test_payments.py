@@ -7,7 +7,6 @@ from decimal import Decimal
 from unittest import mock
 
 import stripe
-
 from django.contrib.auth.models import User
 from django.core import mail
 from django.test import TestCase, override_settings
@@ -275,3 +274,24 @@ class SetupWizardTests(TestCase):
         })
         self.assertContains(response, 'sort code should be 6 digits')
         self.assertFalse(Organisation.objects.exists())
+
+
+class PortalPayButtonTests(PaymentsTestCase):
+    def setUp(self):
+        self.org.set_features({'member_portal': True})
+        self.org.save()
+        self.url = reverse('member_portal', kwargs={'token': self.member.token})
+        self.pay_page = reverse('invoice_pay', kwargs={'token': payments.pay_token(self.invoice)})
+
+    def test_without_cards_the_button_explains_how_to_pay(self):
+        self.configure(**BANK)
+        response = self.client.get(self.url)
+        self.assertContains(response, f'href="{self.pay_page}"')
+        self.assertContains(response, 'How to pay')
+        self.assertNotContains(response, 'disabled>Pay')
+
+    def test_with_cards_the_button_shows_the_amount(self):
+        self.configure(**CARD)
+        response = self.client.get(self.url)
+        self.assertContains(response, f'href="{self.pay_page}"')
+        self.assertContains(response, 'Pay £45.00')

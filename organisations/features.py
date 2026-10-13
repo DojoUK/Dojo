@@ -11,8 +11,6 @@ default here.
 """
 from dataclasses import dataclass
 
-from django.conf import settings
-
 
 @dataclass(frozen=True)
 class Feature:
@@ -43,11 +41,6 @@ FEATURES = (
         'billing', 'Billing',
         'Invoices, billing policies, terms, discounts, overdue reminders and the finance report.',
         default=True,
-    ),
-    Feature(
-        'online_payments', 'Online payments',
-        'Card payments and subscriptions through Stripe in the member portal.',
-        default=True, requires=('billing', 'member_portal'),
     ),
     Feature(
         'inventory', 'Inventory',
@@ -84,13 +77,10 @@ FEATURES = (
 FEATURES_BY_KEY = {f.key: f for f in FEATURES}
 
 
-def stripe_configured():
-    return bool(settings.STRIPE_PUBLIC_KEY and settings.STRIPE_SECRET_KEY)
-
+# Card payments used to be a feature switch here ('online_payments'). They're now
+# set up in Settings → Payments, which is the one place that turns them on.
 
 def default_enabled(feature):
-    if feature.key == 'online_payments':
-        return stripe_configured()
     return feature.default
 
 
