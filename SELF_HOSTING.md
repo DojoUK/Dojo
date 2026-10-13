@@ -168,6 +168,8 @@ Passwords and API keys are stored encrypted with a key derived from `SECRET_KEY`
 
 To see what the mail service is doing: `docker compose logs -f mail`.
 
+**What the emails say and look like** is up to each club: **Settings → Email → Customise emails** lists every email Dojo sends (welcome, portal link, invoice, payment reminder, announcement, session cancelled, waiting-list place). Each can be reworded, with fields like `{first_name}` and ready-made blocks like `{pay_options}`, or replaced entirely with your own HTML, with a live preview, a test send and "Reset to default". The same page sets the header colour, logo, header text and footer message used around every email.
+
 ---
 
 ## Taking payments

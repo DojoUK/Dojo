@@ -78,3 +78,24 @@ class EmailSettings(models.Model):
             ('TXT', f'_dmarc.{domain}', f'v=DMARC1; p=none; rua=mailto:{self.reply_to or self.from_email}',
              'DMARC: tells receiving servers what to do with mail that fails the checks above.'),
         ]
+
+
+class EmailTemplate(models.Model):
+    """A club's own version of one of Dojo's emails (see mailer.catalogue)."""
+    class Mode(models.TextChoices):
+        WORDING = 'wording', 'Wording'
+        HTML = 'html', 'Full HTML'
+
+    organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='email_templates')
+    key = models.CharField(max_length=40)
+    subject = models.CharField(max_length=200)
+    mode = models.CharField(max_length=10, choices=Mode.choices, default=Mode.WORDING)
+    body = models.TextField(blank=True, help_text='Wording, with {fields} and simple formatting.')
+    html = models.TextField(blank=True, help_text='The whole email as HTML, in full HTML mode.')
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['organisation', 'key'], name='one_template_per_email_per_club')]
+
+    def __str__(self):
+        return f'{self.organisation}: {self.key}'

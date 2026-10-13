@@ -4,6 +4,8 @@ from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.shortcuts import redirect
 from django.urls import include, path
+
+from mailer.password_reset import ClubPasswordResetForm
 from organisations import views as organisations_views
 
 
@@ -30,7 +32,7 @@ urlpatterns = [
     path('login/', auth_views.LoginView.as_view(), name='login'),
     path('2fa/', include('accounts.urls')),
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
-    path('password-reset/', auth_views.PasswordResetView.as_view(), name='password_reset'),
+    path('password-reset/', auth_views.PasswordResetView.as_view(form_class=ClubPasswordResetForm), name='password_reset'),
     path('password-reset/done/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),
     path('password-reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     path('password-reset/complete/', auth_views.PasswordResetCompleteView.as_view(), name='password_reset_complete'),

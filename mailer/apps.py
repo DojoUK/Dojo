@@ -9,5 +9,6 @@ class MailerConfig(AppConfig):
     def ready(self):
         from auditlog.registry import auditlog
 
-        from .models import EmailSettings
+        from .models import EmailSettings, EmailTemplate
         auditlog.register(EmailSettings, exclude_fields=['secrets'])
+        auditlog.register(EmailTemplate)

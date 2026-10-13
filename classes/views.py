@@ -10,8 +10,8 @@ from dojo.mixins import ClassCoachMixin, OrgAdminMixin, OrgMixin
 from members.models import Member
 
 from .models import Attendance, Class, ClassCoach, ClassMember, Session, SessionCoach, WaitingList
-from organisations.branding import email_branding
-from mailer import connection_for
+from mailer import blocks as email_blocks
+from mailer import compose
 
 
 DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -234,8 +234,6 @@ class UnenrolMemberView(OrgAdminMixin, View):
 
 
     def _notify_waitlist_promoted(self, request, member, cls):
-        from django.conf import settings
-        from django.core.mail import EmailMultiAlternatives
         has_guardians = member.guardians.exists()
         if has_guardians:
             guardian = member.guardians.filter(email__gt='').first()
@@ -244,29 +242,10 @@ class UnenrolMemberView(OrgAdminMixin, View):
             recipient = member.email or None
         if not recipient:
             return
-        org_name = self.org.name
-        subject = f"A spot has opened up — {cls.name} ({org_name})"
-        greeting = f"Dear guardian of {member.name}" if has_guardians else f"Hi {member.name}"
-        contact_line = (
-            f"To stop receiving non-essential emails like this, contact {self.org.email}."
-            if self.org.email else
-            f"To stop receiving non-essential emails like this, contact {org_name} directly."
-        )
-        body = (
-            f"{greeting},\n\n"
-            f"Great news! A spot has opened up in {cls.name} at {org_name} "
-            f"and {member.name} has been moved off the waiting list and into the class.\n\n"
-            f"No action is needed — you're all set.\n\n"
-            f"Thanks,\n{org_name}\n\n"
-            f"{contact_line}"
-        )
         try:
-            EmailMultiAlternatives(
-                subject=subject, body=body,
-                from_email=settings.DEFAULT_FROM_EMAIL, to=[recipient],
-                connection=connection_for(self.org),
-            ).send()
-        except Exception:
+            compose.send(self.org, 'waiting_list_place', [recipient],
+                         {**compose.member_values(member, to_guardian=has_guardians), 'class_name': cls.name})
+        except Exception:  # the move itself has happened; a failed email mustn't undo it
             pass
 
 
@@ -503,9 +482,6 @@ class CancelSessionView(OrgAdminMixin, View):
         return redirect('class_detail', org_slug=self.org.slug, pk=cls.pk)
 
     def _send_cancellation_emails(self, request, cls, session):
-        from django.core.mail import EmailMultiAlternatives
-        from django.template.loader import render_to_string
-
         enrolled = (
             ClassMember.objects.filter(assigned_class=cls)
             .select_related('member')
@@ -524,35 +500,14 @@ class CancelSessionView(OrgAdminMixin, View):
             if not recipient:
                 continue
 
-            org_name = self.org.name
-            subject = f'{org_name} — {cls.name} session cancelled ({session.date.strftime("%d %b %Y")})'
-            context = {
-                'org_name': org_name,
-                **email_branding(self.org),
-                'org_email': self.org.email,
-                'class_name': cls.name,
-                'session': session,
-                'member': member,
-                'has_guardians': has_guardians,
-            }
-            html_body = render_to_string('emails/session_cancelled.html', context)
-            text_body = (
-                f"{'Hi' if not has_guardians else 'Dear guardian of'} {member.name},\n\n"
-                f"This is to let you know that the {cls.name} session on "
-                f"{session.date.strftime('%d %b %Y')} has been cancelled.\n\n"
-                f"— {org_name}"
-            )
-            msg = EmailMultiAlternatives(
-                subject=subject, body=text_body,
-                from_email=None,
-                to=[recipient],
-                connection=connection_for(self.org),
-            )
-            msg.attach_alternative(html_body, 'text/html')
+            session_date = session.date.strftime('%A %-d %B %Y')
             try:
-                msg.send()
+                compose.send(self.org, 'session_cancelled', [recipient],
+                             {**compose.member_values(member, to_guardian=has_guardians),
+                              'class_name': cls.name, 'session_date': session_date},
+                             {'session_box': email_blocks.session_box(cls.name, session_date)})
                 sent += 1
-            except Exception:
+            except Exception:  # one bad address mustn't stop the other notices
                 pass
 
         if sent:

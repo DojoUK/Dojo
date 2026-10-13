@@ -2,7 +2,6 @@ from datetime import date
 from decimal import Decimal
 
 from django.core import mail
-from django.template.loader import render_to_string
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
@@ -10,7 +9,6 @@ from billing.emails import send_invoice_email
 from billing.models import Invoice, Payment
 from members.emails import send_welcome_email
 from members.models import Member
-from organisations.branding import email_branding
 from organisations.models import Organisation
 
 
@@ -55,10 +53,12 @@ class EmailLayoutTests(TestCase):
         self.assertNotIn('£0.00', html)
 
     def test_session_cancelled_email_uses_the_same_layout(self):
-        html = render_to_string('emails/session_cancelled.html', {
-            'org_name': self.org.name, **email_branding(self.org), 'class_name': 'Juniors',
-            'session': type('S', (), {'date': date(2026, 11, 3)})(), 'member': self.member, 'has_guardians': False,
-        })
+        from mailer import blocks, compose
+        subject, html, text = compose.render(self.org, 'session_cancelled', {
+            **compose.member_values(self.member), 'class_name': 'Juniors', 'session_date': 'Tuesday 3 November 2026',
+        }, {'session_box': blocks.session_box('Juniors', 'Tuesday 3 November 2026')})
+        self.assertEqual(subject, 'Juniors on Tuesday 3 November 2026 is cancelled')
         self.assertIn('background:#1A3C34', html)
         self.assertIn('Powered by', html)
         self.assertIn('Tuesday 3 November 2026', html)
+        self.assertTrue(text.endswith('Powered by Dojo'))

@@ -2,7 +2,7 @@
 <tr>
   <td align="center" style="padding:24px 32px 8px;">
     <p style="color:#64748b;font-size:12px;line-height:1.6;margin:0;">
-      Sent by {{ org_name }}{% if club_email %}. Questions? Just reply, or email <a href="mailto:{{ club_email }}" style="color:#64748b;">{{ club_email }}</a>{% endif %}.
+      {% if layout.footer_text %}{{ layout.footer_text|linebreaksbr }}{% else %}Sent by {{ org_name }}{% if club_email %}. Questions? Just reply, or email <a href="mailto:{{ club_email }}" style="color:#64748b;">{{ club_email }}</a>{% endif %}.{% endif %}
       {% if club_website %}<br><a href="{{ club_website }}" style="color:#64748b;">{{ club_website|cut:"https://"|cut:"http://" }}</a>{% endif %}
     </p>
   </td>
