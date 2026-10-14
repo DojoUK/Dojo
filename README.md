@@ -1,7 +1,7 @@
 # <img width="600" height="327" alt="Dojo" src="https://github.com/user-attachments/assets/e477db25-db4f-45b8-8df3-3902b4b8e4a9" />
 Open source club and class management platform. Manage members, classes, attendance, gradings, billing and payments, and documents. Self-hostable.
 
-**Hosted version coming soon at [dojoapp.co.uk](https://dojoapp.co.uk)**
+**[Website](https://dojouk.github.io/Dojo/)** · [Self-hosting guide](./SELF_HOSTING.md) · A hosted version is planned
 
 ---
 
@@ -142,7 +142,7 @@ Migrations run automatically. Upgrading from a version that used MySQL 8.0 moves
 - [ ] A signup API for club websites
 - [ ] Themes and dark mode
 - [ ] A separate member portal service
-- [ ] Hosted version at [dojoapp.co.uk](https://dojoapp.co.uk)
+- [ ] A hosted version
 
 ---
 
@@ -178,4 +178,4 @@ Dojo is licensed under the [GNU Affero General Public License v3.0](./LICENSE).
 
 You are free to self-host and modify Dojo. If you run a modified version as a service over a network, you must make your modifications available under the same licence.
 
-A hosted version will be available at [dojoapp.co.uk](https://dojoapp.co.uk).
+More about Dojo at [dojouk.github.io/Dojo](https://dojouk.github.io/Dojo/).
