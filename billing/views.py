@@ -467,7 +467,6 @@ class BulkInvoiceView(BillingManagerMixin, View):
                     'amount': calc['net'],
                     'breakdown': calc['breakdown'],
                     'discount_lines': calc['discount_lines'],
-                    'has_subscription': member.has_active_subscription,
                     'already_invoiced': member.pk in already_invoiced_ids,
                 })
 
@@ -488,7 +487,6 @@ class BulkInvoiceView(BillingManagerMixin, View):
                 'amount': member.monthly_fee,
                 'breakdown': [{'label': 'Legacy monthly fee', 'amount': member.monthly_fee}],
                 'discount_lines': [],
-                'has_subscription': member.has_active_subscription,
                 'already_invoiced': member.pk in already_invoiced_ids,
             })
 

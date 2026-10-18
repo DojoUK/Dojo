@@ -12,7 +12,7 @@ whoever operates a given Dojo instance.
 | Contact & membership details | name, DOB, email, phone, guardian details, attendance, invoices | Contract — necessary to run the membership and deliver classes |
 | Medical information | `Member.medical_info`, `MemberApplication.medical_info` | Vital interests / legitimate interests — coaches need this to respond safely to a medical event during activity. Only collected with the member's (or guardian's) knowledge at signup, and visible only to org admins and coaches. |
 | Staff DBS / coaching licence numbers | `OrganisationMember.dbs_number`, `dbs_expiry`, `coaching_licence*` | Legal obligation / legitimate interests — safeguarding checks required to run activities involving minors |
-| Payment data | Stripe customer/subscription IDs, invoices | Contract — required to collect membership fees. Card details never touch Dojo directly; Stripe (a sub-processor, US-based, GDPR-compliant via SCCs) handles those. |
+| Payment data | Stripe customer IDs, invoices | Contract — required to collect membership fees. Card details never touch Dojo directly; Stripe (a sub-processor, US-based, GDPR-compliant via SCCs) handles those. |
 
 ## Retention
 
@@ -63,7 +63,7 @@ just by loading a page.
 
 ## Third-party processors
 
-- **Stripe** — payment processing, subscriptions, billing portal (US-based, SCCs in place)
+- **Stripe** — card payments and automatic payments, through each club's own Stripe account (US-based, SCCs in place)
 - **Email provider** — configured per-instance via `EMAIL_HOST` in `.env`; self-hosters choose and are responsible for their own SMTP provider
 
 ## Member rights

@@ -176,7 +176,7 @@ Member
 - joined_date
 - custom_field_values (JSON)
 - monthly_fee, billing_policy (FK to BillingPolicy, nullable)
-- stripe_customer_id, stripe_subscription_id, subscription_status
+- stripe_customer_id (for automatic payments)
 - licence_number, licence_expiry
 - medical_info
 - archived_at, retention_notes, anonymised_at (GDPR retention/anonymisation; `anonymise()` scrubs PII in place while keeping the row for FK integrity)
@@ -335,8 +335,6 @@ Public/unauthenticated routes:
 /join/<slug>/                  → public membership signup (no login)
 /p/<token>/                    → member portal (no login)
 /p/<token>/checkout/<inv_pk>/  → Stripe Checkout for invoice
-/p/<token>/subscribe/          → Stripe subscription signup
-/p/<token>/billing-portal/     → Stripe billing portal
 /stripe/webhook/               → Stripe webhook handler
 
 /org/<slug>/                   → org dashboard

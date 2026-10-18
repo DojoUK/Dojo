@@ -52,7 +52,7 @@
                             <label class="form-label fw-semibold small">Monthly fee (£)</label>
                             {{ form.monthly_fee }}
                             {% if form.monthly_fee.errors %}<div class="text-danger small mt-1">{{ form.monthly_fee.errors.0 }}</div>{% endif %}
-                            <div class="form-text">Used for autopay subscriptions. Leave blank if not applicable.</div>
+                            <div class="form-text">For members without a billing policy. Leave blank if not applicable.</div>
                         </div>
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold small">Billing policy</label>

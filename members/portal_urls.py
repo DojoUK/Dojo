@@ -7,6 +7,4 @@ urlpatterns = [
     path('pay/<int:invoice_pk>/', portal_views.CreateCheckoutView.as_view(), name='portal_checkout'),
     path('automatic-payments/', portal_views.AutoPaySetupView.as_view(), name='portal_autopay_setup'),
     path('automatic-payments/off/', portal_views.AutoPayOffView.as_view(), name='portal_autopay_off'),
-    path('cancel-subscription/', portal_views.CancelSubscriptionView.as_view(), name='portal_cancel_subscription'),
-    path('billing-portal/', portal_views.BillingPortalView.as_view(), name='portal_billing_portal'),
 ]

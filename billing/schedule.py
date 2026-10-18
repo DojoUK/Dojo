@@ -96,8 +96,6 @@ def estimate(schedule, period_info=None):
     policy = schedule.policy
     count, total = 0, Decimal(0)
     for member in members_for_policy(policy.organisation, policy):
-        if member.has_active_subscription:
-            continue
         net = calculate_invoice_amount(member, policy)['net']
         if net > 0:
             count += 1
@@ -141,8 +139,7 @@ def create_run(schedule, period, invoice_date, term=None, year=None, month=None)
         total = Decimal(0)
         count = 0
         for member in members_for_policy(org, policy):
-            # Members still on an old Stripe subscription are already paying through it.
-            if member.pk in already or member.has_active_subscription:
+            if member.pk in already:
                 continue
             calc = calculate_invoice_amount(member, policy, term=term, year=year, month=month)
             if calc['net'] <= 0:

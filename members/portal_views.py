@@ -84,8 +84,6 @@ class PortalView(View):
             'autopay': autopay.active_autopay(member),
             'autopay_just_set_up': autopay_just_set_up,
             'autopay_expected': bool(payment_settings and payment_settings.auto_pay == 'encouraged'),
-            # Monthly Stripe subscriptions from before automatic payments: still shown so they can be cancelled.
-            'legacy_subscription': bool(member.stripe_subscription_id) and stripe_enabled,
             'enrolments': enrolments,
             'recent_attendance': recent_attendance,
         })
@@ -118,7 +116,6 @@ class DownloadDataView(View):
                 'licence_expiry': member.licence_expiry,
                 'medical_info': member.medical_info,
                 'monthly_fee': member.monthly_fee,
-                'subscription_status': member.subscription_status,
             },
             'guardians': [
                 {'name': g.name, 'email': g.email, 'phone': g.phone, 'relationship': g.relationship}
@@ -228,46 +225,3 @@ class AutoPayOffView(View):
         member = _portal_member(token, 'billing')
         autopay.turn_off(member)
         return redirect(reverse('member_portal', kwargs={'token': token}) + '?autopay_off=1')
-
-
-class BillingPortalView(View):
-    def post(self, request, token):
-        import stripe
-
-        member = _portal_member(token, 'billing')
-
-        keys = stripe_keys(member.organisation)
-        if not member.stripe_customer_id or keys is None:
-            return redirect('member_portal', token=token)
-
-        site_url = settings.SITE_URL.rstrip('/')
-        portal_url = f"{site_url}/p/{token}/"
-
-        session = stripe.billing_portal.Session.create(
-            api_key=keys.secret,
-            customer=member.stripe_customer_id,
-            return_url=portal_url,
-        )
-
-        return redirect(session.url)
-
-
-class CancelSubscriptionView(View):
-    def post(self, request, token):
-        import stripe
-
-        member = _portal_member(token, 'billing')
-
-        keys = stripe_keys(member.organisation)
-        if not member.stripe_subscription_id or keys is None:
-            return redirect('member_portal', token=token)
-
-        stripe.Subscription.modify(
-            member.stripe_subscription_id,
-            api_key=keys.secret,
-            cancel_at_period_end=True,
-        )
-        member.subscription_status = 'cancelling'
-        member.save(update_fields=['subscription_status'])
-
-        return redirect('member_portal', token=token)

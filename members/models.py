@@ -28,8 +28,6 @@ class Member(models.Model):
     custom_field_values = models.JSONField(default=dict, blank=True)
     monthly_fee = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     stripe_customer_id = models.CharField(max_length=255, blank=True)
-    stripe_subscription_id = models.CharField(max_length=255, blank=True)
-    subscription_status = models.CharField(max_length=20, blank=True)
     licence_number = models.CharField(max_length=100, blank=True)
     licence_expiry = models.DateField(null=True, blank=True)
     medical_info = models.TextField(blank=True, help_text='Medical conditions, allergies, or other health information coaches should know about')
@@ -37,10 +35,6 @@ class Member(models.Model):
     archived_at = models.DateTimeField(null=True, blank=True)
     retention_notes = models.TextField(blank=True, help_text='Reason for retaining data beyond the standard period')
     anonymised_at = models.DateTimeField(null=True, blank=True)
-
-    @property
-    def has_active_subscription(self):
-        return self.subscription_status == 'active'
 
     def anonymise(self):
         """Scrub personal data in place, keeping the row for financial/attendance FK integrity."""
@@ -56,8 +50,6 @@ class Member(models.Model):
         self.address_line2 = ''
         self.custom_field_values = {}
         self.stripe_customer_id = ''
-        self.stripe_subscription_id = ''
-        self.subscription_status = ''
         self.licence_number = ''
         self.licence_expiry = None
         self.medical_info = ''
