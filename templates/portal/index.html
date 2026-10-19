@@ -87,30 +87,6 @@
     </div>
     {% endif %}
 
-    {% if legacy_subscription %}
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body d-flex align-items-center justify-content-between gap-3 flex-wrap">
-            <div>
-                <p class="fw-semibold mb-0">Monthly subscription{% if member.subscription_status == 'cancelling' %} (ending){% endif %}</p>
-                <p class="text-muted small mb-0">{% if member.subscription_status == 'cancelling' %}Ends at the close of the current billing period.{% else %}An older monthly card subscription. {% if autopay_enabled %}Once automatic payments are set up above, cancel this so you're not charged twice.{% endif %}{% endif %}</p>
-            </div>
-            <div class="flex-shrink-0 d-flex flex-column gap-2">
-                <form method="post" action="{% url 'portal_billing_portal' token=member.token %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-outline-secondary w-100">Manage payment method</button>
-                </form>
-                {% if member.subscription_status != 'cancelling' %}
-                <form method="post" action="{% url 'portal_cancel_subscription' token=member.token %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-outline-danger w-100"
-                            onclick="return confirm('Cancel this subscription at the end of the billing period?')">Cancel subscription</button>
-                </form>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
     {% if 'billing' in org.enabled_features %}
     {% if outstanding %}
     <div class="card border-0 shadow-sm mb-4">

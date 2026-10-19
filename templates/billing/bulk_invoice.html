@@ -69,8 +69,6 @@
                                 <td class="small py-2">
                                     {% if row.already_invoiced %}
                                     <span class="badge bg-secondary-subtle text-secondary">Already invoiced</span>
-                                    {% elif row.has_subscription %}
-                                    <span class="badge bg-success-subtle text-success">Autopay active</span>
                                     {% else %}
                                     <span class="badge bg-light text-secondary border">Will invoice</span>
                                     {% endif %}

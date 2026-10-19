@@ -43,8 +43,6 @@ class ScheduleTestCase(TestCase):
         cls.bo = Member.objects.create(organisation=cls.org, name='Bo Day', email='bo@example.com')  # billed via her class
         juniors = Class.objects.create(organisation=cls.org, name='Juniors', billing_policy=cls.monthly)
         ClassMember.objects.create(member=cls.bo, assigned_class=juniors)
-        Member.objects.create(organisation=cls.org, name='Old Subscriber', email='old@example.com',
-                              billing_policy=cls.monthly, subscription_status='active')
         Member.objects.create(organisation=cls.org, name='Left', email='left@example.com', billing_policy=cls.monthly,
                               is_active=False)
 
