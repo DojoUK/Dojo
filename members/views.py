@@ -415,9 +415,11 @@ class ToggleTechniqueView(OrgAdminMixin, View):
                 member=member, technique=technique, defaults={'signed_off_by': request.user},
             )
         if request.htmx:
-            return render(request, 'members/_technique_signoff.html', {
+            from progression.syllabus import current_syllabuses
+            return render(request, 'members/_technique_signoff_response.html', {
                 'org': self.org, 'member': member, 'technique': technique, 'signed_off': signed_off,
                 'notes': request.POST.get('notes', '')[:500],
+                'cards': current_syllabuses(member),  # refreshes each syllabus's "N of M" count
             })
         return redirect_to_member(self.org.slug, member.pk, 'grades')
 

@@ -1,0 +1,2 @@
+{% include 'members/_technique_signoff.html' %}
+{% for card in cards %}{% if card.total %}{% include 'members/_signoff_count.html' with oob=True %}{% endif %}{% endfor %}

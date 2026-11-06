@@ -480,7 +480,7 @@
                 <div class="card border-0 shadow-sm mb-3">
                     <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                         <h6 class="mb-0">{{ card.syllabus.name }}</h6>
-                        <span class="text-muted small">for {{ card.stage.name }}{% if card.total %} · {{ card.done }} of {{ card.total }} signed off{% endif %}</span>
+                        <span class="text-muted small">for {{ card.stage.name }}{% if card.total %} · {% include 'members/_signoff_count.html' %}{% endif %}</span>
                     </div>
                     {% if card.syllabus.introduction %}<div class="card-body pb-0 small text-muted">{{ card.syllabus.introduction|linebreaksbr }}</div>{% endif %}
                     {% for heading, entries in card.groups %}

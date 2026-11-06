@@ -74,6 +74,7 @@ class SignOffTests(TestCase):
         self.assertContains(response, 'id="technique-%d"' % self.o_goshi.pk)
         self.assertContains(response, 'bi-check-square-fill')
         self.assertContains(response, 'by Ada Admin')
+        self.assertContains(response, f'id="signoff-count-{self.kyu_syllabus.pk}" hx-swap-oob="true">1 of 3 signed off')
         self.assertNotContains(response, '<html')
 
     def test_member_page_counts_sign_offs(self):
