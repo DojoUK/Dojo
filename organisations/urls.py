@@ -2,6 +2,8 @@ from django.urls import include, path
 
 from mailer import views as mailer_views
 
+from dojo.csv_import import ImportView
+
 from . import views
 
 urlpatterns = [
@@ -14,6 +16,8 @@ urlpatterns = [
     path('billing/', include('billing.urls')),
     path('inventory/', include('inventory.urls')),
     path('audit/', views.AuditLogView.as_view(), name='org_audit_log'),
+    path('import/', ImportView.as_view(), name='org_import'),
+    path('import/<slug:kind>/', ImportView.as_view(), name='org_import_kind'),
     path('staff/', views.StaffListView.as_view(), name='org_staff'),
     path('settings/', views.OrgSettingsView.as_view(), name='org_settings'),
     path('reseed-demo/', views.ReseedDemoView.as_view(), name='org_reseed_demo'),
