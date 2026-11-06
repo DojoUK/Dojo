@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 from django.views.generic import DetailView, ListView
 
-from dojo.mixins import ClassCoachMixin, OrgAdminMixin, OrgMixin
+from dojo.mixins import ClassCapabilityMixin, ClassCoachMixin, OrgAdminMixin, OrgMixin
 from members.models import Member
 
 from .models import Attendance, Class, ClassCoach, ClassMember, Session, SessionCoach, WaitingList
@@ -203,22 +203,62 @@ class ClassDetailView(OrgAdminMixin, DetailView):
         return context
 
 
-class EnrolMemberView(OrgAdminMixin, View):
+def _roster_choices(view, cls):
+    """
+    Who can be added to a class from the coach's class page and the
+    register: {'available_members', 'available_coaches'}, both empty unless
+    this person may enrol members.
+    """
+    if not view.can('manage_class_members'):
+        return {'available_members': [], 'available_coaches': []}
+    from organisations.models import OrganisationMember
+    return {
+        'available_members': (
+            Member.objects.filter(organisation=view.org, is_active=True)
+            .exclude(enrolments__assigned_class=cls)
+            .order_by('name')
+        ),
+        'available_coaches': (
+            OrganisationMember.objects.filter(organisation=view.org)
+            .exclude(user__coached_classes__assigned_class=cls)
+            .select_related('user')
+            .order_by('user__first_name', 'user__last_name', 'user__username')
+        ),
+    }
+
+
+def _back_to_class(view, request, cls):
+    """
+    Where a class action returns to: the register it was taken from (the
+    quick-add controls post next=register and the session), otherwise the
+    class page this person can see.
+    """
+    session_pk = request.POST.get('session_pk', '')
+    if request.POST.get('next') == 'register' and session_pk.isdigit():
+        if Session.objects.filter(pk=session_pk, assigned_class=cls).exists():
+            return redirect('session_register', org_slug=view.org.slug, pk=cls.pk, session_pk=session_pk)
+    if view.is_org_admin:
+        return redirect('class_detail', org_slug=view.org.slug, pk=cls.pk)
+    return redirect('coach_class_detail', org_slug=view.org.slug, pk=cls.pk)
+
+
+class EnrolMemberView(ClassCapabilityMixin, View):
+    required_capabilities = ('manage_class_members',)
+
     def post(self, request, org_slug, pk):
-        cls = get_object_or_404(Class, pk=pk, organisation=self.org)
+        cls = self.assigned_class
         member = get_object_or_404(Member, pk=request.POST.get('member_id'), organisation=self.org)
         already_enrolled = ClassMember.objects.filter(assigned_class=cls, member=member).exists()
         if already_enrolled:
             messages.info(request, f'{member.name} is already enrolled.')
-            return redirect('class_detail', org_slug=self.org.slug, pk=cls.pk)
-        if cls.is_full:
+        elif cls.is_full:
             WaitingList.objects.get_or_create(assigned_class=cls, member=member)
             messages.warning(request, f'{cls.name} is full — {member.name} added to the waiting list.')
         else:
             WaitingList.objects.filter(assigned_class=cls, member=member).delete()
             ClassMember.objects.create(assigned_class=cls, member=member)
             messages.success(request, f'{member.name} enrolled.')
-        return redirect('class_detail', org_slug=self.org.slug, pk=cls.pk)
+        return _back_to_class(self, request, cls)
 
 
 class UnenrolMemberView(OrgAdminMixin, View):
@@ -263,12 +303,14 @@ class RemoveFromWaitingListView(OrgAdminMixin, View):
         return redirect('class_detail', org_slug=self.org.slug, pk=cls.pk)
 
 
-class GenerateSessionsView(OrgAdminMixin, View):
+class GenerateSessionsView(ClassCapabilityMixin, View):
+    required_capabilities = ('generate_sessions',)
+
     def post(self, request, org_slug, pk):
-        cls = get_object_or_404(Class, pk=pk, organisation=self.org)
+        cls = self.assigned_class
         if not cls.schedule:
             messages.warning(request, 'This class has no schedule set.')
-            return redirect('class_detail', org_slug=self.org.slug, pk=cls.pk)
+            return _back_to_class(self, request, cls)
 
         try:
             weeks = max(1, min(int(request.POST.get('weeks', 8)), 52))
@@ -288,7 +330,7 @@ class GenerateSessionsView(OrgAdminMixin, View):
             current += timedelta(days=1)
 
         messages.success(request, f'{created} session{"s" if created != 1 else ""} generated.')
-        return redirect('class_detail', org_slug=self.org.slug, pk=cls.pk)
+        return _back_to_class(self, request, cls)
 
 
 class AttendanceRegisterView(ClassCoachMixin, View):
@@ -330,6 +372,7 @@ class AttendanceRegisterView(ClassCoachMixin, View):
     def _render(self, request, session, enrolled, present_ids, coaches, present_coach_ids, notes, coaches_on_holiday=None):
         coaches = attach_staff_contacts(self.org, coaches)
         return render(request, 'classes/register.html', {
+            **_roster_choices(self, self.assigned_class),
             'org': self.org,
             'org_membership': self.org_membership,
             'cls': self.assigned_class,
@@ -426,24 +469,33 @@ class CoachClassDetailView(ClassCoachMixin, View):
             from progression.gradings import attach_current_grades
             attach_current_grades(members)
         return render(request, 'classes/coach_detail.html', {
+            **_roster_choices(self, cls),
             'org': self.org,
             'org_membership': self.org_membership,
             'cls': cls,
             'upcoming': upcoming,
             'recent': recent,
             'enrolled': enrolled,
+            'can_generate_sessions': self.can('generate_sessions'),
+            'can_manage_class_members': self.can('manage_class_members'),
         })
 
 
-class AddCoachView(OrgAdminMixin, View):
+class AddCoachView(ClassCapabilityMixin, View):
+    required_capabilities = ('manage_class_members',)
+
     def post(self, request, org_slug, pk):
-        from django.contrib.auth.models import User
-        cls = get_object_or_404(Class, pk=pk, organisation=self.org)
-        user_pk = request.POST.get('user_id')
-        user = get_object_or_404(User, pk=user_pk)
-        ClassCoach.objects.get_or_create(assigned_class=cls, user=user)
-        messages.success(request, f'{user.get_full_name() or user.username} added as coach.')
-        return redirect('class_detail', org_slug=self.org.slug, pk=cls.pk)
+        from organisations.models import OrganisationMember
+        cls = self.assigned_class
+        user_pk = request.POST.get('user_id', '')
+        # Only this club's staff can coach its classes.
+        om = get_object_or_404(
+            OrganisationMember.objects.select_related('user'),
+            user_id=user_pk if user_pk.isdigit() else None, organisation=self.org,
+        )
+        ClassCoach.objects.get_or_create(assigned_class=cls, user=om.user)
+        messages.success(request, f'{om.user.get_full_name() or om.user.username} added as coach.')
+        return _back_to_class(self, request, cls)
 
 
 class RemoveCoachView(OrgAdminMixin, View):

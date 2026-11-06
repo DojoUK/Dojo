@@ -17,6 +17,9 @@
 {% endblock %}
 
 {% block main_content %}
+{# Quick-add forms sit outside the register form (forms can't nest); their controls inside it point here with form="...". #}
+{% if available_members %}<form id="add-member-form" method="post" action="{% url 'class_enrol' org_slug=org.slug pk=cls.pk %}">{% csrf_token %}<input type="hidden" name="next" value="register"><input type="hidden" name="session_pk" value="{{ session.pk }}"></form>{% endif %}
+{% if available_coaches %}<form id="add-coach-form" method="post" action="{% url 'class_coach_add' org_slug=org.slug pk=cls.pk %}">{% csrf_token %}<input type="hidden" name="next" value="register"><input type="hidden" name="session_pk" value="{{ session.pk }}"></form>{% endif %}
 <div class="row">
     <div class="col-lg-7">
 
@@ -31,11 +34,27 @@
                     <h6 class="mb-0">Attendance
                         <span class="text-muted fw-normal small ms-1">{{ enrolled_count }} enrolled</span>
                     </h6>
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-2 flex-wrap justify-content-end">
                         <button type="button" class="btn btn-sm btn-outline-secondary" id="mark-all">Mark all present</button>
                         <button type="button" class="btn btn-sm btn-outline-secondary" id="clear-all">Clear all</button>
+                        {% if available_members %}
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#add-member-panel">
+                            <i class="bi bi-person-plus"></i> Add member
+                        </button>
+                        {% endif %}
                     </div>
                 </div>
+                {% if available_members %}
+                <div class="collapse" id="add-member-panel">
+                    <div class="card-body border-bottom bg-light d-flex gap-2">
+                        <select name="member_id" form="add-member-form" class="form-select form-select-sm" aria-label="Member to enrol">
+                            {% for m in available_members %}<option value="{{ m.pk }}">{{ m.name }}</option>{% endfor %}
+                        </select>
+                        <button type="submit" form="add-member-form" class="btn btn-sm btn-dark text-nowrap">Enrol</button>
+                    </div>
+                    <p class="small text-muted px-3 py-2 mb-0 border-bottom">Enrolling reloads the register, so save any marks first.</p>
+                </div>
+                {% endif %}
 
                 {% if enrolled %}
                 <div class="card-body p-0">
@@ -115,17 +134,36 @@
             </div>
             {% endif %}
 
-            {% if coaches %}
+            {% if coaches or available_coaches %}
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                     <h6 class="mb-0">Coaches
                         <span class="text-muted fw-normal small ms-1">{{ coaches|length }} assigned</span>
                     </h6>
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-2 flex-wrap justify-content-end">
+                        {% if coaches %}
                         <button type="button" class="btn btn-sm btn-outline-secondary" id="coach-mark-all">Mark all present</button>
                         <button type="button" class="btn btn-sm btn-outline-secondary" id="coach-clear-all">Clear all</button>
+                        {% endif %}
+                        {% if available_coaches %}
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#add-coach-panel">
+                            <i class="bi bi-person-plus"></i> Add coach
+                        </button>
+                        {% endif %}
                     </div>
                 </div>
+                {% if available_coaches %}
+                <div class="collapse" id="add-coach-panel">
+                    <div class="card-body border-bottom bg-light d-flex gap-2">
+                        <select name="user_id" form="add-coach-form" class="form-select form-select-sm" aria-label="Staff member to add as coach">
+                            {% for om in available_coaches %}
+                            <option value="{{ om.user.pk }}">{{ om.user.get_full_name|default:om.user.username }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" form="add-coach-form" class="btn btn-sm btn-dark text-nowrap">Add</button>
+                    </div>
+                </div>
+                {% endif %}
                 <div class="alert alert-danger rounded-0 mb-0 py-2 d-none" id="coach-required-warning">
                     At least one coach must be marked present to save the register.
                 </div>

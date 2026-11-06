@@ -3,13 +3,15 @@ from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 
-from dojo.mixins import OrgAdminMixin
+from dojo.mixins import CapabilityMixin, OrgAdminMixin
 
 from .models import Product, ProductVariant, StockMovement
 
 
-class ProductListView(OrgAdminMixin, View):
+class ProductListView(CapabilityMixin, View):
+    """The stock list. Admins manage it; staff with View stock see it read-only."""
     required_feature = 'inventory'
+    required_capabilities = ('view_stock',)
     template_name = 'inventory/list.html'
 
     def get(self, request, org_slug):
@@ -29,6 +31,7 @@ class ProductListView(OrgAdminMixin, View):
             'categories': Product.Category.choices,
             'reasons': StockMovement.Reason.choices,
             'low_stock_variants': low_stock_variants,
+            'can_edit': self.is_org_admin,
         })
 
 

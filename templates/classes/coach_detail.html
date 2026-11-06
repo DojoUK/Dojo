@@ -15,6 +15,28 @@
 
     <div class="col-lg-8">
 
+        {% if can_generate_sessions %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body py-3">
+                {% if cls.schedule %}
+                <form method="post" action="{% url 'class_generate_sessions' org_slug=org.slug pk=cls.pk %}" class="d-flex flex-wrap gap-2 align-items-center">
+                    {% csrf_token %}
+                    <span class="small text-muted text-nowrap">Generate sessions for the next</span>
+                    <select name="weeks" class="form-select form-select-sm" style="width:auto;" aria-label="How many weeks">
+                                <option value="4">4 weeks</option>
+                        <option value="6">6 weeks</option>
+                        <option value="8" selected>8 weeks</option>
+                        <option value="12">12 weeks</option>
+                    </select>
+                    <button type="submit" class="btn btn-sm btn-dark text-nowrap">Generate</button>
+                </form>
+                {% else %}
+                <p class="text-muted small mb-0">This class has no weekly schedule, so sessions can't be generated. Ask your administrator to set one.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
         {% if upcoming %}
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-header bg-white border-bottom py-3">
@@ -48,7 +70,7 @@
         {% else %}
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-body text-center py-4 text-muted">
-                <p class="mb-0 small">No upcoming sessions. Ask your administrator to generate sessions for this class.</p>
+                <p class="mb-0 small">No upcoming sessions.{% if not can_generate_sessions %} Ask your administrator to generate sessions for this class.{% endif %}</p>
             </div>
         </div>
         {% endif %}
@@ -87,9 +109,27 @@
 
     <div class="col-lg-4">
         <div class="card border-0 shadow-sm">
-            <div class="card-header bg-white border-bottom py-3">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                 <h6 class="mb-0">Members <span class="text-muted fw-normal">({{ enrolled|length }})</span></h6>
+                {% if available_members %}
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#enrol-form">
+                    <i class="bi bi-person-plus me-1"></i> Enrol
+                </button>
+                {% endif %}
             </div>
+            {% if available_members %}
+            <div class="collapse" id="enrol-form">
+                <div class="card-body border-bottom bg-light">
+                    <form method="post" action="{% url 'class_enrol' org_slug=org.slug pk=cls.pk %}" class="d-flex gap-2">
+                        {% csrf_token %}
+                        <select name="member_id" class="form-select form-select-sm" aria-label="Member to enrol">
+                            {% for m in available_members %}<option value="{{ m.pk }}">{{ m.name }}</option>{% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-dark text-nowrap">Enrol</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
             {% if enrolled %}
             <div class="card-body p-0">
                 <ul class="list-group list-group-flush">
@@ -112,6 +152,25 @@
             </div>
             {% endif %}
         </div>
+
+        {% if can_manage_class_members and available_coaches %}
+        <div class="card border-0 shadow-sm mt-3">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Add a coach</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'class_coach_add' org_slug=org.slug pk=cls.pk %}" class="d-flex gap-2">
+                    {% csrf_token %}
+                    <select name="user_id" class="form-select form-select-sm" aria-label="Staff member to add as coach">
+                        {% for om in available_coaches %}
+                        <option value="{{ om.user.pk }}">{{ om.user.get_full_name|default:om.user.username }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-sm btn-dark text-nowrap">Add</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
 </div>
