@@ -1,0 +1,197 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Expenses{% endblock %}
+
+{% block page_title %}Expenses{% endblock %}
+{% block page_subtitle %}Club outgoings, used for the profit figures on Finance{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'org_finance' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-graph-up me-1"></i> Finance
+</a>
+<button class="btn btn-dark btn-sm" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
+    <i class="bi bi-plus-lg me-1"></i> Add expense
+</button>
+{% endblock %}
+
+{% block main_content %}
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-6">
+        <div class="card border-0 shadow-sm text-center py-3">
+            <div class="display-6 fw-bold text-danger">£{{ total_this_month|floatformat:2 }}</div>
+            <div class="small text-muted mt-1">This month</div>
+        </div>
+    </div>
+    <div class="col-sm-6">
+        <div class="card border-0 shadow-sm text-center py-3">
+            <div class="display-6 fw-bold text-danger">£{{ total_this_year|floatformat:2 }}</div>
+            <div class="small text-muted mt-1">Year to date</div>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h6 class="mb-0">All expenses</h6>
+        <form method="get" class="d-flex gap-2">
+            <select name="category" class="form-select form-select-sm" onchange="this.form.submit()" aria-label="Category">
+                <option value="">All categories</option>
+                {% for value, label in categories %}
+                <option value="{{ value }}" {% if category_filter == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+
+    {% if expenses %}
+    <div class="card-body p-0">
+        <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3 small">Date</th>
+                    <th class="small">Description</th>
+                    <th class="small">Category</th>
+                    <th class="small text-end">Amount</th>
+                    <th class="small pe-3"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in expenses %}
+                <tr>
+                    <td class="ps-3 py-2 small">{{ expense.expense_date|date:"d M Y" }}</td>
+                    <td class="py-2 small">
+                        {{ expense.description }}
+                        {% if expense.notes %}<div class="text-muted" style="font-size:0.75rem;">{{ expense.notes }}</div>{% endif %}
+                    </td>
+                    <td class="py-2 small"><span class="badge bg-secondary-subtle text-secondary">{{ expense.get_category_display }}</span></td>
+                    <td class="py-2 small text-end fw-semibold">£{{ expense.amount|floatformat:2 }}</td>
+                    <td class="py-2 pe-3 text-end">
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editExpenseModal{{ expense.pk }}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <form method="post" action="{% url 'expense_delete' org_slug=org.slug pk=expense.pk %}" class="d-inline" onsubmit="return confirm('Delete this expense?')">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+    {% if is_paginated %}
+    <div class="card-footer bg-white border-top d-flex justify-content-between align-items-center">
+        <span class="small text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        <div class="d-flex gap-2">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if category_filter %}&category={{ category_filter }}{% endif %}" class="btn btn-sm btn-outline-secondary">Previous</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if category_filter %}&category={{ category_filter }}{% endif %}" class="btn btn-sm btn-outline-secondary">Next</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="card-body text-center py-5 text-muted">
+        <i class="bi bi-wallet2" style="font-size:2.5rem;opacity:.3;"></i>
+        <p class="mt-3 mb-0">No expenses recorded yet.</p>
+    </div>
+    {% endif %}
+</div>
+
+{% for expense in expenses %}
+<div class="modal fade" id="editExpenseModal{{ expense.pk }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'expense_edit' org_slug=org.slug pk=expense.pk %}">
+                {% csrf_token %}
+                <div class="modal-header"><h5 class="modal-title">Edit expense</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Description</label>
+                        <input type="text" name="description" class="form-control" value="{{ expense.description }}" required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col">
+                            <label class="form-label small fw-semibold">Category</label>
+                            <select name="category" class="form-select">
+                                {% for value, label in categories %}
+                                <option value="{{ value }}" {% if expense.category == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label class="form-label small fw-semibold">Amount (£)</label>
+                            <input type="number" name="amount" class="form-control" step="0.01" min="0.01" value="{{ expense.amount }}" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Date</label>
+                        <input type="date" name="expense_date" class="form-control" value="{{ expense.expense_date|date:'Y-m-d' }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Notes <span class="text-muted fw-normal">(optional)</span></label>
+                        <textarea name="notes" class="form-control" rows="2">{{ expense.notes }}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-dark btn-sm">Save changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Add expense modal -->
+<div class="modal fade" id="addExpenseModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'expense_add' org_slug=org.slug %}">
+                {% csrf_token %}
+                <div class="modal-header"><h5 class="modal-title">Add expense</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Description</label>
+                        <input type="text" name="description" class="form-control" placeholder="e.g. Mat replacement, June rent" required>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col">
+                            <label class="form-label small fw-semibold">Category</label>
+                            <select name="category" class="form-select">
+                                {% for value, label in categories %}
+                                <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label class="form-label small fw-semibold">Amount (£)</label>
+                            <input type="number" name="amount" class="form-control" step="0.01" min="0.01" placeholder="0.00" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Date</label>
+                        <input type="date" name="expense_date" class="form-control" value="{{ today|date:'Y-m-d' }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Notes <span class="text-muted fw-normal">(optional)</span></label>
+                        <textarea name="notes" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-dark btn-sm">Add expense</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

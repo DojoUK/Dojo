@@ -30,4 +30,10 @@ urlpatterns = [
     # Member discounts
     path('member/<int:member_pk>/discount/add/', views.MemberDiscountAddView.as_view(), name='member_discount_add'),
     path('member-discount/<int:pk>/remove/', views.MemberDiscountRemoveView.as_view(), name='member_discount_remove'),
+
+    # Expenses
+    path('expenses/', views.ExpenseListView.as_view(), name='expense_list'),
+    path('expenses/add/', views.ExpenseCreateView.as_view(), name='expense_add'),
+    path('expenses/<int:pk>/edit/', views.ExpenseEditView.as_view(), name='expense_edit'),
+    path('expenses/<int:pk>/delete/', views.ExpenseDeleteView.as_view(), name='expense_delete'),
 ]

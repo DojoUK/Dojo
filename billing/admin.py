@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Invoice, InvoiceItem, Payment, BillingPolicy, OrgTerm, PolicyDiscount, MemberDiscount
+from .models import Expense, Invoice, InvoiceItem, Payment, BillingPolicy, OrgTerm, PolicyDiscount, MemberDiscount
 
 
 class PaymentInline(admin.TabularInline):
@@ -52,3 +52,11 @@ class OrgTermAdmin(admin.ModelAdmin):
 class MemberDiscountAdmin(admin.ModelAdmin):
     list_display = ('member', 'discount', 'is_active', 'applied_at')
     list_filter = ('is_active',)
+
+
+@admin.register(Expense)
+class ExpenseAdmin(admin.ModelAdmin):
+    list_display = ('description', 'organisation', 'category', 'amount', 'expense_date')
+    list_filter = ('organisation', 'category')
+    search_fields = ('description', 'notes')
+    date_hierarchy = 'expense_date'

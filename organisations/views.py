@@ -1137,6 +1137,31 @@ class FinancialReportView(CapabilityMixin, View):
             organisation=self.org, status=Invoice.Status.UNPAID
         ).aggregate(t=Sum('amount'))['t'] or 0
 
+        from decimal import Decimal
+        from billing.forecast import linear_forecast, next_months
+        from billing.models import Expense
+        expenses = Expense.objects.filter(organisation=self.org)
+        expense_map = {
+            r['month'].replace(day=1): float(r['total'])
+            for r in expenses.annotate(month=TruncMonth('expense_date')).values('month').annotate(total=Sum('amount'))
+        }
+        expense_chart_data = [expense_map.get(m, 0) for m in months]
+        profit_chart_data = [round(revenue - spent, 2) for revenue, spent in zip(chart_data, expense_chart_data)]
+
+        total_expenses_ytd = expenses.filter(expense_date__year=today.year).aggregate(t=Sum('amount'))['t'] or Decimal('0')
+        revenue_this_month = Payment.objects.filter(
+            invoice__organisation=self.org, paid_at__year=today.year, paid_at__month=today.month,
+        ).aggregate(t=Sum('amount'))['t'] or Decimal('0')
+        expenses_this_month = expenses.filter(
+            expense_date__year=today.year, expense_date__month=today.month,
+        ).aggregate(t=Sum('amount'))['t'] or Decimal('0')
+
+        # Projection: revenue (by payment date, as above) and expenses six months on.
+        # The dashed forecast lines start from the last actual month so they join up.
+        ahead = 6
+        forecast_labels = chart_labels + [m.strftime('%b %Y') for m in next_months(months[-1], ahead)]
+        gap = [None] * (len(months) - 1)
+
         return render(request, 'org/finance.html', {
             'org': self.org,
             'org_membership': self.org_membership,
@@ -1146,6 +1171,17 @@ class FinancialReportView(CapabilityMixin, View):
             'total_revenue_ytd': total_revenue_ytd,
             'total_outstanding': total_outstanding,
             'today': today,
+            'total_expenses_ytd': total_expenses_ytd,
+            'total_profit_ytd': Decimal(total_revenue_ytd) - Decimal(total_expenses_ytd),
+            'profit_this_month': Decimal(revenue_this_month) - Decimal(expenses_this_month),
+            'profit_chart_data': json.dumps(profit_chart_data),
+            'forecast_chart_labels': json.dumps(forecast_labels),
+            'revenue_actual_series': json.dumps(chart_data + [None] * ahead),
+            'revenue_forecast_series': json.dumps(gap + [chart_data[-1]] + linear_forecast(chart_data, ahead)),
+            'expense_actual_series': json.dumps(expense_chart_data + [None] * ahead),
+            'expense_forecast_series': json.dumps(
+                gap + [expense_chart_data[-1]] + linear_forecast(expense_chart_data, ahead),
+            ),
         })
 
 

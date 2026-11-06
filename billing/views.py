@@ -15,7 +15,7 @@ from members.models import Member
 from inventory.models import Product, ProductVariant, StockMovement
 
 from .credit import apply_member_credit
-from .models import Invoice, InvoiceItem, Payment, BillingPolicy, OrgTerm, PolicyDiscount, MemberDiscount
+from .models import Expense, Invoice, InvoiceItem, Payment, BillingPolicy, OrgTerm, PolicyDiscount, MemberDiscount
 from members.navigation import redirect_to_member
 
 
@@ -832,3 +832,91 @@ class MemberDiscountRemoveView(BillingManagerMixin, View):
         md.delete()
         messages.success(request, f'Discount "{name}" removed.')
         return redirect_to_member(self.org.slug, member_pk, 'billing')
+
+
+# ── Expenses ──────────────────────────────────────────────────────────────────
+
+def _expense_fields(request):
+    """(fields, error) from the expense form: description, category, amount, date and notes."""
+    description = request.POST.get('description', '').strip()[:255]
+    category = request.POST.get('category', Expense.Category.OTHER)
+    if category not in Expense.Category.values:
+        category = Expense.Category.OTHER
+    amount_raw = request.POST.get('amount', '').strip()
+    date_raw = request.POST.get('expense_date', '').strip()
+    if not description or not amount_raw or not date_raw:
+        return None, 'Description, amount and date are required.'
+    try:
+        amount = Decimal(amount_raw).quantize(Decimal('0.01'))
+    except InvalidOperation:
+        return None, 'Enter the amount as a number, e.g. 45.00.'
+    if not amount.is_finite() or amount <= 0 or amount >= Decimal('100000000'):
+        return None, 'Enter an amount above £0.'
+    try:
+        expense_date = date.fromisoformat(date_raw)
+    except ValueError:
+        return None, 'Enter a valid date.'
+    return {
+        'description': description, 'category': category, 'amount': amount,
+        'expense_date': expense_date, 'notes': request.POST.get('notes', '').strip(),
+    }, None
+
+
+class ExpenseListView(BillingManagerMixin, ListView):
+    template_name = 'billing/expenses.html'
+    context_object_name = 'expenses'
+    paginate_by = 50
+
+    def get_queryset(self):
+        qs = Expense.objects.filter(organisation=self.org).order_by('-expense_date', '-created_at')
+        category = self.request.GET.get('category', '')
+        if category in Expense.Category.values:
+            qs = qs.filter(category=category)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        today = date.today()
+        base = Expense.objects.filter(organisation=self.org)
+        context['category_filter'] = self.request.GET.get('category', '')
+        context['categories'] = Expense.Category.choices
+        context['total_this_month'] = base.filter(
+            expense_date__year=today.year, expense_date__month=today.month,
+        ).aggregate(t=Sum('amount'))['t'] or Decimal('0')
+        context['total_this_year'] = base.filter(expense_date__year=today.year).aggregate(t=Sum('amount'))['t'] or Decimal('0')
+        context['today'] = today
+        return context
+
+
+class ExpenseCreateView(BillingManagerMixin, View):
+    def post(self, request, org_slug):
+        fields, error = _expense_fields(request)
+        if error:
+            messages.error(request, error)
+        else:
+            Expense.objects.create(organisation=self.org, created_by=request.user, **fields)
+            messages.success(request, f'Expense "{fields["description"]}" added.')
+        return redirect('expense_list', org_slug=self.org.slug)
+
+
+class ExpenseEditView(BillingManagerMixin, View):
+    def post(self, request, org_slug, pk):
+        expense = get_object_or_404(Expense, pk=pk, organisation=self.org)
+        fields, error = _expense_fields(request)
+        if error:
+            messages.error(request, error)
+        else:
+            for name, value in fields.items():
+                setattr(expense, name, value)
+            expense.save()
+            messages.success(request, 'Expense updated.')
+        return redirect('expense_list', org_slug=self.org.slug)
+
+
+class ExpenseDeleteView(BillingManagerMixin, View):
+    def post(self, request, org_slug, pk):
+        expense = get_object_or_404(Expense, pk=pk, organisation=self.org)
+        description = expense.description
+        expense.delete()
+        messages.success(request, f'Expense "{description}" deleted.')
+        return redirect('expense_list', org_slug=self.org.slug)
