@@ -22,6 +22,11 @@ def _portal_member(token, *features):
     return member
 
 
+def _document_categories():
+    from documents.models import Document
+    return Document.Category.choices
+
+
 class PortalView(View):
     def get(self, request, token):
         member = _portal_member(token)
@@ -86,6 +91,8 @@ class PortalView(View):
             'autopay_expected': bool(payment_settings and payment_settings.auto_pay == 'encouraged'),
             'enrolments': enrolments,
             'recent_attendance': recent_attendance,
+            'documents': member.documents.all() if org.has_feature('documents') else [],
+            'document_categories': _document_categories(),
         })
 
 
@@ -225,3 +232,56 @@ class AutoPayOffView(View):
         member = _portal_member(token, 'billing')
         autopay.turn_off(member)
         return redirect(reverse('member_portal', kwargs={'token': token}) + '?autopay_off=1')
+
+
+# Members' own uploads: a portal link is the only key, so keep them small and sensible.
+PORTAL_UPLOAD_MAX_BYTES = 10 * 1024 * 1024
+PORTAL_UPLOAD_EXTENSIONS = {'.pdf', '.jpg', '.jpeg', '.png', '.heic', '.doc', '.docx'}
+PORTAL_UPLOAD_LIMIT = 20
+
+
+class PortalDocumentUploadView(View):
+    """A member adds a document (e.g. a medical letter) to their own record. Staff see it marked "From member"."""
+
+    def post(self, request, token):
+        import os
+        from django.contrib import messages
+        from documents.models import Document
+
+        member = _portal_member(token, 'documents')
+        f = request.FILES.get('file')
+        back = redirect(reverse('member_portal', kwargs={'token': token}) + '#documents')
+        if not f:
+            messages.error(request, 'Choose a file to upload.')
+            return back
+        if os.path.splitext(f.name)[1].lower() not in PORTAL_UPLOAD_EXTENSIONS:
+            messages.error(request, 'Upload a PDF, photo (JPG, PNG or HEIC) or Word document.')
+            return back
+        if f.size > PORTAL_UPLOAD_MAX_BYTES:
+            messages.error(request, 'That file is too big. The limit is 10 MB.')
+            return back
+        if member.documents.filter(uploaded_by_member=True).count() >= PORTAL_UPLOAD_LIMIT:
+            messages.error(request, f'You can upload up to {PORTAL_UPLOAD_LIMIT} documents. Contact the club to add more.')
+            return back
+        category = request.POST.get('category', Document.Category.OTHER)
+        if category not in Document.Category.values:
+            category = Document.Category.OTHER
+        name = (request.POST.get('name', '').strip() or f.name)[:255]
+        Document.objects.create(member=member, name=name, category=category, file=f, uploaded_by_member=True)
+        messages.success(request, f'"{name}" uploaded. The club can see it now.')
+        return back
+
+
+class PortalDocumentDownloadView(View):
+    """A member downloads one of the documents on their own record."""
+
+    def get(self, request, token, pk):
+        from django.http import FileResponse, Http404
+        from documents.models import Document
+
+        member = _portal_member(token, 'documents')
+        doc = get_object_or_404(Document, pk=pk, member=member)
+        try:
+            return FileResponse(doc.file.open('rb'), as_attachment=True, filename=doc.name)
+        except FileNotFoundError:
+            raise Http404

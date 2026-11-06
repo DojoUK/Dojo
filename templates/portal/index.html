@@ -47,6 +47,10 @@
 
 <div class="container pb-5" style="max-width: 680px;">
 
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} py-2 small" role="{% if message.level >= 40 %}alert{% else %}status{% endif %}">{{ message }}</div>
+    {% endfor %}
+
     {% if request.GET.payment_error %}
     <div class="alert alert-warning small"><i class="bi bi-exclamation-triangle me-1"></i> Card payments aren't working right now. Please try again later or contact the club.</div>
     {% endif %}
@@ -238,6 +242,51 @@
                 </tbody>
             </table>
             </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if 'documents' in org.enabled_features %}
+    <div class="card border-0 shadow-sm mb-4" id="documents">
+        <div class="card-header bg-white border-bottom py-3">
+            <h6 class="mb-0">Documents</h6>
+        </div>
+        {% if documents %}
+        <ul class="list-group list-group-flush">
+            {% for doc in documents %}
+            <li class="list-group-item py-2 px-3 d-flex justify-content-between align-items-center gap-2">
+                <div class="small">
+                    <div class="fw-semibold">{{ doc.name }}</div>
+                    <div class="text-muted">{{ doc.get_category_display }} · {{ doc.uploaded_at|date:"d M Y" }}{% if doc.uploaded_by_member %} · added by you{% endif %}</div>
+                </div>
+                <a href="{% url 'portal_document_download' token=member.token pk=doc.pk %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-download"></i><span class="visually-hidden">Download {{ doc.name }}</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        <div class="card-body{% if documents %} border-top{% endif %}">
+            <p class="small text-muted mb-2">Send the club a document, such as a medical letter or a signed form. PDF, photo or Word, up to 10 MB.</p>
+            <form method="post" action="{% url 'portal_document_upload' token=member.token %}" enctype="multipart/form-data" class="row g-2">
+                {% csrf_token %}
+                <div class="col-12">
+                    <input type="file" name="file" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png,.heic,.doc,.docx" required aria-label="File">
+                </div>
+                <div class="col-sm-6">
+                    <input type="text" name="name" class="form-control form-control-sm" maxlength="255" placeholder="Name (optional)" aria-label="Document name">
+                </div>
+                <div class="col-sm-4">
+                    <select name="category" class="form-select form-select-sm" aria-label="Kind of document">
+                        {% for value, label in document_categories %}
+                        <option value="{{ value }}" {% if value == 'other' %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-sm-2 d-grid">
+                    <button type="submit" class="btn btn-sm btn-dark">Upload</button>
+                </div>
+            </form>
         </div>
     </div>
     {% endif %}

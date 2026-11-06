@@ -19,6 +19,10 @@ class Document(models.Model):
     file = models.FileField(upload_to='documents/%Y/%m/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
     uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    uploaded_by_member = models.BooleanField(
+        default=False,
+        help_text='Uploaded by the member themselves via the member portal, rather than by staff.',
+    )
     notes = models.TextField(blank=True)
 
     def __str__(self):
