@@ -398,6 +398,30 @@ class RecordPromotionView(OrgAdminMixin, View):
         return redirect_to_member(self.org.slug, member.pk, 'grades')
 
 
+class ToggleTechniqueView(OrgAdminMixin, View):
+    """Sign a syllabus technique off for a member, or undo it."""
+    required_feature = 'syllabus'
+
+    def post(self, request, org_slug, pk, technique_pk):
+        from progression.models import MemberTechnique, Technique
+        member = get_object_or_404(Member, pk=pk, organisation=self.org)
+        technique = get_object_or_404(Technique, pk=technique_pk, organisation=self.org)
+        signed_off = MemberTechnique.objects.filter(member=member, technique=technique).first()
+        if signed_off:
+            signed_off.delete()
+            signed_off = None
+        else:
+            signed_off, _ = MemberTechnique.objects.get_or_create(
+                member=member, technique=technique, defaults={'signed_off_by': request.user},
+            )
+        if request.htmx:
+            return render(request, 'members/_technique_signoff.html', {
+                'org': self.org, 'member': member, 'technique': technique, 'signed_off': signed_off,
+                'notes': request.POST.get('notes', '')[:500],
+            })
+        return redirect_to_member(self.org.slug, member.pk, 'grades')
+
+
 class DeleteProgressionView(OrgAdminMixin, View):
     required_feature = 'grades'
 

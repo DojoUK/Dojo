@@ -1,4 +1,6 @@
+from django.conf import settings
 from django.db import models
+from django.utils import timezone
 from organisations.models import Organisation
 from members.models import Member
 
@@ -219,3 +221,23 @@ class SyllabusEntry(models.Model):
     class Meta:
         ordering = ('order', 'pk')
         unique_together = ('syllabus', 'technique')
+
+
+class MemberTechnique(models.Model):
+    """
+    A technique signed off for a member: a coach has seen them do it. Kept
+    against the technique rather than one syllabus, so it counts in every
+    syllabus that includes it.
+    """
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='techniques_signed_off')
+    technique = models.ForeignKey(Technique, on_delete=models.CASCADE, related_name='signed_off')
+    signed_off_at = models.DateTimeField(default=timezone.now)
+    signed_off_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+',
+    )
+
+    def __str__(self):
+        return f"{self.member} — {self.technique}"
+
+    class Meta:
+        unique_together = ('member', 'technique')
