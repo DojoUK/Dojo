@@ -494,6 +494,11 @@
                             {% if member.autopay.active %}
                             <span class="badge bg-success-subtle text-success" title="Invoices are collected automatically"><i class="bi bi-arrow-repeat"></i> Pays automatically: {{ member.autopay.label }}</span>
                             {% endif %}
+                            {% if overpaid_credit %}
+                            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle" title="Taken off their next invoice automatically">
+                                Overpaid £{{ overpaid_credit|floatformat:2 }}
+                            </span>
+                            {% endif %}
                         </div>
                         <a href="{% url 'invoice_list' org_slug=org.slug %}?q={{ member.name|urlencode }}" class="btn btn-sm btn-outline-secondary">View all</a>
                     </div>

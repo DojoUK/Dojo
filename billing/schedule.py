@@ -127,6 +127,7 @@ def create_due_runs(today=None):
 
 def create_run(schedule, period, invoice_date, term=None, year=None, month=None):
     from .calculator import calculate_invoice_amount
+    from .credit import apply_member_credit
     from .models import Invoice, InvoiceRun
     policy = schedule.policy
     org = policy.organisation
@@ -144,13 +145,14 @@ def create_run(schedule, period, invoice_date, term=None, year=None, month=None)
             calc = calculate_invoice_amount(member, policy, term=term, year=year, month=month)
             if calc['net'] <= 0:
                 continue
-            Invoice.objects.create(
+            invoice = Invoice.objects.create(
                 organisation=org, member=member, billing_policy=policy, amount=calc['net'],
                 discount_amount=calc['discount'], period=period,
                 due_date=invoice_date + timedelta(days=schedule.due_after_days), run=run,
             )
+            apply_member_credit(invoice)
             count += 1
-            total += Decimal(calc['net'])
+            total += Decimal(str(invoice.amount))
         run.invoice_count, run.total = count, total
         run.save(update_fields=['invoice_count', 'total'])
         if review:

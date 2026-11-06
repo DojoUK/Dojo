@@ -114,6 +114,10 @@
                         {% if invoice.is_overdue %}
                         <span class="badge bg-warning-subtle text-warning ms-1" style="font-size:0.6rem;">Overdue</span>
                         {% endif %}
+                        {% if invoice.status != 'paid' and invoice.paid_total and invoice.paid_total < invoice.amount %}
+                        <span class="badge bg-info-subtle text-info-emphasis ms-1" style="font-size:0.6rem;"
+                              title="£{{ invoice.paid_total|floatformat:2 }} of £{{ invoice.amount|floatformat:2 }} received">Partial</span>
+                        {% endif %}
                     </td>
                     <td class="small">
                         {% if invoice.status == 'paid' %}
