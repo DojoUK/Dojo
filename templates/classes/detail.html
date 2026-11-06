@@ -158,7 +158,10 @@
                     <tbody>
                         {% for coach in coaches %}
                         <tr>
-                            <td class="ps-3 py-2 small fw-semibold">{{ coach.user.get_full_name|default:coach.user.username }}</td>
+                            <td class="ps-3 py-2 small fw-semibold">
+                                {{ coach.user.get_full_name|default:coach.user.username }}
+                                {% if cls.default_leader_id == coach.user_id %}<span class="badge bg-secondary-subtle text-secondary ms-1" style="font-size:0.6rem;">Usual leader</span>{% endif %}
+                            </td>
                             <td class="text-end pe-3 py-2">
                                 <form method="post" action="{% url 'class_coach_remove' org_slug=org.slug pk=cls.pk coach_pk=coach.pk %}" class="d-inline">
                                     {% csrf_token %}
@@ -170,6 +173,10 @@
                     </tbody>
                 </table>
                 </div>
+            </div>
+            <div class="card-body border-top">
+                <label class="form-label small fw-semibold mb-1">Usual leader</label>
+                {% include 'classes/_default_leader_form.html' with class_coaches=coaches %}
             </div>
             {% else %}
             <div class="card-body">
@@ -217,6 +224,7 @@
                                 {% elif session.is_extra %}
                                 <span class="badge bg-warning-subtle text-warning ms-1" style="font-size:0.6rem;">Extra</span>
                                 {% endif %}
+                                {% include 'classes/_session_leader.html' %}
                             </td>
                             <td class="text-muted small py-2 text-end pe-3">
                                 <div class="d-flex align-items-center justify-content-end gap-2">

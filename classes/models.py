@@ -28,6 +28,11 @@ class Class(models.Model):
 
     max_capacity = models.PositiveIntegerField(null=True, blank=True)
     billing_policy = models.ForeignKey('billing.BillingPolicy', null=True, blank=True, on_delete=models.SET_NULL, related_name='classes')
+    default_leader = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name='default_led_classes',
+        help_text='The coach who normally runs this whole class series — carried onto newly generated '
+                   'sessions and used on the calendar when a session has no leader of its own set yet.',
+    )
 
     @property
     def enrolled_count(self):
@@ -98,6 +103,10 @@ class Session(models.Model):
     notes = models.TextField(blank=True)
     is_cancelled = models.BooleanField(default=False)
     is_extra = models.BooleanField(default=False)
+    leader = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL, related_name='led_sessions',
+        help_text='The staff member actually running this session — set from the register.',
+    )
 
     def __str__(self):
         return f"{self.assigned_class} — {self.date}"

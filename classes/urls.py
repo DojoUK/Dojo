@@ -15,6 +15,7 @@ urlpatterns = [
     path('<int:pk>/sessions/<int:session_pk>/print/', views.PrintRegisterView.as_view(), name='session_print'),
     path('<int:pk>/coaches/add/', views.AddCoachView.as_view(), name='class_coach_add'),
     path('<int:pk>/coaches/<int:coach_pk>/remove/', views.RemoveCoachView.as_view(), name='class_coach_remove'),
+    path('<int:pk>/default-leader/', views.SetClassLeaderView.as_view(), name='class_set_default_leader'),
     path('attendance/', views.AttendanceAnalyticsView.as_view(), name='attendance_analytics'),
     path('attendance/export/', views.AttendanceExportView.as_view(), name='attendance_export'),
     path('my-classes/', views.CoachClassListView.as_view(), name='coach_class_list'),

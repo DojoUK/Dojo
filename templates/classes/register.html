@@ -167,6 +167,12 @@
                 <div class="alert alert-danger rounded-0 mb-0 py-2 d-none" id="coach-required-warning">
                     At least one coach must be marked present to save the register.
                 </div>
+                {% if coaches %}
+                <div class="px-3 py-2 small text-muted border-bottom d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                    <span>Pick who led the session. Only coaches marked present can lead.{% if cls.default_leader %} Usually {{ cls.default_leader.get_full_name|default:cls.default_leader.username }}.{% endif %}</span>
+                    <button type="button" class="btn btn-link btn-sm p-0 text-muted" id="leader-clear">No leader</button>
+                </div>
+                {% endif %}
                 <div class="card-body p-0">
                     <div class="table-responsive">
                     <table class="table table-hover mb-0 align-middle">
@@ -188,6 +194,15 @@
                                         {% include 'classes/_contacts_button.html' with contacts=cc.contacts prefix='cemg' pk=cc.user.pk %}
                                     </div>
                                     {% include 'classes/_contacts_panel.html' with contacts=cc.contacts prefix='cemg' pk=cc.user.pk %}
+                                </td>
+                                <td class="text-center py-3" style="width:80px;" onclick="event.stopPropagation()">
+                                    <div class="form-check d-flex flex-column align-items-center gap-1 mb-0 ps-0">
+                                        <input class="form-check-input leader-radio m-0" type="radio" name="leader"
+                                               value="{{ cc.user.pk }}" id="leader{{ cc.user.pk }}"
+                                               {% if leader_id == cc.user.pk %}checked{% endif %}
+                                               {% if cc.user.pk not in present_coach_ids %}disabled{% endif %}>
+                                        <label class="form-check-label text-muted mb-0" for="leader{{ cc.user.pk }}" style="font-size:0.65rem;cursor:pointer;">Leader</label>
+                                    </div>
                                 </td>
                                 <td class="text-end pe-3 py-3">
                                     <span class="coach-present-badge {% if cc.user.pk in present_coach_ids %}text-success{% else %}text-muted{% endif %} small">
@@ -274,6 +289,19 @@ function updateCoachBadge(row, present) {
     const badge = row.querySelector('.coach-present-badge');
     badge.textContent = present ? 'Present' : 'Absent';
     badge.className = `coach-present-badge small ${present ? 'text-success' : 'text-muted'}`;
+    // Only a coach marked present can lead.
+    const radio = row.querySelector('.leader-radio');
+    if (radio) {
+        radio.disabled = !present;
+        if (!present) radio.checked = false;
+    }
+}
+
+const leaderClear = document.getElementById('leader-clear');
+if (leaderClear) {
+    leaderClear.addEventListener('click', () => {
+        document.querySelectorAll('.leader-radio').forEach(r => { r.checked = false; });
+    });
 }
 
 function toggleCoachCheck(row) {

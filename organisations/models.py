@@ -168,6 +168,10 @@ class OrganisationMember(models.Model):
     emergency_contact_phone = models.CharField(max_length=30, blank=True)
     emergency_contact_2_name = models.CharField(max_length=255, blank=True)
     emergency_contact_2_phone = models.CharField(max_length=30, blank=True)
+    calendar_colour = models.CharField(
+        max_length=7, blank=True,
+        help_text="Hex colour used for this staff member's sessions on the org calendar, e.g. #2563EB.",
+    )
 
     # Extra permissions an org admin can grant to an individual coach. Org
     # admins implicitly hold all of them. Each entry is (name, label, help);

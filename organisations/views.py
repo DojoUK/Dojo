@@ -1012,7 +1012,7 @@ class CalendarEventsView(OrgMixin, View):
         end = request.GET.get('end', '')
         qs = Session.objects.filter(
             assigned_class__organisation=self.org
-        ).select_related('assigned_class')
+        ).select_related('assigned_class', 'leader', 'assigned_class__default_leader')
         if start:
             qs = qs.filter(date__gte=start[:10])
         if end:
@@ -1025,10 +1025,23 @@ class CalendarEventsView(OrgMixin, View):
             qs = qs.filter(assigned_class__coaches__user=request.user)
 
         from django.urls import reverse
+        sessions = list(qs)
+        # A session's own leader, else the class's usual one, coloured by their chosen colour.
+        leader_colours = dict(
+            OrganisationMember.objects.filter(organisation=self.org)
+            .exclude(calendar_colour='')
+            .values_list('user_id', 'calendar_colour')
+        )
         events = []
-        for session in qs:
-            color = '#dc3545' if session.is_cancelled else '#212529'
+        for session in sessions:
+            leader = session.leader or session.assigned_class.default_leader
+            if session.is_cancelled:
+                color = '#dc3545'
+            else:
+                color = leader_colours.get(leader.pk if leader else None, '#212529')
             title = session.assigned_class.name
+            if leader:
+                title += f' — {leader.get_full_name() or leader.username}'
             if session.is_cancelled:
                 title += ' (cancelled)'
             events.append({
@@ -1197,6 +1210,23 @@ class AccountView(OrgMixin, View):
             holiday = get_object_or_404(StaffHoliday, pk=holiday_pk, member=self.org_membership)
             holiday.delete()
             messages.success(request, 'Holiday removed.')
+            return redirect('account_settings', org_slug=self.org.slug)
+
+        elif action == 'update_calendar_colour':
+            if not self.org_membership:
+                messages.error(request, "You're not a staff member of this organisation.")
+                return redirect('account_settings', org_slug=self.org.slug)
+            import re
+            colour = request.POST.get('calendar_colour', '').strip()
+            if request.POST.get('clear'):
+                colour = ''
+            if colour and not re.fullmatch(r'#[0-9a-fA-F]{6}', colour):
+                messages.error(request, 'Choose a colour like #2563EB.')
+                return redirect('account_settings', org_slug=self.org.slug)
+            # Only ever the signed-in person's own colour.
+            self.org_membership.calendar_colour = colour.upper()
+            self.org_membership.save(update_fields=['calendar_colour'])
+            messages.success(request, 'Calendar colour updated.')
             return redirect('account_settings', org_slug=self.org.slug)
 
         elif action == 'update_emergency_contacts':

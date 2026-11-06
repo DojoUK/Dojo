@@ -81,6 +81,28 @@
         </div>
         {% endif %}{% endif %}
 
+        {# Calendar colour #}
+        {% if org_membership %}
+        <div class="card mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">My calendar colour</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">Sessions you lead show in this colour on the club calendar.</p>
+                <form method="post" class="d-flex flex-wrap gap-2 align-items-center">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_calendar_colour">
+                    <input type="color" name="calendar_colour" value="{{ org_membership.calendar_colour|default:'#212529' }}"
+                           class="form-control form-control-color" aria-label="Calendar colour">
+                    <button type="submit" class="btn btn-dark btn-sm">Save colour</button>
+                    {% if org_membership.calendar_colour %}
+                    <button type="submit" name="clear" value="1" class="btn btn-link btn-sm text-muted">Use the default</button>
+                    {% endif %}
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
         {# Password #}
         <div class="card mb-4">
             <div class="card-header bg-white border-bottom py-3">

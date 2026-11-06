@@ -1,0 +1,12 @@
+{# Set the coach who usually leads this class. Needs `cls` and `class_coaches` (ClassCoach rows). #}
+<form method="post" action="{% url 'class_set_default_leader' org_slug=org.slug pk=cls.pk %}" class="d-flex gap-2 align-items-center">
+    {% csrf_token %}
+    <select name="default_leader" class="form-select form-select-sm" aria-label="Usual leader for {{ cls.name }}">
+        <option value="">No usual leader</option>
+        {% for coach in class_coaches %}
+        <option value="{{ coach.user_id }}" {% if cls.default_leader_id == coach.user_id %}selected{% endif %}>{{ coach.user.get_full_name|default:coach.user.username }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap">Save</button>
+</form>
+<p class="small text-muted mb-0 mt-2">New sessions start with this coach as leader, and the register suggests them.</p>
