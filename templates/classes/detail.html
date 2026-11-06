@@ -66,8 +66,14 @@
                         {% for member in enrolled %}
                         <tr>
                             <td class="ps-3 py-2">
-                                <a href="{% url 'member_detail' org_slug=org.slug pk=member.pk %}" class="text-decoration-none fw-semibold">{{ member.name }}</a>
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <a href="{% url 'member_detail' org_slug=org.slug pk=member.pk %}" class="text-decoration-none fw-semibold">{{ member.name }}</a>
+                                    {% include 'classes/_register_flags.html' %}
+                                </div>
                             </td>
+                            {% if 'grades' in org.enabled_features %}
+                            <td class="small py-2">{% include 'classes/_current_grades.html' %}</td>
+                            {% endif %}
                             <td class="text-muted small py-2">{{ member.email|default:"" }}</td>
                             <td class="text-end pe-3 py-2">
                                 <form method="post" action="{% url 'class_unenrol' org_slug=org.slug pk=cls.pk member_pk=member.pk %}" class="d-inline">

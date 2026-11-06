@@ -1,0 +1,9 @@
+{# A member's latest grade in each progression system; needs `member.current_grades`. #}
+{% for progression in member.current_grades %}
+<span class="d-inline-flex align-items-center gap-1 text-nowrap me-2" title="{{ progression.stage.system.name }}, since {{ progression.achieved_date|date:'d M Y' }}">
+    {% if progression.stage.colour %}<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:{{ progression.stage.colour }};border:1px solid rgba(0,0,0,.15);"></span>{% endif %}
+    {{ progression.stage.name }}
+</span>
+{% empty %}
+<span class="text-muted">Not graded</span>
+{% endfor %}

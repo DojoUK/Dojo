@@ -886,8 +886,23 @@ class CustomFieldSettingsView(OrgAdminMixin, View):
                     field_type=field_type,
                     options=options,
                     order=order,
+                    show_on_registers=(
+                        field_type == CustomField.FieldType.BOOLEAN and 'show_on_registers' in request.POST
+                    ),
                 )
                 messages.success(request, f'Field "{name}" added.')
+
+        elif action == 'show_on_registers':
+            field = get_object_or_404(
+                CustomField, pk=request.POST.get('field_pk'), organisation=self.org,
+                field_type=CustomField.FieldType.BOOLEAN,
+            )
+            field.show_on_registers = request.POST.get('value') == '1'
+            field.save(update_fields=['show_on_registers'])
+            if field.show_on_registers:
+                messages.success(request, f'"{field.name}" now shows on class pages and registers.')
+            else:
+                messages.success(request, f'"{field.name}" no longer shows on registers.')
 
         elif action == 'delete':
             field_pk = request.POST.get('field_pk')

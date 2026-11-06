@@ -51,6 +51,8 @@ class GradingMixin(CapabilityMixin):
         )
         for candidate in candidates:
             candidate.current = held.get(candidate.member_id)
+        from classes.register import attach_member_contacts
+        attach_member_contacts(self.org, [c.member for c in candidates])
         return render(request, 'progression/gradings/session.html', {
             'org': self.org,
             'org_membership': self.org_membership,
