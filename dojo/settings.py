@@ -152,6 +152,13 @@ MESSAGE_TAGS = {message_constants.ERROR: 'danger'}
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = '/'
 
+# Club websites allowed to send membership applications to the signup API
+# (/api/join/<club>/) from a visitor's browser: comma-separated origins, e.g.
+# https://www.myclub.org.uk. Requests from any other site are refused.
+SIGNUP_API_ORIGINS = [o.strip().rstrip('/') for o in os.environ.get('SIGNUP_API_ORIGINS', '').split(',') if o.strip()]
+SIGNUP_API_RATE_LIMIT = int(os.environ.get('SIGNUP_API_RATE_LIMIT', '5'))  # applications per address per hour
+SIGNUP_API_RATE_WINDOW = 60 * 60  # seconds
+
 # Email. Each club chooses how its emails are sent in the setup wizard or
 # Settings → Email (mailer.backends.ClubBackend). The EMAIL_* variables below
 # are the fallback for clubs that haven't chosen; with none set, emails are

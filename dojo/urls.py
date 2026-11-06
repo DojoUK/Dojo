@@ -42,5 +42,6 @@ urlpatterns = [
     path('stripe/', include('billing.stripe_urls')),
     path('pay/', include('billing.pay_urls')),
     path('join/<slug:org_slug>/', include('members.signup_urls')),
+    path('api/join/<slug:org_slug>/', include('members.signup_api_urls')),
     path('org/<slug:org_slug>/', include('documents.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

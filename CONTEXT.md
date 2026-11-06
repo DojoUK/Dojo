@@ -324,6 +324,7 @@ All apps are in `INSTALLED_APPS`. All models are migrated.
 
 Public/unauthenticated routes:
 - `/join/<org_slug>/` — public member signup page (no login)
+- `/api/join/<org_slug>/` — JSON signup API for a club's own website (no login; browser origins limited by `SIGNUP_API_ORIGINS`)
 - `/p/<token>/` — tokenised member portal (no login)
 
 ### URL Structure
@@ -333,6 +334,7 @@ Public/unauthenticated routes:
 /admin/                        → Django admin
 /login/, /logout/, /password-reset/
 /join/<slug>/                  → public membership signup (no login)
+/api/join/<slug>/              → JSON signup API for club websites (same rules as /join/)
 /p/<token>/                    → member portal (no login)
 /p/<token>/checkout/<inv_pk>/  → Stripe Checkout for invoice
 /stripe/webhook/               → Stripe webhook handler
