@@ -219,6 +219,13 @@ class MemberDetailView(OrgAdminMixin, DetailView):
         context['invoices'] = self.object.invoices.order_by('-created_at')[:5]
         from billing.credit import member_credit
         context['overpaid_credit'] = member_credit(self.object)
+        from classes.models import Attendance
+        attended = Attendance.objects.filter(member=self.object, present=True)
+        context['sessions_attended'] = attended.count()
+        context['recent_attended'] = list(
+            attended.select_related('session__assigned_class').order_by('-session__date')[:5]
+        )
+        context['last_attended'] = context['recent_attended'][0].session.date if context['recent_attended'] else None
         from classes.models import ClassMember
         context['enrolments'] = (
             ClassMember.objects.filter(member=self.object)

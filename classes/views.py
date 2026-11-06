@@ -750,7 +750,10 @@ class AttendanceAnalyticsView(AttendanceScopeMixin, View):
             is_cancelled=False,
         ).count()
 
+        trend = self.trend(request, classes, class_pk, today)
+
         return render(request, self.template_name, {
+            **trend,
             'org': self.org,
             'org_membership': self.org_membership,
             'members': member_list,
@@ -764,6 +767,45 @@ class AttendanceAnalyticsView(AttendanceScopeMixin, View):
             'today': today,
             'four_weeks_ago': four_weeks_ago,
         })
+
+
+    TREND_COUNTS = (10, 25, 50)
+
+    def trend(self, request, classes, class_pk, today):
+        """
+        Members present at each of a class's last N sessions that have run
+        (not cancelled), oldest first, and their average. The class can be
+        chosen separately from the table's filter; it defaults to that, then
+        to the first class this person can see.
+        """
+        from django.db.models import Count, Q
+        trend_pk = request.GET.get('trend_class', '')
+        if not (trend_pk.isdigit() and classes.filter(pk=trend_pk).exists()):
+            trend_pk = class_pk or (str(classes.first().pk) if classes.exists() else '')
+        try:
+            count = int(request.GET.get('trend_count', 10))
+        except ValueError:
+            count = 10
+        if count not in self.TREND_COUNTS:
+            count = 10
+        sessions = []
+        if trend_pk:
+            sessions = list(
+                Session.objects.filter(assigned_class_id=trend_pk, is_cancelled=False, date__lte=today)
+                .annotate(present_count=Count('attendance', filter=Q(attendance__present=True)))
+                .order_by('-date')[:count]
+            )
+            sessions.reverse()
+        data = [s.present_count for s in sessions]
+        return {
+            'trend_selected_class': trend_pk,
+            'trend_count': count,
+            'trend_counts': self.TREND_COUNTS,
+            'trend_labels': json.dumps([s.date.strftime('%d %b') for s in sessions]),
+            'trend_data': json.dumps(data),
+            'trend_average': round(sum(data) / len(data), 1) if data else None,
+            'trend_has_data': bool(data),
+        }
 
 
 class AttendanceExportView(AttendanceScopeMixin, View):

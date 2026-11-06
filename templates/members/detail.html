@@ -328,6 +328,35 @@
                     </div>
                     {% endif %}
                 </div>
+
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-white border-bottom py-3">
+                        <h6 class="mb-0">Recent attendance</h6>
+                        <p class="small text-muted mb-0 mt-1">
+                            <strong>{{ sessions_attended }}</strong> session{{ sessions_attended|pluralize }} attended{% if last_attended %}, last on {{ last_attended|date:"d M Y" }}{% endif %}
+                        </p>
+                    </div>
+                    {% if recent_attended %}
+                    <div class="card-body p-0">
+                        <ul class="list-group list-group-flush">
+                            {% for a in recent_attended %}
+                            <li class="list-group-item py-2 px-3 d-flex justify-content-between align-items-center gap-2">
+                                <div>
+                                    <div class="small fw-semibold">{{ a.session.assigned_class.name }}</div>
+                                    <div class="small text-muted">{{ a.session.date|date:"D d M Y" }}</div>
+                                </div>
+                                <a href="{% url 'session_register' org_slug=org.slug pk=a.session.assigned_class_id session_pk=a.session_id %}"
+                                   class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:0.7rem;">Register</a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% else %}
+                    <div class="card-body">
+                        <p class="text-muted small mb-0">No attendance recorded yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
