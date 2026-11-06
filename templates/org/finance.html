@@ -1,5 +1,5 @@
 {% extends 'org/base.html' %}
-{% load static %}
+{% load static money %}
 
 {% block title %}Finance{% endblock %}
 {% block page_title %}Financial report{% endblock %}
@@ -32,7 +32,7 @@
     </div>
     <div class="col-sm-4">
         <div class="card border-0 shadow-sm text-center py-3">
-            <div class="display-6 fw-bold {% if total_profit_ytd >= 0 %}text-success{% else %}text-danger{% endif %}">£{{ total_profit_ytd|floatformat:2 }}</div>
+            <div class="display-6 fw-bold {% if total_profit_ytd >= 0 %}text-success{% else %}text-danger{% endif %}">{{ total_profit_ytd|pounds }}</div>
             <div class="small text-muted mt-1">Profit {{ today.year }}</div>
         </div>
     </div>
@@ -46,7 +46,7 @@
     </div>
     <div class="col-sm-6">
         <div class="card border-0 shadow-sm text-center py-3">
-            <div class="display-6 fw-bold {% if profit_this_month >= 0 %}text-success{% else %}text-danger{% endif %}">£{{ profit_this_month|floatformat:2 }}</div>
+            <div class="display-6 fw-bold {% if profit_this_month >= 0 %}text-success{% else %}text-danger{% endif %}">{{ profit_this_month|pounds }}</div>
             <div class="small text-muted mt-1">Profit this month</div>
         </div>
     </div>

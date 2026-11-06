@@ -156,3 +156,12 @@ class ForecastMathsTests(TestCase):
         self.assertEqual(next_months(date(2026, 11, 1), 3), [date(2026, 12, 1), date(2027, 1, 1), date(2027, 2, 1)])
         self.assertEqual(next_months(date(2026, 1, 1), 0), [])
         self.assertEqual(next_months(date(2026, 1, 1), 1)[0] - date(2026, 1, 1), timedelta(days=31))
+
+
+class PoundsFilterTests(TestCase):
+    def test_formats(self):
+        from billing.templatetags.money import pounds
+        self.assertEqual(pounds(Decimal('-340')), '-£340.00')
+        self.assertEqual(pounds(Decimal('1250.5')), '£1,250.50')
+        self.assertEqual(pounds(0), '£0.00')
+        self.assertEqual(pounds('not money'), '')
