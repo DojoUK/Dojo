@@ -185,9 +185,11 @@ class FormerMembersOnPastRegistersTests(RegisterSafetyBase):
         self.assertContains(response, 'Carl Left')
         self.assertContains(response, 'No longer enrolled')
         self.assertIn(self.carl.pk, response.context['present_ids'])
+        self.assertContains(response, '2 enrolled')
         printed = self.client.get(self.print_url())
         self.assertContains(printed, 'Carl Left')
         self.assertContains(printed, '(no longer enrolled)')
+        self.assertContains(printed, '2 enrolled')
 
     def test_register_without_their_attendance_leaves_them_out(self):
         response = self.client.get(self.register_url(self.upcoming))
