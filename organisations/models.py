@@ -172,6 +172,24 @@ class OrganisationMember(models.Model):
         max_length=7, blank=True,
         help_text="Hex colour used for this staff member's sessions on the org calendar, e.g. #2563EB.",
     )
+    dark_mode = models.BooleanField(
+        default=False,
+        help_text="Use the dark theme for this staff member's own view of the app.",
+    )
+
+    class AccentTheme(models.TextChoices):
+        DEFAULT = '', "Club default"
+        BLUE = 'blue', 'Blue'
+        GREEN = 'green', 'Green'
+        PURPLE = 'purple', 'Purple'
+        AMBER = 'amber', 'Amber'
+        ROSE = 'rose', 'Rose'
+        SLATE = 'slate', 'Slate'
+
+    accent_theme = models.CharField(
+        max_length=20, choices=AccentTheme.choices, blank=True, default='',
+        help_text="Secondary personal theme — recolours the sidebar and buttons for this staff member's own view. Works alongside dark mode.",
+    )
 
     # Extra permissions an org admin can grant to an individual coach. Org
     # admins implicitly hold all of them. Each entry is (name, label, help);

@@ -81,6 +81,51 @@
         </div>
         {% endif %}{% endif %}
 
+        {# Appearance #}
+        {% if org_membership %}
+        <div class="card mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Appearance</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">How Dojo looks for you. Nobody else's view changes.</p>
+                <form method="post" id="appearance-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="update_appearance">
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" role="switch" name="dark_mode" value="1" id="dark-mode-switch"
+                               {% if org_membership.dark_mode %}checked{% endif %}>
+                        <label class="form-check-label small" for="dark-mode-switch">Dark mode</label>
+                    </div>
+                    <fieldset>
+                        <legend class="form-label small fw-semibold mb-2" style="font-size:.875rem;">Colour theme</legend>
+                        <div class="d-flex flex-wrap gap-3">
+                            {% for value, label in accent_theme_choices %}
+                            <label class="d-flex flex-column align-items-center gap-1 small" style="cursor:pointer;">
+                                <input type="radio" class="form-check-input m-0" name="accent_theme" value="{{ value }}"
+                                       {% if org_membership.accent_theme == value %}checked{% endif %}>
+                                <span class="accent-swatch" data-swatch="{{ value|default:'club' }}" aria-hidden="true"></span>
+                                {{ label }}
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </fieldset>
+                    <button type="submit" class="btn btn-dark btn-sm mt-3">Save appearance</button>
+                </form>
+                <style>
+                    .accent-swatch { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--dojo-border); display: inline-block; }
+                    .accent-swatch[data-swatch="club"]   { background: linear-gradient(135deg, {{ org.theme.sidebar_color }} 50%, {{ org.theme.accent_color }} 50%); }
+                    .accent-swatch[data-swatch="blue"]   { background: linear-gradient(135deg, #1E3A5F 50%, #2563EB 50%); }
+                    .accent-swatch[data-swatch="green"]  { background: linear-gradient(135deg, #14532d 50%, #16a34a 50%); }
+                    .accent-swatch[data-swatch="purple"] { background: linear-gradient(135deg, #3b0764 50%, #7c3aed 50%); }
+                    .accent-swatch[data-swatch="amber"]  { background: linear-gradient(135deg, #78350f 50%, #d97706 50%); }
+                    .accent-swatch[data-swatch="rose"]   { background: linear-gradient(135deg, #4c0519 50%, #e11d48 50%); }
+                    .accent-swatch[data-swatch="slate"]  { background: linear-gradient(135deg, #1e293b 50%, #475569 50%); }
+                </style>
+            </div>
+        </div>
+        {% endif %}
+
         {# Calendar colour #}
         {% if org_membership %}
         <div class="card mb-4">

@@ -1165,6 +1165,7 @@ class AccountView(OrgMixin, View):
             'today': date.today(),
             'two_factor': device_for(request.user),
             'two_factor_required': two_factor_required(request.user),
+            'accent_theme_choices': OrganisationMember.AccentTheme.choices,
         })
 
     def post(self, request, org_slug):
@@ -1210,6 +1211,21 @@ class AccountView(OrgMixin, View):
             holiday = get_object_or_404(StaffHoliday, pk=holiday_pk, member=self.org_membership)
             holiday.delete()
             messages.success(request, 'Holiday removed.')
+            return redirect('account_settings', org_slug=self.org.slug)
+
+        elif action == 'update_appearance':
+            if not self.org_membership:
+                messages.error(request, "You're not a staff member of this organisation.")
+                return redirect('account_settings', org_slug=self.org.slug)
+            accent_theme = request.POST.get('accent_theme', '').strip()
+            if accent_theme not in OrganisationMember.AccentTheme.values:
+                messages.error(request, 'Choose one of the colour themes.')
+                return redirect('account_settings', org_slug=self.org.slug)
+            # Only ever the signed-in person's own view.
+            self.org_membership.dark_mode = request.POST.get('dark_mode') == '1'
+            self.org_membership.accent_theme = accent_theme
+            self.org_membership.save(update_fields=['dark_mode', 'accent_theme'])
+            messages.success(request, 'Appearance updated.')
             return redirect('account_settings', org_slug=self.org.slug)
 
         elif action == 'update_calendar_colour':

@@ -228,7 +228,7 @@
             <div class="col-lg-5">
                 {% if member.medical_info and 'medical_info' in org.enabled_fields %}
                 <div class="card mb-3" style="border-color:#fca5a5!important;border-width:2px!important;">
-                    <div class="card-header py-3 d-flex align-items-center gap-2" style="background:#fff5f5;border-bottom-color:#fca5a5;">
+                    <div class="card-header py-3 d-flex align-items-center gap-2 dojo-alert-header">
                         <i class="bi bi-heart-pulse-fill text-danger"></i>
                         <h6 class="mb-0 text-danger">Medical information</h6>
                         <span class="badge bg-danger ms-auto">Visible to coaches</span>
@@ -498,7 +498,7 @@
                         <a href="{% url 'invoice_list' org_slug=org.slug %}?q={{ member.name|urlencode }}" class="btn btn-sm btn-outline-secondary">View all</a>
                     </div>
                     <!-- Policy & discounts -->
-                    <div class="card-body border-bottom py-3 px-3" style="background:#fafafa;">
+                    <div class="card-body border-bottom py-3 px-3 dojo-subtle-panel">
                         <div class="row g-3">
                             <div class="col-sm-6 d-flex flex-column">
                                 <div class="small fw-semibold text-muted mb-1">Billing policy</div>

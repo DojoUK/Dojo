@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="{% if org_membership.dark_mode %}dark{% else %}light{% endif %}"{% if org_membership.accent_theme %} data-accent-theme="{{ org_membership.accent_theme }}"{% endif %}>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -28,6 +28,39 @@
             --dojo-shadow: 0 1px 3px rgba(0,0,0,.06), 0 2px 8px rgba(0,0,0,.04);
             --dojo-shadow-md: 0 4px 12px rgba(0,0,0,.08), 0 1px 3px rgba(0,0,0,.05);
         }
+        /* Dark mode: <html data-bs-theme="dark">, from the signed-in staff member's
+           Appearance setting under My account. Bootstrap 5.3's own components follow
+           the attribute; these cover Dojo's --dojo-* colours and the literal-colour
+           utilities (.bg-white, .bg-light, .text-dark) used across the templates. */
+        :root[data-bs-theme="dark"] {
+            --dojo-sidebar: #161616;
+            --dojo-sidebar-dark: #080808;
+            --dojo-body-bg: #0a0a0a;
+            --dojo-card-bg: #171717;
+            --dojo-text: #e8e8e8;
+            --dojo-muted: #9a9a9a;
+            --dojo-border: #2e2e2e;
+            --dojo-shadow: 0 1px 3px rgba(0,0,0,.6), 0 2px 8px rgba(0,0,0,.5);
+            --dojo-shadow-md: 0 4px 12px rgba(0,0,0,.7), 0 1px 3px rgba(0,0,0,.6);
+        }
+        [data-bs-theme="dark"] .bg-white { background-color: var(--dojo-card-bg) !important; }
+        [data-bs-theme="dark"] .bg-light { background-color: #1c1c1c !important; }
+        [data-bs-theme="dark"] .text-dark,
+        [data-bs-theme="dark"] .text-black { color: var(--dojo-text) !important; }
+        /* A lightly shaded strip inside a card. */
+        .dojo-subtle-panel { background: rgba(0,0,0,.02); }
+        [data-bs-theme="dark"] .dojo-subtle-panel { background: rgba(255,255,255,.03); }
+        /* A card header that needs to stand out, e.g. medical information. */
+        .dojo-alert-header { background: #fff5f5; border-bottom-color: #fca5a5 !important; }
+        [data-bs-theme="dark"] .dojo-alert-header { background: #2a1214; border-bottom-color: #7f1d1d !important; }
+        /* Personal colour themes (Appearance under My account), over the club's own colours.
+           html[data-accent-theme] outranks the club's :root colours whatever the order. */
+        html[data-accent-theme="blue"]   { --dojo-accent:#2563EB; --dojo-accent-hover:#1d4ed8; --dojo-sidebar:#1E3A5F; --dojo-sidebar-dark:#152d4a; }
+        html[data-accent-theme="green"]  { --dojo-accent:#16a34a; --dojo-accent-hover:#15803d; --dojo-sidebar:#14532d; --dojo-sidebar-dark:#052e13; }
+        html[data-accent-theme="purple"] { --dojo-accent:#7c3aed; --dojo-accent-hover:#6d28d9; --dojo-sidebar:#3b0764; --dojo-sidebar-dark:#1e0333; }
+        html[data-accent-theme="amber"]  { --dojo-accent:#d97706; --dojo-accent-hover:#b45309; --dojo-sidebar:#78350f; --dojo-sidebar-dark:#3f1d05; }
+        html[data-accent-theme="rose"]   { --dojo-accent:#e11d48; --dojo-accent-hover:#be123c; --dojo-sidebar:#4c0519; --dojo-sidebar-dark:#27020d; }
+        html[data-accent-theme="slate"]  { --dojo-accent:#475569; --dojo-accent-hover:#334155; --dojo-sidebar:#1e293b; --dojo-sidebar-dark:#0f172a; }
         * { box-sizing: border-box; }
         body { font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 15px; color: var(--dojo-text); background: var(--dojo-body-bg); }
         h1,h2,h3,h4,h5,h6 { font-weight: 600; }
@@ -51,7 +84,7 @@
             /* The row's negative gutter margins would pull the now-unpadded text to the card's edge. */
             dl.row { margin-left: 0; margin-right: 0; }
             dl.row dt, dl.row dd { float: none; width: 100%; max-width: 100%; padding: 0; margin: 0; }
-            dl.row dd { color: #0f172a; padding-bottom: 10px; }
+            dl.row dd { color: var(--dojo-text); padding-bottom: 10px; }
             dl.row dt { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .05em; padding-top: 6px; }
             dl.row dt:first-child { padding-top: 0; }
             /* Stat tiles on small screens */
@@ -80,6 +113,13 @@
             tab.addEventListener('shown.bs.tab', () => history.replaceState(null, '', '#' + tab.dataset.section));
         });
     })();
+    </script>
+    <script>
+    // Charts follow the dark theme.
+    if (window.Chart && document.documentElement.dataset.bsTheme === 'dark') {
+        Chart.defaults.color = '#c8c8c8';
+        Chart.defaults.borderColor = 'rgba(255,255,255,.1)';
+    }
     </script>
     {% block extra_scripts %}{% endblock %}
 </body>
