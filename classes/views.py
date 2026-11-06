@@ -774,7 +774,7 @@ class AttendanceAnalyticsView(AttendanceScopeMixin, View):
     def trend(self, request, classes, class_pk, today):
         """
         Members present at each of a class's last N sessions that have run
-        (not cancelled), oldest first, and their average. The class can be
+        (not cancelled, register taken), oldest first, and their average. The class can be
         chosen separately from the table's filter; it defaults to that, then
         to the first class this person can see.
         """
@@ -792,7 +792,11 @@ class AttendanceAnalyticsView(AttendanceScopeMixin, View):
         if trend_pk:
             sessions = list(
                 Session.objects.filter(assigned_class_id=trend_pk, is_cancelled=False, date__lte=today)
-                .annotate(present_count=Count('attendance', filter=Q(attendance__present=True)))
+                .annotate(
+                    present_count=Count('attendance', filter=Q(attendance__present=True)),
+                    marked_count=Count('attendance'),
+                )
+                .filter(marked_count__gt=0)  # a register nobody has taken yet isn't "nobody came"
                 .order_by('-date')[:count]
             )
             sessions.reverse()

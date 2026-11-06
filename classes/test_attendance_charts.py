@@ -78,9 +78,14 @@ class TrendChartTests(AttendanceChartBase):
         self.assertEqual(self.get(**{'class': self.seniors.pk})['trend_selected_class'], str(self.seniors.pk))
         self.assertEqual(self.get()['trend_selected_class'], str(self.juniors.pk))
 
-    def test_class_with_no_sessions_run(self):
+    def test_sessions_without_a_register_are_left_out(self):
+        context = self.get(trend_class=self.seniors.pk)
+        self.assertFalse(context['trend_has_data'])
+        Attendance.objects.create(session=self.seniors_session, member=self.members[0], present=False)
         context = self.get(trend_class=self.seniors.pk)
         self.assertEqual(json.loads(context['trend_data']), [0])
+
+    def test_class_with_no_sessions_run(self):
         empty = Class.objects.create(organisation=self.org, name='Zumba')
         context = self.get(trend_class=empty.pk)
         self.assertFalse(context['trend_has_data'])
