@@ -8,3 +8,6 @@ screenshot.
 
 This branch holds no code. It can be deleted once those pull requests are
 merged (the images in their descriptions will stop loading then).
+
+`fork-pr/`: screenshots for the pull request that merges DojoUK main into
+WeaversJ/Dojo, taken from the same made-up demo club with the merged code.
