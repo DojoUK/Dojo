@@ -28,6 +28,13 @@ class Document(models.Model):
     def __str__(self):
         return f"{self.member} — {self.name}"
 
+    @property
+    def download_name(self):
+        """The name to save a download as: the document's name plus its file's extension."""
+        import os
+        ext = os.path.splitext(self.file.name)[1].lower()
+        return self.name if not ext or self.name.lower().endswith(ext) else f'{self.name}{ext}'
+
     class Meta:
         ordering = ['-uploaded_at']
 

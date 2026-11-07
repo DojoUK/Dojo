@@ -1,9 +1,9 @@
 from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.shortcuts import redirect
-from django.urls import include, path
+from django.urls import include, path, re_path
+from django.views.static import serve
 
 from mailer.password_reset import ClubPasswordResetForm
 from organisations import views as organisations_views
@@ -44,4 +44,23 @@ urlpatterns = [
     path('join/<slug:org_slug>/', include('members.signup_urls')),
     path('api/join/<slug:org_slug>/', include('members.signup_api_urls')),
     path('org/<slug:org_slug>/', include('documents.urls')),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
+
+# Uploaded files that are public by design are served straight from MEDIA_URL:
+# club logos (emails, the sign-in page) and waiver forms (the join page).
+# Members' documents and signed waivers are never served from here, only
+# through the signed-in download views and the member's own portal.
+PUBLIC_MEDIA_FOLDERS = ('logos', 'waiver_templates')
+
+
+def public_media_patterns():
+    # Each folder is its own document root, so "logos/../documents/..." can't climb out of it.
+    prefix = settings.MEDIA_URL.lstrip('/')
+    return [
+        re_path(rf'^{prefix}{folder}/(?P<path>.+)$', serve, {'document_root': settings.MEDIA_ROOT / folder})
+        for folder in PUBLIC_MEDIA_FOLDERS
+    ]
+
+
+if settings.DEBUG and settings.MEDIA_URL.startswith('/'):
+    urlpatterns += public_media_patterns()

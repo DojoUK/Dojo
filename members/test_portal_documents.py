@@ -102,6 +102,24 @@ class PortalDocumentTests(TestCase):
         self.assertEqual(self.client.get(
             reverse('portal_document_download', kwargs={'token': 'nope', 'pk': mine.pk})).status_code, 404)
 
+    def test_upload_is_stored_under_a_random_name(self):
+        self.upload(file=pdf('Alice A GP letter.pdf'), name='GP letter')
+        doc = Document.objects.get()
+        self.assertEqual(doc.name, 'GP letter')
+        self.assertNotIn('Alice', doc.file.name)
+        self.assertTrue(doc.file.name.startswith('documents/') and doc.file.name.endswith('.pdf'))
+
+    def test_download_keeps_the_file_type(self):
+        self.upload(file=pdf('scan.pdf'), name='GP letter')
+        doc = Document.objects.get()
+        response = self.client.get(self.download_url(doc))
+        self.assertIn('filename="GP letter.pdf"', response['Content-Disposition'])
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        staff = self.client_class()
+        staff.force_login(self.admin)
+        response = staff.get(reverse('document_download', kwargs={'org_slug': self.org.slug, 'member_pk': self.member.pk, 'pk': doc.pk}))
+        self.assertIn('filename="GP letter.pdf"', response['Content-Disposition'])
+
     def test_portal_lists_documents_and_the_upload_form(self):
         Document.objects.create(member=self.member, name='Consent form', file=pdf())
         Document.objects.create(member=self.sibling, name='SIBLING-DOC', file=pdf())
