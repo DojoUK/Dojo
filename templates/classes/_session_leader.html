@@ -1,0 +1,8 @@
+{# Who led (or is set to lead) a session: its own leader, else the class's usual one. #}
+{% with leader=session.leader|default:cls.default_leader %}
+{% if leader %}
+<div class="text-muted fw-normal" style="font-size:0.75rem;">
+    <i class="bi bi-person-check-fill me-1"></i>{% if session.leader %}Led by{% else %}Usually{% endif %} {{ leader.get_full_name|default:leader.username }}
+</div>
+{% endif %}
+{% endwith %}

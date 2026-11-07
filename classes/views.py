@@ -194,7 +194,7 @@ class ClassDetailView(OrgAdminMixin, DetailView):
             .exclude(user_id__in=coach_user_ids)
             .select_related('user')
         )
-        context['sessions'] = self.object.sessions.order_by('-date')[:10]
+        context['sessions'] = self.object.sessions.select_related('leader').order_by('-date')[:10]
         context['days'] = DAYS
         context['waiting_list'] = (
             self.object.waiting_list.select_related('member')
@@ -324,7 +324,9 @@ class GenerateSessionsView(ClassCapabilityMixin, View):
         while current < to_date:
             for entry in cls.schedule:
                 if current.weekday() == entry['day']:
-                    _, was_new = Session.objects.get_or_create(assigned_class=cls, date=current)
+                    _, was_new = Session.objects.get_or_create(
+                        assigned_class=cls, date=current, defaults={'leader': cls.default_leader},
+                    )
                     if was_new:
                         created += 1
             current += timedelta(days=1)
@@ -335,7 +337,9 @@ class GenerateSessionsView(ClassCapabilityMixin, View):
 
 class AttendanceRegisterView(ClassCoachMixin, View):
     def _get_session(self, session_pk):
-        return get_object_or_404(Session, pk=session_pk, assigned_class=self.assigned_class)
+        return get_object_or_404(
+            Session.objects.select_related('leader'), pk=session_pk, assigned_class=self.assigned_class,
+        )
 
     def _unsigned_waiver_ids(self, enrolled):
         from documents.models import SignedWaiver, WaiverTemplate
@@ -369,8 +373,12 @@ class AttendanceRegisterView(ClassCoachMixin, View):
         attach_member_contacts(self.org, members)
         return enrolled
 
-    def _render(self, request, session, enrolled, present_ids, coaches, present_coach_ids, notes, coaches_on_holiday=None):
+    def _render(self, request, session, enrolled, present_ids, coaches, present_coach_ids, notes,
+                coaches_on_holiday=None, leader_id=None):
         coaches = attach_staff_contacts(self.org, coaches)
+        if leader_id is None:
+            # The session's own leader, or the class's usual one as a suggestion.
+            leader_id = session.leader_id or self.assigned_class.default_leader_id
         return render(request, 'classes/register.html', {
             **_roster_choices(self, self.assigned_class),
             'org': self.org,
@@ -385,6 +393,7 @@ class AttendanceRegisterView(ClassCoachMixin, View):
             'unsigned_waiver_ids': self._unsigned_waiver_ids(enrolled),
             'notes': notes,
             'coaches_on_holiday': coaches_on_holiday or [],
+            'leader_id': leader_id,
         })
 
     def get(self, request, org_slug, pk, session_pk):
@@ -408,10 +417,21 @@ class AttendanceRegisterView(ClassCoachMixin, View):
         coaches, coaches_on_holiday = _coaches_and_holiday_split(self.assigned_class, session.date)
         coach_present_ids = {int(x) for x in request.POST.getlist('coach_present')}
         notes = request.POST.get('notes', session.notes)
+        leader_raw = request.POST.get('leader', '').strip()
+        leader_id = int(leader_raw) if leader_raw.isdigit() else None
 
         if coaches.exists() and not coach_present_ids:
             messages.error(request, 'At least one coach must be marked present to save the register.')
-            return self._render(request, session, enrolled, present_ids, coaches, coach_present_ids, notes, coaches_on_holiday)
+            return self._render(request, session, enrolled, present_ids, coaches, coach_present_ids, notes,
+                                coaches_on_holiday, leader_id=leader_id or 0)
+
+        if leader_id is not None and leader_id not in coach_present_ids:
+            messages.error(request, 'The session leader must be one of the coaches marked present.')
+            return self._render(request, session, enrolled, present_ids, coaches, coach_present_ids, notes,
+                                coaches_on_holiday, leader_id=leader_id)
+        # Present coaches come from this class's own coach list.
+        if leader_id is not None and not coaches.filter(user_id=leader_id).exists():
+            leader_id = None
 
         for cm in enrolled:
             Attendance.objects.update_or_create(
@@ -428,7 +448,8 @@ class AttendanceRegisterView(ClassCoachMixin, View):
             )
 
         session.notes = notes
-        session.save(update_fields=['notes'])
+        session.leader_id = leader_id
+        session.save(update_fields=['notes', 'leader'])
 
         messages.success(request, f'Register saved for {session.date:%d %b %Y}.')
         return redirect('session_register', org_slug=self.org.slug, pk=self.assigned_class.pk, session_pk=session.pk)
@@ -457,8 +478,8 @@ class CoachClassDetailView(ClassCoachMixin, View):
     def get(self, request, org_slug, pk):
         cls = self.assigned_class
         from datetime import date
-        upcoming = cls.sessions.filter(date__gte=date.today()).order_by('date')[:10]
-        recent = cls.sessions.filter(date__lt=date.today()).order_by('-date')[:5]
+        upcoming = cls.sessions.select_related('leader').filter(date__gte=date.today()).order_by('date')[:10]
+        recent = cls.sessions.select_related('leader').filter(date__lt=date.today()).order_by('-date')[:5]
         enrolled = list(
             ClassMember.objects.filter(assigned_class=cls)
             .select_related('member')
@@ -478,6 +499,7 @@ class CoachClassDetailView(ClassCoachMixin, View):
             'enrolled': enrolled,
             'can_generate_sessions': self.can('generate_sessions'),
             'can_manage_class_members': self.can('manage_class_members'),
+            'class_coaches': cls.coaches.select_related('user').order_by('user__first_name', 'user__last_name'),
         })
 
 
@@ -498,12 +520,44 @@ class AddCoachView(ClassCapabilityMixin, View):
         return _back_to_class(self, request, cls)
 
 
+class SetClassLeaderView(ClassCoachMixin, View):
+    """
+    Sets or clears the class's default leader: the coach who normally runs
+    it. Any coach of the class can set it, as a "this is my class" choice.
+    It's carried onto newly generated sessions and pre-selected on registers.
+    """
+
+    def post(self, request, org_slug, pk):
+        cls = self.assigned_class
+        leader_raw = request.POST.get('default_leader', '').strip()
+        if not leader_raw:
+            cls.default_leader = None
+            cls.save(update_fields=['default_leader'])
+            messages.success(request, f'Cleared the usual leader for {cls.name}.')
+            return _back_to_class(self, request, cls)
+        coach = (
+            ClassCoach.objects.filter(assigned_class=cls, user_id=leader_raw if leader_raw.isdigit() else None)
+            .select_related('user').first()
+        )
+        if coach is None:
+            messages.error(request, "That person doesn't coach this class.")
+            return _back_to_class(self, request, cls)
+        cls.default_leader = coach.user
+        cls.save(update_fields=['default_leader'])
+        name = coach.user.get_full_name() or coach.user.username
+        messages.success(request, f'{name} now leads {cls.name} by default.')
+        return _back_to_class(self, request, cls)
+
+
 class RemoveCoachView(OrgAdminMixin, View):
     def post(self, request, org_slug, pk, coach_pk):
         cls = get_object_or_404(Class, pk=pk, organisation=self.org)
         coach = get_object_or_404(ClassCoach, pk=coach_pk, assigned_class=cls)
         name = coach.user.get_full_name() or coach.user.username
         coach.delete()
+        if cls.default_leader_id == coach.user_id:
+            cls.default_leader = None
+            cls.save(update_fields=['default_leader'])
         messages.success(request, f'{name} removed as coach.')
         return redirect('class_detail', org_slug=self.org.slug, pk=cls.pk)
 

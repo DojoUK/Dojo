@@ -48,7 +48,10 @@
                     <tbody>
                         {% for session in upcoming %}
                         <tr>
-                            <td class="ps-3 py-3 small fw-semibold">{{ session.date|date:"l d M Y" }}</td>
+                            <td class="ps-3 py-3 small fw-semibold">
+                                {{ session.date|date:"l d M Y" }}
+                                {% include 'classes/_session_leader.html' %}
+                            </td>
                             <td class="py-3 small text-muted">
                                 {% with count=session.attendance.count %}
                                 {% if count %}{{ count }} marked{% endif %}
@@ -86,7 +89,10 @@
                     <tbody>
                         {% for session in recent %}
                         <tr>
-                            <td class="ps-3 py-2 small text-muted">{{ session.date|date:"l d M Y" }}</td>
+                            <td class="ps-3 py-2 small text-muted">
+                                {{ session.date|date:"l d M Y" }}
+                                {% include 'classes/_session_leader.html' %}
+                            </td>
                             <td class="py-2 small text-muted">
                                 {% with total=session.attendance.count %}
                                 {% if total %}{{ total }} marked{% endif %}
@@ -108,6 +114,15 @@
     </div>
 
     <div class="col-lg-4">
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0">Usual leader</h6>
+            </div>
+            <div class="card-body">
+                {% include 'classes/_default_leader_form.html' %}
+            </div>
+        </div>
+
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                 <h6 class="mb-0">Members <span class="text-muted fw-normal">({{ enrolled|length }})</span></h6>
