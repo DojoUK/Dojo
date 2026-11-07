@@ -118,6 +118,11 @@ class Invoice(models.Model):
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.UNPAID)
     notes = models.TextField(blank=True)
     reminder_sent_at = models.DateTimeField(null=True, blank=True)
+    overpayment_credited = models.DecimalField(
+        max_digits=8, decimal_places=2, default=0,
+        help_text="How much of this invoice's overpayment (if any) has already been "
+                  "pulled into a later invoice for the same member as a discount.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class AutoPayStatus(models.TextChoices):
@@ -155,6 +160,24 @@ class Invoice(models.Model):
         if self.status == self.Status.PAID:
             return Decimal('0')
         return max(Decimal(self.amount) - self.amount_paid, Decimal('0'))
+
+    @property
+    def is_partial(self):
+        """Some money has come in, but not enough to cover the invoice yet."""
+        from decimal import Decimal
+        return self.status != self.Status.PAID and Decimal('0') < self.amount_paid < Decimal(self.amount)
+
+    @property
+    def overpaid_amount(self):
+        """How much more than the invoice total has been paid in, if any."""
+        from decimal import Decimal
+        return max(self.amount_paid - Decimal(self.amount), Decimal('0'))
+
+    @property
+    def available_credit(self):
+        """Overpayment on this invoice not yet taken off a later invoice."""
+        from decimal import Decimal
+        return max(self.overpaid_amount - Decimal(self.overpayment_credited), Decimal('0'))
 
     @property
     def payment_reference(self):

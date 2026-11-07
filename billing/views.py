@@ -14,6 +14,7 @@ from dojo.mixins import CapabilityMixin
 from members.models import Member
 from inventory.models import Product, ProductVariant, StockMovement
 
+from .credit import apply_member_credit
 from .models import Invoice, InvoiceItem, Payment, BillingPolicy, OrgTerm, PolicyDiscount, MemberDiscount
 from members.navigation import redirect_to_member
 
@@ -59,7 +60,8 @@ class InvoiceListView(InvoiceAccessMixin, ListView):
         qs = (
             self.invoice_queryset()
             .select_related('member')
-            .order_by('-created_at')
+            .annotate(paid_total=Sum('payments__amount'))
+            .order_by('-due_date', 'member__name', '-pk')
         )
         status = self.request.GET.get('status', '')
         if status in ('unpaid', 'paid', 'overdue'):
@@ -227,6 +229,7 @@ class InvoiceCreateView(BillingManagerMixin, View):
                     due_date=due_date,
                     notes=notes,
                 )
+                apply_member_credit(invoice)
                 for variant, quantity in item_rows:
                     locked = locked_variants[variant.pk]
                     InvoiceItem.objects.create(
@@ -247,14 +250,16 @@ class InvoiceCreateView(BillingManagerMixin, View):
                 # Remaining selected members (only reachable when there are no product items,
                 # since 'all' + products is rejected above) each get their own plain invoice.
                 for member in selected_members[1:]:
-                    created_invoices.append(Invoice.objects.create(
+                    extra = Invoice.objects.create(
                         organisation=self.org,
                         member=member,
                         amount=base_amount,
                         period=period,
                         due_date=due_date,
                         notes=notes,
-                    ))
+                    )
+                    apply_member_credit(extra)
+                    created_invoices.append(extra)
         except InsufficientStockError as e:
             for msg in e.errors:
                 messages.error(request, msg)
@@ -598,6 +603,7 @@ class BulkInvoiceView(BillingManagerMixin, View):
                 period=period_label,
                 due_date=due_date,
             )
+            apply_member_credit(inv)
             created_invoices.append(inv)
 
         messages.success(
