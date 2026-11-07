@@ -1,4 +1,5 @@
 {% extends 'org/base.html' %}
+{% load money %}
 
 {% block title %}Expenses{% endblock %}
 
@@ -19,13 +20,13 @@
 <div class="row g-3 mb-4">
     <div class="col-sm-6">
         <div class="card border-0 shadow-sm text-center py-3">
-            <div class="display-6 fw-bold text-danger">£{{ total_this_month|floatformat:2 }}</div>
+            <div class="display-6 fw-bold text-danger">{{ total_this_month|pounds }}</div>
             <div class="small text-muted mt-1">This month</div>
         </div>
     </div>
     <div class="col-sm-6">
         <div class="card border-0 shadow-sm text-center py-3">
-            <div class="display-6 fw-bold text-danger">£{{ total_this_year|floatformat:2 }}</div>
+            <div class="display-6 fw-bold text-danger">{{ total_this_year|pounds }}</div>
             <div class="small text-muted mt-1">Year to date</div>
         </div>
     </div>
@@ -66,7 +67,7 @@
                         {% if expense.notes %}<div class="text-muted" style="font-size:0.75rem;">{{ expense.notes }}</div>{% endif %}
                     </td>
                     <td class="py-2 small"><span class="badge bg-secondary-subtle text-secondary">{{ expense.get_category_display }}</span></td>
-                    <td class="py-2 small text-end fw-semibold">£{{ expense.amount|floatformat:2 }}</td>
+                    <td class="py-2 small text-end fw-semibold">{{ expense.amount|pounds }}</td>
                     <td class="py-2 pe-3 text-end">
                         <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editExpenseModal{{ expense.pk }}">
                             <i class="bi bi-pencil"></i>
