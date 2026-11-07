@@ -106,6 +106,22 @@ class CreditMathsTests(CreditTestBase):
         self.assertEqual(february.available_credit, Decimal('2.00'))
         self.assertEqual(member_credit(self.ann), Decimal('2.00'))
 
+    def test_stops_taking_once_the_invoice_is_covered(self):
+        january = self.invoice(self.ann, '20.00', due=date(2026, 1, 31), paid='30.00')   # 10 credit
+        february = self.invoice(self.ann, '20.00', due=date(2026, 2, 28), paid='30.00')  # 10 credit
+        new = self.invoice(self.ann, '6.00', due=date(2026, 3, 31))
+        self.assertEqual(apply_member_credit(new), Decimal('6.00'))
+        january.refresh_from_db()
+        february.refresh_from_db()
+        self.assertEqual(january.overpayment_credited, Decimal('6.00'))
+        self.assertEqual(february.overpayment_credited, Decimal('0.00'))
+
+    def test_nothing_owed_takes_no_credit(self):
+        self.invoice(self.ann, '40.00', paid='50.00')
+        new = self.invoice(self.ann, '0.00', due=date(2026, 3, 31))
+        self.assertEqual(apply_member_credit(new), Decimal('0'))
+        self.assertEqual(member_credit(self.ann), Decimal('10.00'))
+
     def test_another_members_credit_is_never_used(self):
         self.invoice(self.bob, '40.00', paid='50.00')
         new = self.invoice(self.ann, '30.00')
@@ -183,6 +199,48 @@ class CreditOnAutomaticInvoicesTests(CreditTestBase):
         self.assertEqual(invoice.amount, Decimal('35.00'))       # 45 - 10
         self.assertEqual(invoice.run.total, Decimal('35.00'))
 
+    def held_run(self):
+        InvoiceSchedule.objects.create(policy=self.policy, enabled=True, send_mode='review', day_of_month=5)
+        with self.captureOnCommitCallbacks(execute=True):
+            schedule.create_due_runs(date(2026, 11, 5))
+        invoice = Invoice.objects.filter(member=self.ann, run__isnull=False).get()
+        return invoice.run, invoice
+
+    def test_held_run_takes_the_credit_only_when_sent(self):
+        self.invoice(self.ann, '40.00', paid='50.00')            # 10 credit
+        run, invoice = self.held_run()
+        self.assertEqual(invoice.amount, Decimal('45.00'))
+        self.assertEqual(member_credit(self.ann), Decimal('10.00'))
+        with self.captureOnCommitCallbacks(execute=True):
+            schedule.release(run)
+        invoice.refresh_from_db()
+        run.refresh_from_db()
+        self.assertEqual(invoice.amount, Decimal('35.00'))
+        self.assertEqual(run.total, Decimal('35.00'))
+        self.assertEqual(member_credit(self.ann), Decimal('0'))
+
+    def test_cancelling_a_held_run_keeps_the_credit(self):
+        self.invoice(self.ann, '40.00', paid='100.00')           # 60 credit would cover 45
+        run, invoice = self.held_run()
+        schedule.cancel(run)
+        self.assertFalse(Invoice.objects.filter(pk=invoice.pk).exists())
+        self.assertEqual(member_credit(self.ann), Decimal('60.00'))
+        self.assertFalse(run.invoices.exists())
+
+    def test_held_invoice_covered_by_credit_is_paid_and_not_collected_when_sent(self):
+        payment_settings = PaymentSettings(organisation=self.org)
+        apply_post(payment_settings, {**CARD, **form(auto_pay='optional')})
+        payment_settings.save()
+        AutoPay.objects.create(member=self.ann, payment_method_id='pm_1', method_type='card', label='Visa')
+        self.invoice(self.ann, '40.00', paid='100.00')
+        run, invoice = self.held_run()
+        with self.captureOnCommitCallbacks(execute=True):
+            schedule.release(run)
+        invoice.refresh_from_db()
+        self.assertEqual(invoice.status, 'paid')
+        self.assertEqual(invoice.autopay_status, '')
+        self.assertEqual(member_credit(self.ann), Decimal('15.00'))
+
     def test_invoice_covered_by_credit_is_not_collected_automatically(self):
         payment_settings = PaymentSettings(organisation=self.org)
         apply_post(payment_settings, {**CARD, **form(auto_pay='optional')})
@@ -211,6 +269,11 @@ class BillingListTests(CreditTestBase):
         self.assertEqual(rows, [
             (date(2026, 5, 1), 'Ann Able'), (date(2026, 3, 1), 'Ann Able'), (date(2026, 3, 1), 'Bob Best'),
         ])
+
+    def test_payment_form_starts_at_what_is_left_to_pay(self):
+        invoice = self.invoice(self.ann, '30.00', paid='10.00')
+        html = self.client.get(self.url('invoice_detail', pk=invoice.pk)).content.decode()
+        self.assertRegex(html, r'name="amount"[^>]*value="20\.00"')
 
     def test_member_page_shows_unused_credit(self):
         self.invoice(self.ann, '40.00', paid='52.50')

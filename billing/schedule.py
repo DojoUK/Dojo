@@ -5,6 +5,9 @@ send_due_reminders() regularly; both are safe to run any number of times.
 
 A run made in "let me check first" mode is held: its invoices aren't shown to
 members, emailed, charged or chased until an admin sends them (release()).
+A held run takes members' overpayment credit only when it's sent, so
+cancelling it leaves their credit where it was, and any amounts changed
+while checking are credited as finally sent.
 """
 import calendar
 import logging
@@ -150,7 +153,8 @@ def create_run(schedule, period, invoice_date, term=None, year=None, month=None)
                 discount_amount=calc['discount'], period=period,
                 due_date=invoice_date + timedelta(days=schedule.due_after_days), run=run,
             )
-            apply_member_credit(invoice)
+            if not review:
+                apply_member_credit(invoice)
             count += 1
             total += Decimal(str(invoice.amount))
         run.invoice_count, run.total = count, total
@@ -165,12 +169,17 @@ def create_run(schedule, period, invoice_date, term=None, year=None, month=None)
 def release(run):
     """Send a held run: queue automatic payments and email every invoice."""
     from . import autopay
+    from .credit import apply_member_credit
     from .models import InvoiceRun
     if run.status != HELD:
         return 0
-    run.status = InvoiceRun.Status.SENT
-    run.released_at = timezone.now()
-    run.save(update_fields=['status', 'released_at'])
+    with transaction.atomic():
+        for invoice in run.invoices.filter(status='unpaid'):
+            apply_member_credit(invoice)
+        run.status = InvoiceRun.Status.SENT
+        run.released_at = timezone.now()
+        run.total = sum((Decimal(str(amount)) for amount in run.invoices.values_list('amount', flat=True)), Decimal(0))
+        run.save(update_fields=['status', 'released_at', 'total'])
     for invoice in run.invoices.filter(status='unpaid'):
         autopay.mark_due(invoice)
     return email_invoices(run)
