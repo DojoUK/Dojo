@@ -1,3 +1,4 @@
+import re
 from datetime import date
 
 from django.contrib.auth.models import User
@@ -49,12 +50,13 @@ class SignOffTests(TestCase):
     def setUp(self):
         self.client.force_login(self.admin)
 
-    def toggle(self, technique, member=None, **headers):
+    def toggle(self, technique, member=None, syllabus=None, **headers):
         member = member or self.member
         return self.client.post(
             reverse('member_technique_toggle', kwargs={
                 'org_slug': self.org.slug, 'pk': member.pk, 'technique_pk': technique.pk,
             }),
+            {'syllabus': (syllabus or self.kyu_syllabus).pk},
             headers=headers,
         )
 
@@ -71,11 +73,40 @@ class SignOffTests(TestCase):
 
     def test_htmx_returns_just_the_row(self):
         response = self.toggle(self.o_goshi, **{'HX-Request': 'true'})
-        self.assertContains(response, 'id="technique-%d"' % self.o_goshi.pk)
+        self.assertContains(response, f'id="technique-{self.kyu_syllabus.pk}-{self.o_goshi.pk}">')
         self.assertContains(response, 'bi-check-square-fill')
         self.assertContains(response, 'by Ada Admin')
         self.assertContains(response, f'id="signoff-count-{self.kyu_syllabus.pk}" hx-swap-oob="true">1 of 3 signed off')
         self.assertNotContains(response, '<html')
+
+    def test_a_technique_in_two_syllabuses_is_ticked_in_both(self):
+        response = self.toggle(self.ukemi, syllabus=self.mon_syllabus, **{'HX-Request': 'true'})
+        html = response.content.decode()
+        # The ticked row is swapped in place, the other syllabus's copy out of band.
+        self.assertIn(f'id="technique-{self.mon_syllabus.pk}-{self.ukemi.pk}">', html)
+        self.assertIn(f'id="technique-{self.kyu_syllabus.pk}-{self.ukemi.pk}" hx-swap-oob="true">', html)
+        self.assertEqual(html.count('bi-check-square-fill'), 2)
+        self.assertContains(response, f'id="signoff-count-{self.kyu_syllabus.pk}" hx-swap-oob="true">1 of 3 signed off')
+        self.assertContains(response, f'id="signoff-count-{self.mon_syllabus.pk}" hx-swap-oob="true">1 of 1 signed off')
+
+    def test_member_page_ids_are_unique(self):
+        response = self.client.get(reverse('member_detail', kwargs={'org_slug': self.org.slug, 'pk': self.member.pk}))
+        ids = re.findall(r'id="(technique-[\d-]+)"', response.content.decode())
+        self.assertEqual(len(ids), 4)
+        self.assertEqual(len(ids), len(set(ids)))
+
+    def test_out_of_date_page_is_reloaded(self):
+        other = Syllabus.objects.create(organisation=self.org, name='Not theirs')
+        response = self.toggle(self.o_goshi, syllabus=other, **{'HX-Request': 'true'})
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response['HX-Refresh'], 'true')
+
+    def test_signed_out_visitors_are_sent_to_log_in(self):
+        self.client.logout()
+        response = self.toggle(self.o_goshi)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse('login'), response['Location'])
+        self.assertFalse(MemberTechnique.objects.exists())
 
     def test_member_page_counts_sign_offs(self):
         self.toggle(self.ukemi)
