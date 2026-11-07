@@ -100,6 +100,17 @@ class ExpensePageTests(ExpenseTestBase):
         self.rent.refresh_from_db()
         self.assertEqual(self.rent.description, 'Hall rent')
 
+    def test_signed_out_visitors_are_sent_to_log_in(self):
+        self.client.logout()
+        for name, kwargs in (('expense_list', {}), ('expense_add', {}), ('expense_edit', {'pk': self.rent.pk}),
+                             ('expense_delete', {'pk': self.rent.pk})):
+            response = self.client.post(self.url(name, **kwargs), {'description': 'Hacked', 'amount': '1'})
+            self.assertEqual(response.status_code, 302, name)
+            self.assertIn(reverse('login'), response['Location'], name)
+        self.rent.refresh_from_db()
+        self.assertEqual(self.rent.description, 'Hall rent')
+        self.assertEqual(Expense.objects.count(), 1)
+
     def test_off_without_billing(self):
         self.org.features = {**ALL_ON, 'billing': False}
         self.org.save(update_fields=['features'])
