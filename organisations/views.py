@@ -1146,7 +1146,7 @@ class FinancialReportView(CapabilityMixin, View):
             for r in expenses.annotate(month=TruncMonth('expense_date')).values('month').annotate(total=Sum('amount'))
         }
         expense_chart_data = [expense_map.get(m, 0) for m in months]
-        profit_chart_data = [round(revenue - spent, 2) for revenue, spent in zip(chart_data, expense_chart_data)]
+        profit_chart_data = [round(revenue - spent, 2) for revenue, spent in zip(chart_data, expense_chart_data, strict=True)]
 
         total_expenses_ytd = expenses.filter(expense_date__year=today.year).aggregate(t=Sum('amount'))['t'] or Decimal('0')
         revenue_this_month = Payment.objects.filter(
