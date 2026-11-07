@@ -14,6 +14,9 @@
         td { border-bottom: 1px solid #ddd; padding: 8px; }
         .tick-box { width: 22px; height: 22px; border: 1.5px solid #333; display: inline-block; }
         .present { background: #000; }
+        .note { color: #999; font-size: 11px; }
+        .flag { display: inline-block; border: 1px solid #999; border-radius: 3px; padding: 0 4px; margin-left: 4px; font-size: 10px; color: #333; }
+        .contacts { font-size: 11px; color: #333; }
         .no-print { margin-bottom: 16px; }
         @media print {
             .no-print { display: none !important; }
@@ -40,6 +43,7 @@
             <tr>
                 <th style="width:40px;">#</th>
                 <th>Name</th>
+                <th>Emergency contact</th>
                 <th style="width:60px; text-align:center;">Present</th>
                 <th style="width:120px;">Signature</th>
             </tr>
@@ -48,14 +52,19 @@
             {% for cm in enrolled %}
             <tr>
                 <td style="color:#999;">{{ forloop.counter }}</td>
-                <td>{{ cm.member.name }}</td>
+                <td>
+                    {{ cm.member.name }}
+                    {% if cm.is_former_member %}<span class="note">(no longer enrolled)</span>{% endif %}
+                    {% for flag in cm.member.register_flags %}<span class="flag">{{ flag }}</span>{% endfor %}
+                </td>
+                <td class="contacts">{% include 'classes/_print_contacts.html' with contacts=cm.member.contacts %}</td>
                 <td style="text-align:center;">
                     <span class="tick-box {% if cm.member.pk in present_ids %}present{% endif %}"></span>
                 </td>
                 <td></td>
             </tr>
             {% empty %}
-            <tr><td colspan="4" style="color:#999; padding:12px 8px;">No members enrolled.</td></tr>
+            <tr><td colspan="5" style="color:#999; padding:12px 8px;">No members enrolled.</td></tr>
             {% endfor %}
         </tbody>
     </table>
@@ -67,6 +76,7 @@
             <thead>
                 <tr>
                     <th>Name</th>
+                    <th>Emergency contact</th>
                     <th style="width:60px; text-align:center;">Present</th>
                     <th style="width:120px;">Signature</th>
                 </tr>
@@ -75,6 +85,7 @@
                 {% for cc in coaches %}
                 <tr>
                     <td>{{ cc.user.get_full_name|default:cc.user.username }}</td>
+                    <td class="contacts">{% include 'classes/_print_contacts.html' with contacts=cc.contacts %}</td>
                     <td style="text-align:center;">
                         <span class="tick-box {% if cc.user.pk in present_coach_ids %}present{% endif %}"></span>
                     </td>
@@ -87,7 +98,7 @@
     {% endif %}
 
     <div style="margin-top:32px; color:#555; font-size:11px;">
-        {{ enrolled|length }} enrolled &mdash; printed {{ today|date:"d M Y" }}
+        {{ enrolled_count }} enrolled &mdash; printed {{ today|date:"d M Y" }}
     </div>
 </body>
 </html>

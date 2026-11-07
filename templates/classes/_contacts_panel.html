@@ -1,0 +1,13 @@
+{# The emergency contacts opened by _contacts_button.html. Needs `contacts` and the same `prefix` and `pk`. #}
+{% if contacts %}
+<div class="collapse mt-2" id="{{ prefix }}{{ pk }}" onclick="event.stopPropagation()">
+    <div class="p-2 rounded small" style="background:#e0f2fe;border:1px solid #bae6fd;color:#075985;">
+        {% for name, phone in contacts %}
+        <div>
+            <i class="bi bi-telephone-fill me-1"></i>{{ name|default:"Emergency contact" }}{% if phone %}:
+            <a href="tel:{{ phone }}" class="text-reset fw-semibold">{{ phone }}</a>{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}

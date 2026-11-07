@@ -38,6 +38,14 @@
                         <label class="form-label fw-semibold small">Options <span class="text-muted fw-normal">(one per line)</span></label>
                         <textarea name="options" class="form-control form-control-sm" rows="3" placeholder="Option 1&#10;Option 2"></textarea>
                     </div>
+                    <div class="col-12" id="registers-row" style="display:none;">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="show_on_registers" id="show-on-registers">
+                            <label class="form-check-label small" for="show-on-registers">
+                                Show on registers: members ticked "yes" get a badge with this name on class pages and registers, e.g. "Photo consent"
+                            </label>
+                        </div>
+                    </div>
                     <div class="col-12">
                         <button type="submit" class="btn btn-dark">Add field</button>
                     </div>
@@ -57,6 +65,7 @@
                     <th class="ps-3 small fw-semibold">Field name</th>
                     <th class="small fw-semibold">Type</th>
                     <th class="small fw-semibold">Options</th>
+                    <th class="small fw-semibold">On registers</th>
                     <th></th>
                 </tr>
             </thead>
@@ -67,6 +76,24 @@
                     <td class="small text-muted">{{ field.get_field_type_display }}</td>
                     <td class="small text-muted">
                         {% if field.options %}{{ field.options|join:", "|truncatechars:60 }}{% else %}—{% endif %}
+                    </td>
+                    <td class="small">
+                        {% if field.field_type == 'boolean' %}
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="show_on_registers">
+                            <input type="hidden" name="field_pk" value="{{ field.pk }}">
+                            <input type="hidden" name="value" value="{% if field.show_on_registers %}0{% else %}1{% endif %}">
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" role="switch" id="reg-{{ field.pk }}"
+                                       {% if field.show_on_registers %}checked{% endif %} onchange="this.form.submit()"
+                                       aria-label="Show {{ field.name }} on registers">
+                            </div>
+                            <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">{% if field.show_on_registers %}Hide{% else %}Show{% endif %}</button></noscript>
+                        </form>
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
                     </td>
                     <td class="text-end pe-3">
                         <form method="post" class="d-inline">
@@ -98,8 +125,10 @@
 <script>
 const sel = document.getElementById('field-type-select');
 const optRow = document.getElementById('options-row');
+const regRow = document.getElementById('registers-row');
 sel.addEventListener('change', () => {
     optRow.style.display = sel.value === 'select' ? '' : 'none';
+    regRow.style.display = sel.value === 'boolean' ? '' : 'none';
 });
 </script>
 {% endblock %}

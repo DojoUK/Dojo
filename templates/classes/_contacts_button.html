@@ -1,0 +1,12 @@
+{# Phone button that opens a person's emergency contacts. Needs `contacts` and a unique `prefix` and `pk` for its id. #}
+{% if contacts %}
+<button type="button"
+        class="badge bg-info text-dark border-0 d-flex align-items-center gap-1"
+        style="font-size:0.65rem;cursor:pointer;"
+        data-bs-toggle="collapse"
+        data-bs-target="#{{ prefix }}{{ pk }}"
+        aria-label="Show emergency contacts"
+        onclick="event.stopPropagation()">
+    <i class="bi bi-telephone-fill"></i> Emergency contact
+</button>
+{% endif %}

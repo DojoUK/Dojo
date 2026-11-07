@@ -95,6 +95,11 @@ class CustomField(models.Model):
     field_type = models.CharField(max_length=20, choices=FieldType.choices)
     options = models.JSONField(default=list, blank=True)
     order = models.PositiveIntegerField(default=0)
+    show_on_registers = models.BooleanField(
+        default=False,
+        help_text='Yes/no fields only: members ticked "yes" get a badge with the field name on class '
+                  'pages and registers, e.g. "Photo consent".',
+    )
 
     def __str__(self):
         return f"{self.organisation} — {self.name}"

@@ -30,6 +30,25 @@ def current_progressions(system, member_ids, before_grading=None):
     return latest
 
 
+def attach_current_grades(members):
+    """
+    Set `.current_grades` on each member: their latest grade in each
+    progression system, in system order. Returns the members.
+    """
+    members = list(members)
+    latest = {}
+    for progression in (
+        MemberProgression.objects.filter(member_id__in=[m.pk for m in members])
+        .select_related('stage__system')
+        .order_by('member_id', '-achieved_date', '-pk')
+    ):
+        latest.setdefault((progression.member_id, progression.stage.system_id), progression)
+    for member in members:
+        grades = [p for (member_id, _), p in latest.items() if member_id == member.pk]
+        member.current_grades = sorted(grades, key=lambda p: (p.stage.system.order, p.stage.system.name))
+    return members
+
+
 def default_target(system, current):
     """The grade a candidate goes for: the one after their current grade, or the system's first."""
     if current is None:

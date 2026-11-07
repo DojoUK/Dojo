@@ -10,6 +10,9 @@ from dojo.mixins import ClassCoachMixin, OrgAdminMixin, OrgMixin
 from members.models import Member
 
 from .models import Attendance, Class, ClassCoach, ClassMember, Session, SessionCoach, WaitingList
+from .register import (
+    attach_member_contacts, attach_register_flags, attach_staff_contacts, with_former_members,
+)
 from mailer import blocks as email_blocks
 from mailer import compose
 
@@ -172,10 +175,11 @@ class ClassDetailView(OrgAdminMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         enrolled_ids = list(self.object.enrolments.values_list('member_id', flat=True))
-        context['enrolled'] = (
-            Member.objects.filter(pk__in=enrolled_ids)
-            .order_by('name')
-        )
+        enrolled = attach_register_flags(self.org, list(Member.objects.filter(pk__in=enrolled_ids).order_by('name')))
+        if self.org.has_feature('grades'):
+            from progression.gradings import attach_current_grades
+            attach_current_grades(enrolled)
+        context['enrolled'] = enrolled
         context['available'] = (
             Member.objects.filter(organisation=self.org, is_active=True)
             .exclude(pk__in=enrolled_ids)
@@ -310,13 +314,28 @@ class AttendanceRegisterView(ClassCoachMixin, View):
         )
         return set(member_ids) - signed_ids
 
+    def _enrolled(self, session):
+        """Register rows: the class's members plus anyone marked for this session who has since left."""
+        enrolled = (
+            ClassMember.objects.filter(assigned_class=self.assigned_class)
+            .select_related('member')
+            .order_by('member__name')
+        )
+        enrolled = with_former_members(self.assigned_class, session, enrolled)
+        members = [cm.member for cm in enrolled]
+        attach_register_flags(self.org, members)
+        attach_member_contacts(self.org, members)
+        return enrolled
+
     def _render(self, request, session, enrolled, present_ids, coaches, present_coach_ids, notes, coaches_on_holiday=None):
+        coaches = attach_staff_contacts(self.org, coaches)
         return render(request, 'classes/register.html', {
             'org': self.org,
             'org_membership': self.org_membership,
             'cls': self.assigned_class,
             'session': session,
             'enrolled': enrolled,
+            'enrolled_count': sum(not cm.is_former_member for cm in enrolled),
             'present_ids': present_ids,
             'coaches': coaches,
             'present_coach_ids': present_coach_ids,
@@ -327,11 +346,7 @@ class AttendanceRegisterView(ClassCoachMixin, View):
 
     def get(self, request, org_slug, pk, session_pk):
         session = self._get_session(session_pk)
-        enrolled = (
-            ClassMember.objects.filter(assigned_class=self.assigned_class)
-            .select_related('member')
-            .order_by('member__name')
-        )
+        enrolled = self._enrolled(session)
         present_ids = set(
             Attendance.objects.filter(session=session, present=True)
             .values_list('member_id', flat=True)
@@ -345,7 +360,7 @@ class AttendanceRegisterView(ClassCoachMixin, View):
 
     def post(self, request, org_slug, pk, session_pk):
         session = self._get_session(session_pk)
-        enrolled = ClassMember.objects.filter(assigned_class=self.assigned_class).select_related('member')
+        enrolled = self._enrolled(session)
         present_ids = {int(x) for x in request.POST.getlist('present')}
         coaches, coaches_on_holiday = _coaches_and_holiday_split(self.assigned_class, session.date)
         coach_present_ids = {int(x) for x in request.POST.getlist('coach_present')}
@@ -401,11 +416,15 @@ class CoachClassDetailView(ClassCoachMixin, View):
         from datetime import date
         upcoming = cls.sessions.filter(date__gte=date.today()).order_by('date')[:10]
         recent = cls.sessions.filter(date__lt=date.today()).order_by('-date')[:5]
-        enrolled = (
+        enrolled = list(
             ClassMember.objects.filter(assigned_class=cls)
             .select_related('member')
             .order_by('member__name')
         )
+        members = attach_register_flags(self.org, [cm.member for cm in enrolled])
+        if self.org.has_feature('grades'):
+            from progression.gradings import attach_current_grades
+            attach_current_grades(members)
         return render(request, 'classes/coach_detail.html', {
             'org': self.org,
             'org_membership': self.org_membership,
@@ -440,13 +459,18 @@ class RemoveCoachView(OrgAdminMixin, View):
 class PrintRegisterView(ClassCoachMixin, View):
     def get(self, request, org_slug, pk, session_pk):
         session = get_object_or_404(Session, pk=session_pk, assigned_class=self.assigned_class)
-        enrolled = ClassMember.objects.filter(
-            assigned_class=self.assigned_class
-        ).select_related('member').order_by('member__name')
+        enrolled = with_former_members(
+            self.assigned_class, session,
+            ClassMember.objects.filter(assigned_class=self.assigned_class).select_related('member').order_by('member__name'),
+        )
+        members = [cm.member for cm in enrolled]
+        attach_register_flags(self.org, members)
+        attach_member_contacts(self.org, members)
         present_ids = set(
             session.attendance.filter(present=True).values_list('member_id', flat=True)
         )
         coaches, _ = _coaches_and_holiday_split(self.assigned_class, session.date)
+        coaches = attach_staff_contacts(self.org, coaches)
         present_coach_ids = set(
             session.session_coaches.filter(present=True).values_list('coach_id', flat=True)
         )
@@ -455,6 +479,7 @@ class PrintRegisterView(ClassCoachMixin, View):
             'cls': self.assigned_class,
             'session': session,
             'enrolled': enrolled,
+            'enrolled_count': sum(not cm.is_former_member for cm in enrolled),
             'present_ids': present_ids,
             'coaches': coaches,
             'present_coach_ids': present_coach_ids,

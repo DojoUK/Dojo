@@ -1,0 +1,1 @@
+{% for name, phone in contacts %}<div>{{ name|default:"Contact" }}{% if phone %}: {{ phone }}{% endif %}</div>{% empty %}<span style="color:#bbb;">—</span>{% endfor %}
