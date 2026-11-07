@@ -359,6 +359,17 @@
         {% endif %}
     </ul>
 
+    {% can 'view_stock' as can_view_stock %}
+    {% if 'inventory' in org.enabled_features and can_view_stock %}
+    <ul class="sidebar-nav">
+        <li>
+            <a href="{% url 'inventory_list' org_slug=org.slug %}" class="{% if 'inventory' in url_name %}active{% endif %}">
+                <i class="bi bi-box-seam"></i> Stock
+            </a>
+        </li>
+    </ul>
+    {% endif %}
+
     {% can 'manage_gradings' as can_manage_gradings %}
     {% if 'gradings' in org.enabled_features and can_manage_gradings %}
     <ul class="sidebar-nav">

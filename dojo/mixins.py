@@ -147,3 +147,19 @@ class ClassCoachMixin(OrgMixin):
         context = super().get_context_data(**kwargs)
         context['assigned_class'] = self.assigned_class
         return context
+
+
+class ClassCapabilityMixin(ClassCoachMixin):
+    """
+    A class action open to Org Admins, and to coaches of that class who hold
+    at least one of `required_capabilities`.
+    """
+    required_capabilities = ()
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return super().dispatch(request, *args, **kwargs)
+        _resolve_org_membership(self, request, kwargs)
+        if not any(self.can(c) for c in self.required_capabilities):
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)

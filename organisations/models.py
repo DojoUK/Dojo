@@ -183,12 +183,22 @@ class OrganisationMember(models.Model):
          'Send announcements to the whole club or any class, not just their own classes.'),
         ('manage_gradings', 'Manage gradings',
          'Run gradings: add candidates and record results, which updates members\' grades.'),
+        ('generate_sessions', 'Generate sessions',
+         'Generate upcoming sessions from the schedule of the classes they coach.'),
+        ('manage_class_members', 'Enrol members',
+         'Enrol members in the classes they coach and add other staff as coaches, from the class '
+         'page or straight from the register.'),
+        ('view_stock', 'View stock',
+         'See the stock list and how many of each item are left, without changing it.'),
     )
     can_manage_billing = models.BooleanField(default=False)
     can_take_payments = models.BooleanField(default=False)
     can_view_all_attendance = models.BooleanField(default=False)
     can_message_all_members = models.BooleanField(default=False)
     can_manage_gradings = models.BooleanField(default=False)
+    can_generate_sessions = models.BooleanField(default=False)
+    can_manage_class_members = models.BooleanField(default=False)
+    can_view_stock = models.BooleanField(default=False)
 
     @property
     def is_org_admin(self):
