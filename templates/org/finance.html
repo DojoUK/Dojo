@@ -20,13 +20,13 @@
 <div class="row g-3 mb-4">
     <div class="col-sm-4">
         <div class="card border-0 shadow-sm text-center py-3">
-            <div class="display-6 fw-bold text-success">£{{ total_revenue_ytd|floatformat:2 }}</div>
+            <div class="display-6 fw-bold text-success">{{ total_revenue_ytd|pounds }}</div>
             <div class="small text-muted mt-1">Revenue {{ today.year }}</div>
         </div>
     </div>
     <div class="col-sm-4">
         <div class="card border-0 shadow-sm text-center py-3">
-            <div class="display-6 fw-bold text-danger">£{{ total_expenses_ytd|floatformat:2 }}</div>
+            <div class="display-6 fw-bold text-danger">{{ total_expenses_ytd|pounds }}</div>
             <div class="small text-muted mt-1">Expenses {{ today.year }}</div>
         </div>
     </div>
@@ -39,7 +39,7 @@
     <div class="col-sm-6">
         <div class="card border-0 shadow-sm text-center py-3">
             <div class="display-6 fw-bold {% if total_outstanding %}text-warning{% else %}text-success{% endif %}">
-                £{{ total_outstanding|floatformat:2 }}
+                {{ total_outstanding|pounds }}
             </div>
             <div class="small text-muted mt-1">Outstanding</div>
         </div>
@@ -99,7 +99,7 @@
                         <span class="fw-semibold small">{{ row.member__name }}</span>
                         {% endif %}
                     </td>
-                    <td class="py-2 text-end pe-3 small fw-semibold">£{{ row.total|floatformat:2 }}</td>
+                    <td class="py-2 text-end pe-3 small fw-semibold">{{ row.total|pounds }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -120,8 +120,10 @@
 
 {% block extra_scripts %}
 <script>
-const pounds = { callbacks: { label: ctx => ctx.dataset.label + ': £' + ctx.parsed.y.toFixed(2) } };
-const poundAxis = { ticks: { callback: val => '£' + val } };
+// Same format as the cards: £1,250.50 and -£340.00.
+const gbp = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' });
+const pounds = { callbacks: { label: ctx => ctx.dataset.label + ': ' + gbp.format(ctx.parsed.y) } };
+const poundAxis = { ticks: { callback: val => gbp.format(val).replace(/\.00$/, '') } };
 const dashed = [6, 4];
 new Chart(document.getElementById('forecastChart'), {
     type: 'line',

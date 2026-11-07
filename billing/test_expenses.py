@@ -100,6 +100,17 @@ class ExpensePageTests(ExpenseTestBase):
         self.rent.refresh_from_db()
         self.assertEqual(self.rent.description, 'Hall rent')
 
+    def test_signed_out_visitors_are_sent_to_log_in(self):
+        self.client.logout()
+        for name, kwargs in (('expense_list', {}), ('expense_add', {}), ('expense_edit', {'pk': self.rent.pk}),
+                             ('expense_delete', {'pk': self.rent.pk})):
+            response = self.client.post(self.url(name, **kwargs), {'description': 'Hacked', 'amount': '1'})
+            self.assertEqual(response.status_code, 302, name)
+            self.assertIn(reverse('login'), response['Location'], name)
+        self.rent.refresh_from_db()
+        self.assertEqual(self.rent.description, 'Hall rent')
+        self.assertEqual(Expense.objects.count(), 1)
+
     def test_off_without_billing(self):
         self.org.features = {**ALL_ON, 'billing': False}
         self.org.save(update_fields=['features'])
@@ -127,6 +138,13 @@ class FinanceProfitTests(ExpenseTestBase):
         forecast = json.loads(response.context['expense_forecast_series'])
         self.assertEqual(forecast[:11], [None] * 11)
         self.assertEqual(forecast[11], 350.0)  # joins the actual line at this month
+
+    def test_cards_use_one_money_format(self):
+        Expense.objects.create(organisation=self.org, description='Mats', amount=Decimal('2000'), expense_date=date.today())
+        response = self.client.get(self.url('org_finance'))
+        self.assertContains(response, '£2,350.00')    # expenses this year: 350 + 2,000
+        self.assertContains(response, '-£2,350.00')   # no revenue, so a loss
+        self.assertNotContains(response, '£-')
 
     def test_another_clubs_expenses_are_not_counted(self):
         Expense.objects.create(organisation=self.other_org, description='Theirs', amount=Decimal('999'),

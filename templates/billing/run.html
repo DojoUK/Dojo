@@ -14,7 +14,7 @@
         <div>
             <div class="h5 mb-0">{{ run.invoice_count }} invoice{{ run.invoice_count|pluralize }} · £{{ run.total|floatformat:2 }}</div>
             <div class="small text-muted">
-                {% if run.status == 'awaiting_review' %}Not sent yet: members can't see these. Change any you need to below, then send.
+                {% if run.status == 'awaiting_review' %}Not sent yet: members can't see these. Change any you need to below, then send. Any overpayment credit a member has is taken off when you send.
                 {% elif run.status == 'sent' %}Sent {{ run.released_at|date:"j M Y, H:i" }}.
                 {% else %}Cancelled: the invoices were deleted and nothing was sent.{% endif %}
             </div>

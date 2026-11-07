@@ -245,7 +245,10 @@ class PortalDocumentUploadView(View):
 
     def post(self, request, token):
         import os
+        import secrets
+
         from django.contrib import messages
+
         from documents.models import Document
 
         member = _portal_member(token, 'documents')
@@ -254,7 +257,8 @@ class PortalDocumentUploadView(View):
         if not f:
             messages.error(request, 'Choose a file to upload.')
             return back
-        if os.path.splitext(f.name)[1].lower() not in PORTAL_UPLOAD_EXTENSIONS:
+        ext = os.path.splitext(f.name)[1].lower()
+        if ext not in PORTAL_UPLOAD_EXTENSIONS:
             messages.error(request, 'Upload a PDF, photo (JPG, PNG or HEIC) or Word document.')
             return back
         if f.size > PORTAL_UPLOAD_MAX_BYTES:
@@ -267,6 +271,9 @@ class PortalDocumentUploadView(View):
         if category not in Document.Category.values:
             category = Document.Category.OTHER
         name = (request.POST.get('name', '').strip() or f.name)[:255]
+        # Stored under a random name: the member's own file name (often theirs or
+        # their child's) stays only in the document's name, never in a path.
+        f.name = f'{secrets.token_urlsafe(16)}{ext}'
         Document.objects.create(member=member, name=name, category=category, file=f, uploaded_by_member=True)
         messages.success(request, f'"{name}" uploaded. The club can see it now.')
         return back
@@ -282,6 +289,6 @@ class PortalDocumentDownloadView(View):
         member = _portal_member(token, 'documents')
         doc = get_object_or_404(Document, pk=pk, member=member)
         try:
-            return FileResponse(doc.file.open('rb'), as_attachment=True, filename=doc.name)
+            return FileResponse(doc.file.open('rb'), as_attachment=True, filename=doc.download_name)
         except FileNotFoundError:
-            raise Http404
+            raise Http404 from None

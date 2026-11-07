@@ -4,9 +4,9 @@ JSON signup API, for a club's own website to take membership applications.
     GET  /api/join/<org>/   club name, active waivers and collected fields, to build the form
     POST /api/join/<org>/   create a MemberApplication (JSON or form-encoded)
 
-Cross-origin access is limited to SIGNUP_API_ORIGINS: a request carrying
-any other Origin is refused, so another site can't post applications from a
-visitor's browser. The endpoint is CSRF-exempt because it uses no cookies
+Cross-origin access is limited to SIGNUP_API_ORIGINS (see origin_allowed):
+a request carrying any other Origin is refused, so another site can't post
+applications from a visitor's browser. The endpoint is CSRF-exempt because it uses no cookies
 or session; it can do only what the public /join/ page does. A honeypot
 field and a per-IP rate limit keep bots out.
 """
@@ -24,6 +24,7 @@ from .signup import (
     client_ip,
     collected_fields,
     create_application,
+    origin_allowed,
     signup_org,
 )
 
@@ -58,7 +59,7 @@ def _rate_limited(org, request):
 class SignupApiView(View):
     def dispatch(self, request, *args, **kwargs):
         origin = request.headers.get('Origin')
-        if origin and origin.rstrip('/') not in settings.SIGNUP_API_ORIGINS:
+        if origin and not origin_allowed(origin, kwargs.get('org_slug', '')):
             return JsonResponse({'errors': ['Origin not allowed.']}, status=403)
         return _cors(super().dispatch(request, *args, **kwargs), origin)
 
