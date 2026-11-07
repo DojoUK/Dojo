@@ -51,7 +51,7 @@ class DocumentDownloadView(OrgAdminMixin, View):
         member = get_object_or_404(Member, pk=member_pk, organisation=self.org)
         doc = get_object_or_404(Document, pk=pk, member=member)
         try:
-            return FileResponse(doc.file.open('rb'), as_attachment=True, filename=doc.name)
+            return FileResponse(doc.file.open('rb'), as_attachment=True, filename=doc.download_name)
         except FileNotFoundError:
             raise Http404
 

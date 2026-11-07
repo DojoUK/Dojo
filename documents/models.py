@@ -19,10 +19,21 @@ class Document(models.Model):
     file = models.FileField(upload_to='documents/%Y/%m/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
     uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    uploaded_by_member = models.BooleanField(
+        default=False,
+        help_text='Uploaded by the member themselves via the member portal, rather than by staff.',
+    )
     notes = models.TextField(blank=True)
 
     def __str__(self):
         return f"{self.member} — {self.name}"
+
+    @property
+    def download_name(self):
+        """The name to save a download as: the document's name plus its file's extension."""
+        import os
+        ext = os.path.splitext(self.file.name)[1].lower()
+        return self.name if not ext or self.name.lower().endswith(ext) else f'{self.name}{ext}'
 
     class Meta:
         ordering = ['-uploaded_at']

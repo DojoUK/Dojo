@@ -761,7 +761,10 @@
                             <tbody>
                                 {% for doc in member.documents.all %}
                                 <tr>
-                                    <td class="ps-3 py-2 small fw-semibold">{{ doc.name }}</td>
+                                    <td class="ps-3 py-2 small fw-semibold">
+                                        {{ doc.name }}
+                                        {% if doc.uploaded_by_member %}<span class="badge bg-secondary-subtle text-secondary ms-1" style="font-size:0.65rem;">From member</span>{% endif %}
+                                    </td>
                                     <td class="py-2 small text-muted">{{ doc.get_category_display }}</td>
                                     <td class="py-2 small text-muted">{{ doc.uploaded_at|date:"d M Y" }}</td>
                                     <td class="py-2 text-end pe-3">
