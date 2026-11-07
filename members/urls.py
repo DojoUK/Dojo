@@ -13,6 +13,7 @@ urlpatterns = [
     path('<int:pk>/regenerate-portal-token/', views.RegeneratePortalTokenView.as_view(), name='member_regenerate_portal_token'),
     path('<int:pk>/promote/', views.RecordPromotionView.as_view(), name='member_promote'),
     path('<int:pk>/progression/<int:prog_pk>/delete/', views.DeleteProgressionView.as_view(), name='member_progression_delete'),
+    path('<int:pk>/techniques/<int:technique_pk>/toggle/', views.ToggleTechniqueView.as_view(), name='member_technique_toggle'),
     path('import/', views.MemberImportView.as_view(), name='member_import'),
     path('export/', views.MemberExportView.as_view(), name='member_export'),
     path('<int:pk>/notes/add/', views.AddMemberNoteView.as_view(), name='member_note_add'),

@@ -1,0 +1,20 @@
+{# One syllabus technique on a member's page, with its sign-off tick. Needs `member`, `syllabus`, `technique`, `signed_off` and `notes`; `oob` swaps it in alongside another row. #}
+<li class="small py-1 border-bottom d-flex align-items-start gap-2" id="technique-{{ syllabus.pk }}-{{ technique.pk }}"{% if oob %} hx-swap-oob="true"{% endif %}>
+    <form method="post" action="{% url 'member_technique_toggle' org_slug=org.slug pk=member.pk technique_pk=technique.pk %}"
+          hx-post="{% url 'member_technique_toggle' org_slug=org.slug pk=member.pk technique_pk=technique.pk %}"
+          hx-target="#technique-{{ syllabus.pk }}-{{ technique.pk }}" hx-swap="outerHTML" class="m-0">
+        {% csrf_token %}
+        <input type="hidden" name="syllabus" value="{{ syllabus.pk }}">
+        <button type="submit" class="btn btn-link p-0 border-0 lh-1 {% if signed_off %}text-success{% else %}text-muted{% endif %}"
+                aria-pressed="{% if signed_off %}true{% else %}false{% endif %}"
+                aria-label="{% if signed_off %}Undo sign-off for{% else %}Sign off{% endif %} {{ technique.name }}"
+                {% if signed_off %}title="Signed off {{ signed_off.signed_off_at|date:'d M Y' }}{% if signed_off.signed_off_by %} by {{ signed_off.signed_off_by.get_full_name|default:signed_off.signed_off_by.username }}{% endif %}"{% endif %}>
+            <i class="bi {% if signed_off %}bi-check-square-fill{% else %}bi-square{% endif %}" style="font-size:1rem;"></i>
+        </button>
+    </form>
+    <span class="{% if signed_off %}text-body{% endif %}">
+        {{ technique.name }}
+        {% if technique.link %}<a href="{{ technique.link }}" target="_blank" rel="noopener noreferrer" class="ms-1" title="Open link"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+        {% if notes %}<span class="text-muted">— {{ notes }}</span>{% endif %}
+    </span>
+</li>

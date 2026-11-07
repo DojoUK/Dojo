@@ -1,0 +1,4 @@
+{# The ticked row, then (out of band) the same technique in the member's other syllabuses and every card's count. #}
+{% include 'members/_technique_signoff.html' with syllabus=row.0 technique=row.1.technique signed_off=row.1.signed_off notes=row.1.notes %}
+{% for syllabus, entry in other_rows %}{% include 'members/_technique_signoff.html' with technique=entry.technique signed_off=entry.signed_off notes=entry.notes oob=True %}{% endfor %}
+{% for card in cards %}{% if card.total %}{% include 'members/_signoff_count.html' with oob=True %}{% endif %}{% endfor %}

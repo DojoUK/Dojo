@@ -1,5 +1,5 @@
 from django.contrib import messages
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
@@ -395,6 +395,45 @@ class RecordPromotionView(OrgAdminMixin, View):
             notes=notes,
         )
         messages.success(request, f'{member.name} promoted to {stage.name}.')
+        return redirect_to_member(self.org.slug, member.pk, 'grades')
+
+
+class ToggleTechniqueView(OrgAdminMixin, View):
+    """Sign a syllabus technique off for a member, or undo it."""
+    required_feature = 'syllabus'
+
+    def post(self, request, org_slug, pk, technique_pk):
+        from progression.models import MemberTechnique, Technique
+        member = get_object_or_404(Member, pk=pk, organisation=self.org)
+        technique = get_object_or_404(Technique, pk=technique_pk, organisation=self.org)
+        signed_off = MemberTechnique.objects.filter(member=member, technique=technique).first()
+        if signed_off:
+            signed_off.delete()
+            signed_off = None
+        else:
+            signed_off, _ = MemberTechnique.objects.get_or_create(
+                member=member, technique=technique, defaults={'signed_off_by': request.user},
+            )
+        if request.htmx:
+            from progression.syllabus import current_syllabuses
+            cards = current_syllabuses(member)
+            # The technique can be in more than one of the member's syllabuses:
+            # the ticked row is swapped in place and the others out of band.
+            rows = [
+                (card['syllabus'], entry)
+                for card in cards for _, entries in card['groups'] for entry in entries
+                if entry.technique_id == technique.pk
+            ]
+            ticked = next((row for row in rows if str(row[0].pk) == request.POST.get('syllabus')), None)
+            if ticked is None:  # the page is out of date (grade or syllabus changed): reload it
+                response = HttpResponse(status=204)
+                response['HX-Refresh'] = 'true'
+                return response
+            return render(request, 'members/_technique_signoff_response.html', {
+                'org': self.org, 'member': member, 'row': ticked,
+                'other_rows': [row for row in rows if row is not ticked],
+                'cards': cards,  # refreshes each syllabus's "N of M" count
+            })
         return redirect_to_member(self.org.slug, member.pk, 'grades')
 
 
