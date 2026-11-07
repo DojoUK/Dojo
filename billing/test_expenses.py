@@ -139,6 +139,12 @@ class FinanceProfitTests(ExpenseTestBase):
         self.assertEqual(forecast[:11], [None] * 11)
         self.assertEqual(forecast[11], 350.0)  # joins the actual line at this month
 
+    def test_expenses_page_uses_the_same_money_format(self):
+        Expense.objects.create(organisation=self.org, description='Mats', amount=Decimal('1200.50'), expense_date=date.today())
+        response = self.client.get(self.url('expense_list'))
+        self.assertContains(response, '£1,200.50')
+        self.assertContains(response, '£1,550.50')   # this year: 350 + 1,200.50
+
     def test_cards_use_one_money_format(self):
         Expense.objects.create(organisation=self.org, description='Mats', amount=Decimal('2000'), expense_date=date.today())
         response = self.client.get(self.url('org_finance'))
