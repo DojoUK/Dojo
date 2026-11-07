@@ -108,6 +108,19 @@ class UsualLeaderTests(LeaderTestBase):
         self.client.force_login(self.outsider)
         self.assertEqual(self.set_leader(self.outsider).status_code, 403)
 
+    def test_another_clubs_admin_and_anonymous_cannot_set_it(self):
+        other_org = Organisation.objects.create(name='Other Club', slug='other-club', features=dict(ALL_ON))
+        other_admin = User.objects.create_user('other-admin', password='pw')
+        OrganisationMember.objects.create(user=other_admin, organisation=other_org, role='org_admin')
+        self.client.force_login(other_admin)
+        self.assertIn(self.set_leader(self.ann).status_code, (403, 404))
+        self.client.logout()
+        response = self.set_leader(self.ann)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse('login'), response['Location'])
+        self.cls.refresh_from_db()
+        self.assertIsNone(self.cls.default_leader)
+
     def test_clearing(self):
         self.cls.default_leader = self.ann
         self.cls.save()
