@@ -1,7 +1,9 @@
 """CSV imports for classes, registers and coach attendance (see dojo.csv_import)."""
 import re
 
-from dojo.csv_import import Importer, RowError, name_key, parse_date, parse_yes_no
+from collections import defaultdict
+
+from dojo.csv_import import Importer, MemberFinder, RowError, name_key, parse_date, parse_yes_no
 
 from .models import Attendance, Class, Session, SessionCoach
 
@@ -38,13 +40,15 @@ class ClassImporter(Importer):
     key = 'classes'
     title = 'Classes'
     intro = ('Adds classes, or updates the description, schedule and capacity of classes that already '
-             'exist with the same name.')
+             'exist with the same name. For a class that already exists, a missing column or blank cell '
+             'leaves that detail as it is.')
     columns = (
         ('name', True, 'The class name, e.g. "Juniors".'),
         ('description', False, ''),
         ('schedule', False, 'Days and times, e.g. "Tue 18:00-18:45, Thu 19:00-20:00".'),
-        ('max_capacity', False, 'Most members allowed, or blank for no limit.'),
+        ('max_capacity', False, 'Most members allowed. Blank: no limit for a new class.'),
     )
+    LABELS = {'description': 'description', 'schedule': 'schedule', 'max_capacity': 'capacity'}
     example = 'name,schedule,max_capacity\nJuniors,"Tue 18:00-18:45, Thu 18:00-18:45",30\nSeniors,Tue 19:00-20:30,'
     done_url = 'class_list'
 
@@ -69,7 +73,14 @@ class ClassImporter(Importer):
         }
         existing = self.existing.get(name_key(name))
         if existing:
-            return 'update', f'Update {existing.name}', (existing, fields)
+            # Only what the file actually gives: a missing column or blank cell isn't "clear it".
+            changes = {
+                field: value for field, value in fields.items()
+                if row.get(field) and value != getattr(existing, field)
+            }
+            if not changes:
+                return 'skip', f'{existing.name}: nothing to change', None
+            return 'update', f'Update {existing.name} ({", ".join(self.LABELS[f] for f in changes)})', (existing, changes)
         return 'create', f'Add {name}', (name, fields)
 
     def save(self, planned):
@@ -79,7 +90,7 @@ class ClassImporter(Importer):
                 cls, fields = data
                 for field, value in fields.items():
                     setattr(cls, field, value)
-                cls.save()
+                cls.save(update_fields=list(fields))
                 updated += 1
             else:
                 name, fields = data
@@ -126,6 +137,7 @@ class RegisterImporter(SessionRowsMixin, Importer):
         ('class_name', True, 'Must match a class name.'),
         ('date', True, 'e.g. 2026-03-14 or 14/03/2026.'),
         ('member_name', True, 'Must match a member\'s name. "Surname Firstname" is tried too.'),
+        ('member_email', False, 'Only needed to tell apart two members with the same name.'),
         ('present', False, 'Yes or no; blank means absent.'),
     )
     example = 'class_name,date,member_name,present\nJuniors,14/03/2026,Alice Able,yes\nJuniors,14/03/2026,Bob Best,no'
@@ -133,24 +145,11 @@ class RegisterImporter(SessionRowsMixin, Importer):
 
     def prepare(self):
         super().prepare()
-        from members.models import Member
-        self.members = {}
-        for member in Member.objects.filter(organisation=self.org).exclude(name=''):
-            self.members.setdefault(name_key(member.name), member)
-
-    def find_member(self, name):
-        member = self.members.get(name_key(name))
-        if member is None:
-            parts = name.split()
-            if len(parts) == 2:
-                member = self.members.get(name_key(f'{parts[1]} {parts[0]}'))
-        if member is None:
-            raise RowError(f'no member called "{name}"')
-        return member
+        self.members = MemberFinder(self.org)
 
     def plan_row(self, row):
         cls, day = self.class_and_date(row)
-        member = self.find_member(row.get('member_name', ''))
+        member = self.members.find(row.get('member_name', ''), row.get('member_email', ''))
         present = parse_yes_no(row.get('present'), default=False)
         mark = 'present' if present else 'absent'
         return 'create', f'{member.name}: {mark} at {cls.name} on {day:%d %b %Y}', (cls, day, member, present)
@@ -181,17 +180,21 @@ class CoachAttendanceImporter(SessionRowsMixin, Importer):
     def prepare(self):
         super().prepare()
         from organisations.models import OrganisationMember
-        self.staff = {}
+        self.staff = defaultdict(dict)
         for om in OrganisationMember.objects.filter(organisation=self.org).select_related('user'):
             for key in (om.user.get_full_name(), om.user.username):
                 if key:
-                    self.staff.setdefault(name_key(key), om.user)
+                    self.staff[name_key(key)][om.user.pk] = om.user
 
     def plan_row(self, row):
         cls, day = self.class_and_date(row)
-        coach = self.staff.get(name_key(row.get('coach_name', '')))
-        if coach is None:
-            raise RowError(f'no staff member called "{row.get("coach_name", "")}"')
+        name = row.get('coach_name', '')
+        matches = list(self.staff.get(name_key(name), {}).values())
+        if not matches:
+            raise RowError(f'no staff member called "{name}"')
+        if len(matches) > 1:
+            raise RowError(f'{len(matches)} staff members are called "{name}": use their username instead')
+        coach = matches[0]
         present = parse_yes_no(row.get('present'), default=False)
         name = coach.get_full_name() or coach.username
         mark = 'present' if present else 'absent'

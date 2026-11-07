@@ -5,6 +5,7 @@ Importer subclass; ImportView handles the page, access and the preview.
 """
 import csv
 import io
+from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 
@@ -65,7 +66,7 @@ def parse_money(raw, label='amount', allow_zero=False):
     try:
         value = Decimal(text).quantize(Decimal('0.01'))
     except InvalidOperation:
-        raise RowError(f'{label} "{raw}" isn\'t a number')
+        raise RowError(f'{label} "{raw}" isn\'t a number') from None
     if not value.is_finite() or value < 0 or (value == 0 and not allow_zero) or value >= Decimal('1000000'):
         raise RowError(f'{label} "{raw}" is out of range')
     return value
@@ -73,6 +74,36 @@ def parse_money(raw, label='amount', allow_zero=False):
 
 def name_key(name):
     return ' '.join((name or '').split()).lower()
+
+
+class MemberFinder:
+    """
+    Finds a club's member from a CSV's name (and email, when the file has
+    one). Two members with the same name are never guessed between: the row
+    is an error unless an email column says which.
+    """
+
+    def __init__(self, org):
+        from members.models import Member
+        self.by_name = defaultdict(list)
+        for member in Member.objects.filter(organisation=org).exclude(name=''):
+            self.by_name[name_key(member.name)].append(member)
+
+    def find(self, name, email=''):
+        candidates = self.by_name.get(name_key(name), [])
+        if not candidates:
+            parts = name.split()
+            if len(parts) == 2:  # "Surname Firstname"
+                candidates = self.by_name.get(name_key(f'{parts[1]} {parts[0]}'), [])
+        if not candidates:
+            raise RowError(f'no member called "{name}"')
+        if len(candidates) > 1 and email:
+            candidates = [m for m in candidates if (m.email or '').strip().lower() == email.strip().lower()]
+            if not candidates:
+                raise RowError(f'none of the members called "{name}" has the email {email}')
+        if len(candidates) > 1:
+            raise RowError(f'{len(candidates)} members are called "{name}": add a member_email column to say which')
+        return candidates[0]
 
 
 class Importer:
@@ -134,12 +165,15 @@ def read_rows(text, importer):
     if missing:
         return None, f'The CSV needs these columns: {", ".join(missing)}.'
     rows = []
-    for row in reader:
-        if not any((v or '').strip() for v in row.values() if isinstance(v, str)):
-            continue  # blank line
-        rows.append({k: (v or '').strip() if isinstance(v, str) else '' for k, v in row.items() if k})
-        if len(rows) > MAX_ROWS:
-            return None, f'That\'s more than {MAX_ROWS} rows. Split it into smaller files.'
+    try:
+        for row in reader:
+            if not any((v or '').strip() for v in row.values() if isinstance(v, str)):
+                continue  # blank line
+            rows.append({k: (v or '').strip() if isinstance(v, str) else '' for k, v in row.items() if k})
+            if len(rows) > MAX_ROWS:
+                return None, f'That\'s more than {MAX_ROWS} rows. Split it into smaller files.'
+    except csv.Error as e:  # e.g. a cell far too long, or a stray quote that never closes
+        return None, f'Line {reader.line_num} of the CSV couldn\'t be read ({e}). Check it in a spreadsheet and try again.'
     if not rows:
         return None, 'The CSV has a header row but no data.'
     return rows, None

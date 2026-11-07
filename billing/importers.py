@@ -2,7 +2,9 @@
 from datetime import datetime, time
 from datetime import timezone as dt_timezone
 
-from dojo.csv_import import Importer, RowError, name_key, parse_date, parse_money, parse_optional_date
+from decimal import Decimal
+
+from dojo.csv_import import Importer, MemberFinder, RowError, name_key, parse_date, parse_money, parse_optional_date
 
 from .models import BillingPolicy, Expense, Invoice, Payment
 
@@ -20,9 +22,11 @@ class InvoiceImporter(Importer):
     title = 'Invoices'
     intro = ('Adds past invoices, and the payment against each if it was paid. An invoice for a member and '
              'period that already exists is skipped, so importing the same file twice is safe. Imported '
-             'invoices aren\'t emailed, collected automatically or reduced by overpayment credit.')
+             'invoices aren\'t emailed, collected automatically or reduced by overpayment credit, and an '
+             'overpayment on one isn\'t carried onto later invoices.')
     columns = (
-        ('member_name', True, 'Must match a member\'s name.'),
+        ('member_name', True, 'Must match a member\'s name. "Surname Firstname" is tried too.'),
+        ('member_email', False, 'Only needed to tell apart two members with the same name.'),
         ('amount', True, 'What the invoice is for, e.g. 45.00.'),
         ('period', True, 'e.g. "January 2026" or "Autumn Term 2026".'),
         ('due_date', True, 'e.g. 2026-01-31 or 31/01/2026.'),
@@ -42,18 +46,13 @@ class InvoiceImporter(Importer):
     done_url = 'invoice_list'
 
     def prepare(self):
-        from members.models import Member
-        self.members = {}
-        for member in Member.objects.filter(organisation=self.org).exclude(name=''):
-            self.members.setdefault(name_key(member.name), member)
+        self.members = MemberFinder(self.org)
         self.policies = {name_key(p.name): p for p in BillingPolicy.objects.filter(organisation=self.org)}
         self.existing = set(Invoice.objects.filter(organisation=self.org).values_list('member_id', 'period'))
         self.seen = set()
 
     def plan_row(self, row):
-        member = self.members.get(name_key(row.get('member_name', '')))
-        if member is None:
-            raise RowError(f'no member called "{row.get("member_name", "")}"')
+        member = self.members.find(row.get('member_name', ''), row.get('member_email', ''))
         amount = parse_money(row.get('amount'), allow_zero=True)
         period = ' '.join(row.get('period', '').split())[:50]
         if not period:
@@ -70,6 +69,8 @@ class InvoiceImporter(Importer):
             raise RowError(f'status "{row["status"]}" should be unpaid or paid')
         paid_date = parse_optional_date(row.get('paid_date'), 'paid_date')
         paid_amount = None
+        if row.get('paid_amount') and not paid_date:
+            raise RowError('paid_amount needs a paid_date')
         if paid_date:
             paid_amount = parse_money(row.get('paid_amount'), 'paid_amount') if row.get('paid_amount') else amount
         method_raw = row.get('payment_method', '').lower()
@@ -99,6 +100,9 @@ class InvoiceImporter(Importer):
         for _, _, data in planned:
             invoice = Invoice(organisation=self.org, **data['invoice'])
             invoice.skip_autopay = True  # history, not a new bill to collect (see billing.signals)
+            if data['payment']:
+                # Any overpayment was settled back then: don't offer it again as credit (billing.credit).
+                invoice.overpayment_credited = max(data['payment'][0] - invoice.amount, Decimal(0))
             invoice.save()
             invoices += 1
             if data['payment']:

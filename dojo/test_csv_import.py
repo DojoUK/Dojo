@@ -8,11 +8,12 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from billing.credit import member_credit
 from billing.models import AutoPay, Expense, Invoice, Payment, PaymentSettings
 from billing.payment_forms import apply_post
 from billing.test_payments import CARD, form
 from classes.importers import parse_schedule
-from classes.models import Attendance, Class, ClassCoach, Session, SessionCoach
+from classes.models import Attendance, Class, Session, SessionCoach
 from dojo.csv_import import RowError, parse_date, parse_money, parse_yes_no
 from members.models import Member
 from organisations.features import FEATURES_BY_KEY
@@ -115,6 +116,19 @@ class ClassImportTests(ImportTestBase):
         self.do_import('classes', 'name,schedule,max_capacity\nA,Funday 10:00,\nC,,\n')
         self.assertEqual(sorted(Class.objects.filter(organisation=self.org).values_list('name', flat=True)), ['C', 'Juniors'])
 
+    def test_updates_only_what_the_file_gives(self):
+        self.juniors.description = 'Ages 8 to 12'
+        self.juniors.max_capacity = 20
+        self.juniors.save()
+        # No description or capacity column, and a blank schedule cell.
+        response = self.preview('classes', 'name,schedule\nJuniors,\n')
+        self.assertContains(response, 'Juniors: nothing to change')
+        self.do_import('classes', 'name,max_capacity\nJuniors,24\n')
+        self.juniors.refresh_from_db()
+        self.assertEqual(self.juniors.description, 'Ages 8 to 12')
+        self.assertEqual(self.juniors.schedule, [{'day': 5, 'time': '10:00'}])
+        self.assertEqual(self.juniors.max_capacity, 24)
+
     def test_missing_column(self):
         response = self.preview('classes', 'title\nX\n')
         self.assertContains(response, 'The CSV needs these columns: name.')
@@ -151,6 +165,16 @@ class RegisterImportTests(ImportTestBase):
         self.assertFalse(Attendance.objects.exists())
 
 
+    def test_two_members_with_one_name_are_never_guessed(self):
+        twin = Member.objects.create(organisation=self.org, name='Alice Able', email='twin@example.com')
+        response = self.preview('registers', 'class_name,date,member_name,present\nJuniors,2026-03-14,Alice Able,yes\n')
+        self.assertContains(response, '2 members are called &quot;Alice Able&quot;')
+        self.do_import('registers', (
+            'class_name,date,member_name,member_email,present\nJuniors,2026-03-14,Alice Able,TWIN@example.com,yes\n'
+        ))
+        self.assertEqual(Attendance.objects.get().member, twin)
+
+
 class CoachAttendanceImportTests(ImportTestBase):
     def test_matches_staff_by_name_or_username(self):
         self.do_import('coach-attendance', (
@@ -158,6 +182,14 @@ class CoachAttendanceImportTests(ImportTestBase):
         ))
         marks = dict(SessionCoach.objects.values_list('session__date', 'present'))
         self.assertEqual(marks, {date(2026, 3, 14): True, date(2026, 3, 21): False})
+
+    def test_two_staff_with_one_name_are_never_guessed(self):
+        namesake = User.objects.create_user('cora2', password='pw', first_name='Cora', last_name='Coach')
+        OrganisationMember.objects.create(user=namesake, organisation=self.org, role='coach')
+        response = self.preview('coach-attendance', 'class_name,date,coach_name\nJuniors,2026-03-14,Cora Coach\n')
+        self.assertContains(response, 'use their username instead')
+        self.do_import('coach-attendance', 'class_name,date,coach_name,present\nJuniors,2026-03-14,cora2,yes\n')
+        self.assertEqual(SessionCoach.objects.get().coach, namesake)
 
     def test_other_clubs_staff_are_not_matched(self):
         response = self.preview('coach-attendance', 'class_name,date,coach_name\nJuniors,2026-03-14,other\n')
@@ -203,6 +235,16 @@ class InvoiceImportTests(ImportTestBase):
         imported = Invoice.objects.get(member=self.bob, period='March 2026')
         self.assertEqual(imported.autopay_status, '')
         self.assertEqual(imported.amount, Decimal('30.00'))
+
+    def test_an_imported_overpayment_is_not_new_credit(self):
+        self.do_import('invoices', 'member_name,amount,period,due_date,paid_date,paid_amount\nAlice Able,30,Jan,2026-01-31,2026-01-20,45\n')
+        invoice = Invoice.objects.get(member=self.alice)
+        self.assertEqual(invoice.amount_paid, Decimal('45.00'))
+        self.assertEqual(member_credit(self.alice), Decimal('0'))
+
+    def test_a_payment_needs_a_date(self):
+        response = self.preview('invoices', 'member_name,amount,period,due_date,paid_amount\nAlice Able,30,Jan,2026-01-31,30\n')
+        self.assertContains(response, 'paid_amount needs a paid_date')
 
     def test_problems(self):
         response = self.preview('invoices', (
@@ -272,6 +314,22 @@ class ImportAccessTests(ImportTestBase):
         self.assertContains(response, 'too big')
         bad = SimpleUploadedFile('bad.csv', 'description,amount,expense_date\nCafé,5,2026-01-01\n'.encode('latin-1'))
         self.assertContains(self.client.post(self.url('expenses'), {'action': 'preview', 'csv_file': bad}), 'UTF-8')
+
+    def test_a_cell_too_long_to_read_is_reported(self):
+        huge = 'description,amount,expense_date\n"' + 'x' * 200_000 + '",5,2026-01-01\n'
+        with mock.patch('dojo.csv_import.MAX_CSV_BYTES', 10 * 1024 * 1024):
+            response = self.preview('expenses', huge)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'couldn&#x27;t be read')
+        self.assertFalse(Expense.objects.exists())
+
+    def test_signed_out_visitors_are_sent_to_log_in(self):
+        self.client.logout()
+        for url in (self.url(), self.url('expenses')):
+            response = self.client.post(url, {'action': 'import', 'raw_csv': 'description,amount,expense_date\nX,5,2026-01-01\n'})
+            self.assertEqual(response.status_code, 302, url)
+            self.assertIn(reverse('login'), response['Location'])
+        self.assertFalse(Expense.objects.exists())
 
     def test_upload_and_preview_from_a_file(self):
         upload = SimpleUploadedFile('e.csv', '﻿Description,Amount,Expense Date\nRent,350,2026-03-01\n'.encode('utf-8'))
