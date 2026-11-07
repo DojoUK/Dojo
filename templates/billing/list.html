@@ -20,6 +20,9 @@
     <a href="{% url 'billing_export' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-download me-1"></i> Export CSV
     </a>
+    <a href="{% url 'org_import_kind' org_slug=org.slug kind='invoices' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-upload me-1"></i> Import
+    </a>
 </div>
 {% endif %}
 {% endblock %}

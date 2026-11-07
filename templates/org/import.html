@@ -1,0 +1,100 @@
+{% extends 'org/base.html' %}
+
+{% block title %}Import {{ importer.title|lower }}{% endblock %}
+{% block page_title %}Import {{ importer.title|lower }}{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'org_import' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Import data
+</a>
+{% endblock %}
+
+{% block main_content %}
+<div class="row g-4">
+    <div class="col-lg-7">
+        {% if planned %}
+        <div class="card mb-4">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h6 class="mb-0">Check before importing</h6>
+                <div class="small d-flex gap-2 flex-wrap">
+                    {% if counts.create %}<span class="badge bg-success-subtle text-success">{{ counts.create }} to add</span>{% endif %}
+                    {% if counts.update %}<span class="badge bg-primary-subtle text-primary">{{ counts.update }} to update</span>{% endif %}
+                    {% if counts.skip %}<span class="badge bg-secondary-subtle text-secondary">{{ counts.skip }} already there</span>{% endif %}
+                    {% if counts.error %}<span class="badge bg-danger-subtle text-danger">{{ counts.error }} with problems</span>{% endif %}
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light"><tr><th class="ps-3">Row</th><th>What happens</th></tr></thead>
+                    <tbody>
+                        {% for number, action, summary, data in planned %}
+                        <tr>
+                            <td class="ps-3 text-muted small">{{ number }}</td>
+                            <td class="small">
+                                {% if action == 'error' %}<span class="text-danger"><i class="bi bi-x-circle me-1"></i>Not imported: {{ summary }}</span>
+                                {% elif action == 'skip' %}<span class="text-muted"><i class="bi bi-dash-circle me-1"></i>Skipped: {{ summary }}</span>
+                                {% else %}<i class="bi bi-check-circle text-success me-1"></i>{{ summary }}{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if more_rows %}<div class="card-body py-2 small text-muted border-top">…and {{ more_rows }} more row{{ more_rows|pluralize }}.</div>{% endif %}
+            <div class="card-body border-top d-flex gap-2 align-items-center flex-wrap">
+                {% if counts.create or counts.update %}
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="import">
+                    <textarea name="raw_csv" hidden aria-hidden="true">{{ raw_csv }}</textarea>
+                    <button type="submit" class="btn btn-dark btn-sm">
+                        <i class="bi bi-upload me-1"></i> Import {{ counts.create|add:counts.update }} row{{ counts.create|add:counts.update|pluralize }}
+                    </button>
+                </form>
+                {% endif %}
+                <span class="small text-muted">{% if counts.error %}Rows with problems are left out. Fix them in the file and import it again any time.{% else %}Nothing changes until you press Import.{% endif %}</span>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card mb-4">
+            <div class="card-header bg-white border-bottom py-3"><h6 class="mb-0">{% if planned %}Try a different file{% else %}Upload a CSV{% endif %}</h6></div>
+            <div class="card-body">
+                <p class="small text-muted">{{ importer.intro }}</p>
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="preview">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold" for="csv-file">CSV file</label>
+                        <input type="file" name="csv_file" id="csv-file" accept=".csv,text/csv" class="form-control form-control-sm">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold" for="raw-csv">Or paste it here</label>
+                        <textarea name="raw_csv" id="raw-csv" rows="6" class="form-control form-control-sm font-monospace" placeholder="{{ importer.example }}">{% if not planned %}{{ raw_csv }}{% endif %}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-dark btn-sm">Check the file</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header bg-white border-bottom py-3"><h6 class="mb-0">Columns</h6></div>
+            <ul class="list-group list-group-flush">
+                {% for name, required, help in importer.columns %}
+                <li class="list-group-item small">
+                    <code>{{ name }}</code>{% if required %} <span class="badge bg-dark-subtle text-dark-emphasis ms-1">required</span>{% endif %}
+                    {% if help %}<div class="text-muted">{{ help }}</div>{% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            <div class="card-body border-top">
+                <div class="small fw-semibold mb-1">Example</div>
+                <pre class="small mb-0 p-2 rounded dojo-subtle-panel" style="white-space:pre-wrap;">{{ importer.example }}</pre>
+                <p class="small text-muted mb-0 mt-2">Column names aren't case-sensitive, and other columns are ignored.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

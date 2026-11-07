@@ -8,6 +8,6 @@ from .models import Invoice
 @receiver(post_save, sender=Invoice)
 def queue_automatic_payment(sender, instance, created, **kwargs):
     """New invoices for members who pay automatically are queued for the scheduler to collect."""
-    if created:
+    if created and not getattr(instance, 'skip_autopay', False):
         from .autopay import mark_due
         transaction.on_commit(lambda: mark_due(instance))

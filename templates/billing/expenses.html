@@ -10,6 +10,9 @@
 <a href="{% url 'org_finance' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm">
     <i class="bi bi-graph-up me-1"></i> Finance
 </a>
+<a href="{% url 'org_import_kind' org_slug=org.slug kind='expenses' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-upload me-1"></i> Import
+</a>
 <button class="btn btn-dark btn-sm" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
     <i class="bi bi-plus-lg me-1"></i> Add expense
 </button>

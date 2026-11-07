@@ -327,6 +327,11 @@
         </li>
         {% endif %}
         <li>
+            <a href="{% url 'org_import' org_slug=org.slug %}" class="{% if 'import' in url_name %}active{% endif %}">
+                <i class="bi bi-upload"></i> Import data
+            </a>
+        </li>
+        <li>
             <a href="{% url 'former_members' org_slug=org.slug %}" class="{% if url_name == 'former_members' %}active{% endif %}">
                 <i class="bi bi-person-slash"></i> Former members
             </a>
