@@ -49,6 +49,10 @@
         [data-bs-theme="dark"] .table-light { --bs-table-bg: #1f1f1f; --bs-table-color: var(--dojo-muted); --bs-table-border-color: var(--dojo-border); }
         [data-bs-theme="dark"] .text-dark,
         [data-bs-theme="dark"] .text-black { color: var(--dojo-text) !important; }
+        /* ...except on the bright warning and info badges (Medical info, Emergency
+           contact), which keep their yellow and cyan in dark mode and need dark text. */
+        [data-bs-theme="dark"] .bg-warning.text-dark,
+        [data-bs-theme="dark"] .bg-info.text-dark { color: #212529 !important; }
         /* A lightly shaded strip inside a card. */
         .dojo-subtle-panel { background: rgba(0,0,0,.02); }
         [data-bs-theme="dark"] .dojo-subtle-panel { background: rgba(255,255,255,.03); }

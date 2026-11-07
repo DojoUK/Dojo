@@ -49,7 +49,10 @@ if SITE_URL.startswith('https://'):
 # Django believe the proxy's X-Forwarded-Proto header instead. Only switch it
 # on when a proxy that sets (and overwrites) that header is in front:
 # without one, any client could claim to be on HTTPS.
-if os.environ.get('TRUST_PROXY_HTTPS', '').strip().lower() in ('1', 'true', 'yes', 'on'):
+# The signup API's rate limit also uses it to read the visitor's address from
+# X-Forwarded-For (members.signup.client_ip).
+TRUST_PROXY_HTTPS = os.environ.get('TRUST_PROXY_HTTPS', '').strip().lower() in ('1', 'true', 'yes', 'on')
+if TRUST_PROXY_HTTPS:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 INSTALLED_APPS = [
@@ -155,6 +158,8 @@ LOGIN_REDIRECT_URL = '/'
 # Club websites allowed to send membership applications to the signup API
 # (/api/join/<club>/) from a visitor's browser: comma-separated origins, e.g.
 # https://www.myclub.org.uk. Requests from any other site are refused.
+# Each entry is a website address (any club on this instance) or
+# "<club-slug>=<address>" (only that club); see members.signup.origin_allowed.
 SIGNUP_API_ORIGINS = [o.strip().rstrip('/') for o in os.environ.get('SIGNUP_API_ORIGINS', '').split(',') if o.strip()]
 SIGNUP_API_RATE_LIMIT = int(os.environ.get('SIGNUP_API_RATE_LIMIT', '5'))  # applications per address per hour
 SIGNUP_API_RATE_WINDOW = 60 * 60  # seconds
