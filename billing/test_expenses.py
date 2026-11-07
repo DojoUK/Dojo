@@ -139,6 +139,13 @@ class FinanceProfitTests(ExpenseTestBase):
         self.assertEqual(forecast[:11], [None] * 11)
         self.assertEqual(forecast[11], 350.0)  # joins the actual line at this month
 
+    def test_cards_use_one_money_format(self):
+        Expense.objects.create(organisation=self.org, description='Mats', amount=Decimal('2000'), expense_date=date.today())
+        response = self.client.get(self.url('org_finance'))
+        self.assertContains(response, '£2,350.00')    # expenses this year: 350 + 2,000
+        self.assertContains(response, '-£2,350.00')   # no revenue, so a loss
+        self.assertNotContains(response, '£-')
+
     def test_another_clubs_expenses_are_not_counted(self):
         Expense.objects.create(organisation=self.other_org, description='Theirs', amount=Decimal('999'),
                                expense_date=date.today())
