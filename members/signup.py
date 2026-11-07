@@ -7,6 +7,7 @@ application is or which fields a club collects.
 """
 from datetime import date
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.shortcuts import get_object_or_404
@@ -57,10 +58,35 @@ def collected_fields(org):
 
 
 def client_ip(request):
-    ip = request.META.get('HTTP_X_FORWARDED_FOR', request.META.get('REMOTE_ADDR', ''))
-    if ',' in ip:
-        ip = ip.split(',')[0].strip()
-    return ip
+    """
+    The visitor's address, for rate limiting.
+
+    X-Forwarded-For is only believed behind a reverse proxy
+    (TRUST_PROXY_HTTPS), and then only its last entry: the address the proxy
+    itself saw. Anything before it came from the client and can be made up.
+    Without a proxy the header is ignored, so changing it can't dodge the limit.
+    """
+    if settings.TRUST_PROXY_HTTPS:
+        forwarded = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[-1].strip()
+        if forwarded:
+            return forwarded
+    return request.META.get('REMOTE_ADDR', '')
+
+
+def origin_allowed(origin, org_slug):
+    """
+    Whether a browser on `origin` may use this club's signup API.
+
+    SIGNUP_API_ORIGINS entries are either an address, allowed for every club
+    on the instance, or "<club-slug>=<address>", allowed for that club only,
+    so one club's website can't send applications to another club.
+    """
+    origin = origin.rstrip('/')
+    for entry in settings.SIGNUP_API_ORIGINS:
+        slug, _, address = entry.rpartition('=')
+        if address.rstrip('/') == origin and slug.strip() in ('', org_slug):
+            return True
+    return False
 
 
 def create_application(org, data):
@@ -100,16 +126,16 @@ def create_application(org, data):
             except ValidationError:
                 errors.append(f'Enter a valid {MemberApplication._meta.get_field(key).verbose_name}.')
 
-    if errors:
-        return None, errors
-
     dob = None
     dob_raw = value('date_of_birth') if collected['date_of_birth'] else ''
     if dob_raw:
         try:
             dob = date.fromisoformat(dob_raw)
         except ValueError:
-            pass
+            errors.append('Enter the date of birth as YYYY-MM-DD.')
+
+    if errors:
+        return None, errors
 
     application = MemberApplication.objects.create(
         organisation=org,

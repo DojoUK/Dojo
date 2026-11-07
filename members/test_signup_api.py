@@ -92,6 +92,40 @@ class SignupApiTests(TestCase):
         # A different address still gets through.
         self.assertEqual(self.post({'name': 'Elsewhere'}, REMOTE_ADDR='10.0.0.9').status_code, 201)
 
+    def test_made_up_forwarded_address_does_not_dodge_the_limit(self):
+        """Without a proxy in front, X-Forwarded-For comes from the client, so it's ignored."""
+        for i in range(5):
+            self.post({'name': f'Spammer {i}'}, HTTP_X_FORWARDED_FOR=f'203.0.113.{i}')
+        self.assertEqual(MemberApplication.objects.count(), 3)
+
+    @override_settings(TRUST_PROXY_HTTPS=True)
+    def test_behind_a_proxy_the_address_it_saw_is_counted(self):
+        # A proxy that appends (nginx) leaves whatever the client sent in front.
+        for i in range(5):
+            self.post({'name': f'Spammer {i}'}, REMOTE_ADDR='172.18.0.2', HTTP_X_FORWARDED_FOR=f'203.0.113.{i}, 198.51.100.7')
+        self.assertEqual(MemberApplication.objects.count(), 3)
+        # Different visitors behind the same proxy each get their own allowance.
+        response = self.post({'name': 'Neighbour'}, REMOTE_ADDR='172.18.0.2', HTTP_X_FORWARDED_FOR='198.51.100.8')
+        self.assertEqual(response.status_code, 201)
+
+    @override_settings(SIGNUP_API_ORIGINS=[SITE, 'other-club=https://other.example'])
+    def test_a_website_listed_for_one_club_cannot_post_to_another(self):
+        other_url = reverse('member_signup_api', kwargs={'org_slug': self.other.slug})
+        post = lambda url: self.client.post(  # noqa: E731
+            url, json.dumps({'name': 'Zed'}), content_type='application/json', headers={'Origin': 'https://other.example'},
+        )
+        self.assertEqual(post(self.url).status_code, 403)
+        self.assertEqual(post(other_url).status_code, 201)
+        self.assertEqual(list(MemberApplication.objects.values_list('organisation__slug', flat=True)), ['other-club'])
+        # A plain entry still works for every club.
+        self.assertEqual(self.post({'name': 'Yan'}).status_code, 201)
+
+    def test_bad_date_of_birth_is_reported(self):
+        response = self.post({'name': 'Dee', 'date_of_birth': '31/02/2015'})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['errors'], ['Enter the date of birth as YYYY-MM-DD.'])
+        self.assertFalse(MemberApplication.objects.exists())
+
     def test_required_waiver_needs_a_signature(self):
         WaiverTemplate.objects.create(organisation=self.org, name='Club rules', is_required=True, is_active=True)
         response = self.post({'name': 'Erin'})
