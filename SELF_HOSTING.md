@@ -55,6 +55,8 @@ Nothing here is required for a basic instance — everything has a sane default.
 | `DB_NAME` / `DB_USER` / `DB_PASSWORD` / `DB_ROOT_PASSWORD` | `dojo` / `dojo_user` / `dojo_password` / `dojo_root_password` | Change these for anything beyond local/trusted use |
 | `ALLOWED_HOSTS` | `*` (all hosts accepted) | Comma-separated list, e.g. `dojo.yourclub.com`. Tightening this is optional today — the codebase notes a browser-configurable allow-list is planned to replace setting it via the environment |
 | `SITE_URL` | `http://localhost:8000` | Used to build links in emails and Stripe redirects. **Also controls security headers** — see below |
+| `SIGNUP_API_ORIGINS` | unset (no websites) | Comma-separated addresses of club websites allowed to send membership applications to the signup API, e.g. `https://www.yourclub.org.uk`. Write `<club>=<address>` to allow a website for one club only. See [Taking applications from your own website](#taking-applications-from-your-own-website) |
+| `SIGNUP_API_RATE_LIMIT` | `5` | Applications the signup API accepts from one address per hour. Behind a reverse proxy, set `TRUST_PROXY_HTTPS` so each visitor is counted by their own address |
 | `TRUST_PROXY_HTTPS` | unset (off) | Set to `true` when a reverse proxy handles HTTPS in front of Dojo — see [Running behind a reverse proxy](#running-behind-a-reverse-proxy) |
 | `EMAIL_*` | console backend | **Fallback only.** Each club chooses how its email is sent in the setup wizard or **Settings → Email** (see [Sending email](#sending-email)). These variables are used only by clubs that haven't chosen yet. Leave them unset to print that mail to `docker compose logs -f web` |
 | `MAIL_HOSTNAME` | `localhost` | For **Built-in mail server**: the name the `mail` container introduces itself as, e.g. `mail.yourclub.org.uk`. Set it, and your server's reverse DNS, to a name that points at your server |
@@ -62,6 +64,19 @@ Nothing here is required for a basic instance — everything has a sane default.
 | `STRIPE_PUBLIC_KEY` / `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | unset | **Fallback only.** Each club enters its own Stripe keys in the setup wizard or **Settings → Payments** (see [Taking payments](#taking-payments)). These apply only to clubs that haven't |
 | `DOJO_BUILD_REPO` / `DOJO_BUILD_COMMIT` / `DOJO_BUILD_TAG` | unset (read from `.git`) | The version shown under Settings → General. Dojo reads it from the `.git` folder; set these only if your image is built without one. A repository other than `DojoUK/Dojo` shows as "Unofficial Dojo fork" |
 | `DOJO_LICENCE_KEY` / `DOJO_LICENCE_HOLDER` | unset | Self-hosters on the default AGPL-3.0 licence leave both blank |
+
+### Taking applications from your own website
+
+Each club's join page is at `SITE_URL/join/<club>/` (switch on **Applications** under Settings → Features). A club with its own website can instead build its own form and send it to the signup API at `SITE_URL/api/join/<club>/`:
+
+- `GET` returns the club's name, its active waivers (name, description, file link, whether it must be signed) and which optional fields the club collects.
+- `POST` takes the same field names as the join page (`name`, `date_of_birth`, `email`, `phone`, `address_line1`, `address_line2`, `city`, `county`, `postcode`, `guardian_name`, `guardian_email`, `guardian_phone`, `medical_info`, `notes`, and `signature_data` as a PNG data URL), as JSON or a normal form. It answers `201` with `{"ok": true}`, or `400` with `{"errors": [...]}` to show the applicant.
+
+Applications land under Members → Applications, exactly like the join page's. A browser request from a site not listed in `SIGNUP_API_ORIGINS` is refused, a hidden `website` field catches bots, and each address can send `SIGNUP_API_RATE_LIMIT` applications an hour.
+
+If several clubs share your instance, list each website against its own club, e.g. `SIGNUP_API_ORIGINS=judo=https://www.ourjudo.org.uk,karate=https://karate.example.com`, so one club's website can't send applications to another club. An entry without `<club>=` works for every club.
+
+The rate limit counts the address the request came from. Behind a reverse proxy every request comes from the proxy, so set `TRUST_PROXY_HTTPS=true` (see [Running behind a reverse proxy](#running-behind-a-reverse-proxy)): Dojo then counts the address your proxy puts last in `X-Forwarded-For`. Without a proxy that header is ignored, since anyone could send a made-up one.
 
 ### `SITE_URL` and security headers
 
@@ -114,7 +129,7 @@ SITE_URL=https://dojo.yourclub.com
 TRUST_PROXY_HTTPS=true
 ```
 
-`TRUST_PROXY_HTTPS` is needed because the proxy talks to Dojo over plain HTTP. Without it, an `https://` `SITE_URL` makes Dojo redirect every request to HTTPS forever and reject form submissions. With it, Dojo trusts the proxy's `X-Forwarded-Proto` header to know the visitor is on HTTPS. Only set it with a proxy in front that sets that header (Caddy does by default; the nginx example above does via `proxy_set_header X-Forwarded-Proto`). Without a proxy, anyone could send the header and claim to be on HTTPS.
+`TRUST_PROXY_HTTPS` is needed because the proxy talks to Dojo over plain HTTP. Without it, an `https://` `SITE_URL` makes Dojo redirect every request to HTTPS forever and reject form submissions. With it, Dojo trusts the proxy's `X-Forwarded-Proto` header to know the visitor is on HTTPS, and the last address in `X-Forwarded-For` as the visitor's address for the signup API's rate limit. Only set it with a proxy in front that sets that header (Caddy does by default; the nginx example above does via `proxy_set_header X-Forwarded-Proto`). Without a proxy, anyone could send the header and claim to be on HTTPS.
 
 ---
 
