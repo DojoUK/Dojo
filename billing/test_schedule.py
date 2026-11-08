@@ -189,6 +189,49 @@ class ReminderTests(ScheduleTestCase):
         self.assertEqual(schedule.send_due_reminders(TODAY), 0)
 
 
+
+class ChaseOverdueTests(ScheduleTestCase):
+    def setUp(self):
+        self.client.force_login(self.admin)
+
+    def invoice(self, member, due_in_days, **fields):
+        return Invoice.objects.create(organisation=self.org, member=member, amount=45, period='October 2026',
+                                      due_date=date.today() + timedelta(days=due_in_days), **fields)
+
+    def chase(self):
+        return self.client.post(reverse('invoice_chase_overdue', kwargs={'org_slug': 'forest'}), follow=True)
+
+    def test_the_overdue_filter_lists_unpaid_invoices_past_their_due_date(self):
+        late = self.invoice(self.ann, -10)
+        self.invoice(self.bo, 5)  # not due yet
+        self.invoice(self.bo, -10, status='paid')
+        response = self.client.get(reverse('invoice_list', kwargs={'org_slug': 'forest'}), {'status': 'overdue'})
+        self.assertEqual(list(response.context['invoices']), [late])
+
+    def test_chasing_sends_the_payment_reminder_and_records_it(self):
+        late = self.invoice(self.ann, -10)
+        self.invoice(self.bo, 5)
+        response = self.chase()
+        self.assertContains(response, 'Chased 1 overdue invoice.')
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['ann@example.com'])
+        self.assertTrue(mail.outbox[0].subject.startswith('Payment reminder'))
+        late.refresh_from_db()
+        self.assertIsNotNone(late.reminder_sent_at)
+
+    def test_held_and_automatically_paid_invoices_are_not_chased(self):
+        held_run = InvoiceRun.objects.create(schedule=InvoiceSchedule.objects.create(policy=self.monthly),
+                                             period='October 2026', status='awaiting_review')
+        self.invoice(self.ann, -10, run=held_run)
+        self.invoice(self.bo, -10, autopay_status='processing')
+        self.assertContains(self.chase(), 'No overdue invoices to chase.')
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_members_without_an_address_are_reported(self):
+        self.invoice(Member.objects.create(organisation=self.org, name='No Mail'), -10)
+        self.assertContains(self.chase(), '1 invoice skipped — no email address on file.')
+
+
 class PageTests(ScheduleTestCase):
     def setUp(self):
         self.client.force_login(self.admin)

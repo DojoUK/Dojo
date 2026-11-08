@@ -64,7 +64,10 @@ class InvoiceListView(InvoiceAccessMixin, ListView):
             .order_by('-due_date', 'member__name', '-pk')
         )
         status = self.request.GET.get('status', '')
-        if status in ('unpaid', 'paid', 'overdue'):
+        if status == 'overdue':
+            # Overdue isn't a stored status: it's an unpaid invoice past its due date (Invoice.is_overdue).
+            qs = qs.filter(status=Invoice.Status.UNPAID, due_date__lt=date.today())
+        elif status in ('unpaid', 'paid'):
             qs = qs.filter(status=status)
         q = self.request.GET.get('q', '').strip()
         if q:
@@ -370,26 +373,29 @@ class BillingExportView(BillingManagerMixin, View):
 
 class ChaseOverdueView(BillingManagerMixin, View):
     def post(self, request, org_slug):
-        from .emails import send_invoice_email
-        overdue = [
-            inv for inv in Invoice.objects.filter(organisation=self.org, status=Invoice.Status.UNPAID)
-            if inv.is_overdue
-        ]
-        sent, skipped = 0, 0
+        from .emails import send_reminder_email
+        from .schedule import chaseable
+        overdue = list(chaseable(Invoice.objects.filter(
+            organisation=self.org, status=Invoice.Status.UNPAID, due_date__lt=date.today(),
+        )).select_related('member', 'organisation'))
+        sent, no_address, failed = 0, 0, 0
         for inv in overdue:
             try:
-                ok, _ = send_invoice_email(inv, request=request)
-                if ok:
-                    sent += 1
-                else:
-                    skipped += 1
+                ok, _ = send_reminder_email(inv, request=request)
             except Exception:
-                skipped += 1
+                failed += 1
+                continue
+            if ok:
+                sent += 1
+            else:
+                no_address += 1
 
         if sent:
             messages.success(request, f'Chased {sent} overdue invoice{"s" if sent != 1 else ""}.')
-        if skipped:
-            messages.warning(request, f'{skipped} invoice{"s" if skipped != 1 else ""} skipped — no email address on file.')
+        if no_address:
+            messages.warning(request, f'{no_address} invoice{"s" if no_address != 1 else ""} skipped — no email address on file.')
+        if failed:
+            messages.error(request, f'{failed} reminder{"s" if failed != 1 else ""} couldn\'t be sent. Check Settings → Email.')
         if not overdue:
             messages.info(request, 'No overdue invoices to chase.')
         return redirect('invoice_list', org_slug=self.org.slug)
