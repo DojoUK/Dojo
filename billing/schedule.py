@@ -239,6 +239,11 @@ def reminder_settings(org):
             'repeat_days': int(stored.get('repeat_days', 14))}
 
 
+def chaseable(invoices):
+    """Leave out invoices that mustn't be chased: ones held for checking, and ones being paid automatically."""
+    return invoices.exclude(run__status=HELD).exclude(autopay_status__in=['due', 'collecting', 'processing'])
+
+
 def send_due_reminders(today=None):
     """Chase overdue invoices for clubs that have switched automatic reminders on."""
     from django.db.models import Q
@@ -253,15 +258,12 @@ def send_due_reminders(today=None):
         options = reminder_settings(org)
         if not options['enabled'] or not org.has_feature('billing'):
             continue
-        invoices = (
+        invoices = chaseable(
             Invoice.objects.filter(organisation=org, status='unpaid', member__is_active=True,
                                    due_date__lte=today - timedelta(days=options['after_days']))
             .filter(Q(reminder_sent_at__isnull=True)
                     | Q(reminder_sent_at__lte=timezone.now() - timedelta(days=options['repeat_days'])))
-            .exclude(run__status=HELD)
-            .exclude(autopay_status__in=['due', 'collecting', 'processing'])
-            .select_related('member', 'organisation')
-        )
+        ).select_related('member', 'organisation')
         for invoice in invoices:
             try:
                 if send_reminder_email(invoice)[0]:
