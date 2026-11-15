@@ -1,0 +1,1859 @@
+{
+ "key": "judo-bja",
+ "name": "Judo (British Judo Association)",
+ "description": "The BJA grading schemes: Sho awards (ages 5 to 7), Mon grades (juniors), Kyu grades (adults) and Dan grades (black belts and above). Includes the Mon and Kyu syllabus checklists.",
+ "enable_features": [
+  "grades",
+  "syllabus"
+ ],
+ "progression_systems": [
+  {
+   "name": "BJA Sho Awards",
+   "first_stage_is_default": false,
+   "stages": [
+    {
+     "name": "1st Sho",
+     "colour": ""
+    },
+    {
+     "name": "2nd Sho",
+     "colour": ""
+    },
+    {
+     "name": "3rd Sho",
+     "colour": ""
+    },
+    {
+     "name": "4th Sho",
+     "colour": ""
+    },
+    {
+     "name": "5th Sho",
+     "colour": ""
+    },
+    {
+     "name": "6th Sho",
+     "colour": ""
+    },
+    {
+     "name": "7th Sho",
+     "colour": ""
+    },
+    {
+     "name": "8th Sho",
+     "colour": ""
+    },
+    {
+     "name": "9th Sho",
+     "colour": ""
+    }
+   ]
+  },
+  {
+   "name": "BJA Mon Grades",
+   "stages": [
+    {
+     "name": "Novice (White Belt)",
+     "colour": "#FFFFFF",
+     "syllabus": "BJA Mon: Novice to 1st Mon"
+    },
+    {
+     "name": "1st Mon - Red Belt + 1 Yellow Tag",
+     "colour": "#DC2626",
+     "syllabus": "BJA Mon: 1st to 2nd Mon"
+    },
+    {
+     "name": "2nd Mon - Red Belt + 2 Yellow Tags",
+     "colour": "#DC2626",
+     "syllabus": "BJA Mon: 2nd to 3rd Mon"
+    },
+    {
+     "name": "3rd Mon - Red Belt + 3 Yellow Tags",
+     "colour": "#DC2626",
+     "syllabus": "BJA Mon: 3rd to 4th Mon"
+    },
+    {
+     "name": "4th Mon - Yellow Belt + 1 Red Tag",
+     "colour": "#FACC15",
+     "syllabus": "BJA Mon: 4th to 5th Mon"
+    },
+    {
+     "name": "5th Mon - Yellow Belt + 2 Red Tags",
+     "colour": "#FACC15",
+     "syllabus": "BJA Mon: 5th to 6th Mon"
+    },
+    {
+     "name": "6th Mon - Yellow Belt + 3 Red Tags",
+     "colour": "#FACC15",
+     "syllabus": "BJA Mon: 6th to 7th Mon"
+    },
+    {
+     "name": "7th Mon - Orange Belt + 1 Red Tag",
+     "colour": "#F97316",
+     "syllabus": "BJA Mon: 7th to 8th Mon"
+    },
+    {
+     "name": "8th Mon - Orange Belt + 2 Red Tags",
+     "colour": "#F97316",
+     "syllabus": "BJA Mon: 8th to 9th Mon"
+    },
+    {
+     "name": "9th Mon - Orange Belt + 3 Red Tags",
+     "colour": "#F97316",
+     "syllabus": "BJA Mon: 9th to 10th Mon"
+    },
+    {
+     "name": "10th Mon - Green Belt + 1 Red Tag",
+     "colour": "#22C55E",
+     "syllabus": "BJA Mon: 10th to 11th Mon"
+    },
+    {
+     "name": "11th Mon - Green Belt + 2 Red Tags",
+     "colour": "#22C55E",
+     "syllabus": "BJA Mon: 11th to 12th Mon"
+    },
+    {
+     "name": "12th Mon - Green Belt + 3 Red Tags",
+     "colour": "#22C55E",
+     "syllabus": "BJA Mon: 12th to 13th Mon"
+    },
+    {
+     "name": "13th Mon - Blue Belt + 1 Red Tag",
+     "colour": "#2563EB",
+     "syllabus": "BJA Mon: 13th to 14th Mon"
+    },
+    {
+     "name": "14th Mon - Blue Belt + 2 Red Tags",
+     "colour": "#2563EB",
+     "syllabus": "BJA Mon: 14th to 15th Mon"
+    },
+    {
+     "name": "15th Mon - Blue Belt + 3 Red Tags",
+     "colour": "#2563EB",
+     "syllabus": "BJA Mon: 15th to 16th Mon"
+    },
+    {
+     "name": "16th Mon - Brown Belt + 1 Red Tag",
+     "colour": "#78350F",
+     "syllabus": "BJA Mon: 16th to 17th Mon"
+    },
+    {
+     "name": "17th Mon - Brown Belt + 2 Red Tags",
+     "colour": "#78350F",
+     "syllabus": "BJA Mon: 17th to 18th Mon"
+    },
+    {
+     "name": "18th Mon - Brown Belt + 3 Red Tags",
+     "colour": "#78350F"
+    }
+   ]
+  },
+  {
+   "name": "BJA Kyu Grades",
+   "stages": [
+    {
+     "name": "Novice (White Belt)",
+     "colour": "#FFFFFF",
+     "syllabus": "BJA Kyu: Novice to 6th Kyu"
+    },
+    {
+     "name": "6th Kyu - Red Belt",
+     "colour": "#DC2626",
+     "syllabus": "BJA Kyu: 6th to 5th Kyu"
+    },
+    {
+     "name": "5th Kyu - Yellow Belt",
+     "colour": "#FACC15",
+     "syllabus": "BJA Kyu: 5th to 4th Kyu"
+    },
+    {
+     "name": "4th Kyu - Orange Belt",
+     "colour": "#F97316",
+     "syllabus": "BJA Kyu: 4th to 3rd Kyu"
+    },
+    {
+     "name": "3rd Kyu - Green Belt",
+     "colour": "#22C55E",
+     "syllabus": "BJA Kyu: 3rd to 2nd Kyu"
+    },
+    {
+     "name": "2nd Kyu - Blue Belt",
+     "colour": "#2563EB",
+     "syllabus": "BJA Kyu: 2nd to 1st Kyu"
+    },
+    {
+     "name": "1st Kyu - Brown Belt",
+     "colour": "#78350F"
+    }
+   ]
+  },
+  {
+   "name": "BJA Dan Grades",
+   "first_stage_is_default": false,
+   "stages": [
+    {
+     "name": "1st Dan - Black Belt",
+     "colour": "#111827"
+    },
+    {
+     "name": "2nd Dan - Black Belt",
+     "colour": "#111827"
+    },
+    {
+     "name": "3rd Dan - Black Belt",
+     "colour": "#111827"
+    },
+    {
+     "name": "4th Dan - Black Belt",
+     "colour": "#111827"
+    },
+    {
+     "name": "5th Dan - Black Belt",
+     "colour": "#111827"
+    },
+    {
+     "name": "6th Dan - Red and White Belt",
+     "colour": "#FCA5A5"
+    },
+    {
+     "name": "7th Dan - Red and White Belt",
+     "colour": "#FCA5A5"
+    },
+    {
+     "name": "8th Dan - Red and White Belt",
+     "colour": "#FCA5A5"
+    },
+    {
+     "name": "9th Dan - Red Belt",
+     "colour": "#B91C1C"
+    },
+    {
+     "name": "10th Dan - Red Belt",
+     "colour": "#B91C1C"
+    }
+   ]
+  }
+ ],
+ "syllabus_sections": [
+  {
+   "name": "BJA Mon: Novice to 1st Mon",
+   "content": "From the BJA Mon Grade Promotion Syllabus (January 2025). Recommended age 8-10. Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Mon-Grade-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Ukemi: Ushiro ukemi"
+      },
+      {
+       "name": "Tachi-waza: O-soto-otoshi"
+      },
+      {
+       "name": "Osae-komi-waza: Kesa-gatame"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Transition into ne-waza: O-soto-otoshi into Kesa-gatame"
+      },
+      {
+       "name": "Ne-waza: Escape from Kesa-gatame by trapping Uke's leg"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Two additional techniques: one tachi-waza and one osae-komi-waza (left or right, any suitable grip)"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Explain the meaning of: Hajime, Mate, Rei"
+      },
+      {
+       "name": "In which country was judo devised?"
+      },
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Judogi (Judo uniform); Judoka (Judo player); Hajime (Begin); Ne-waza (Groundwork techniques); Osae-komi-waza (Holding techniques); Kesa-gatame (Scarf hold); Mate (Wait); O-soto-otoshi (Major outer drop throw); Rei (Standing bow); Tachi-waza (Standing techniques); Ushiro ukemi (Rear breakfall)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "BJA Mon: 1st to 2nd Mon",
+   "content": "From the BJA Mon Grade Promotion Syllabus (January 2025). Recommended age 8-10. Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Mon-Grade-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Ukemi: Yoko ukemi"
+      },
+      {
+       "name": "Tachi-waza: De-ashi-barai"
+      },
+      {
+       "name": "Osae-komi-waza: Mune-gatame"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Transition into ne-waza: De-ashi-barai into Mune-gatame"
+      },
+      {
+       "name": "Ne-waza: Escape from Mune-gatame using a bridge and roll"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Two additional techniques: one tachi-waza and one osae-komi-waza (left or right, any suitable grip)"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Explain the meaning of: Osae-komi, Randori, Toketa"
+      },
+      {
+       "name": "Demonstrate the correct procedure for standing and kneeling bows"
+      },
+      {
+       "name": "Who was the founder of modern judo?"
+      },
+      {
+       "name": "What is the Judo Moral Code?"
+      },
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Deashi-barai (Advanced foot sweep); Mune-gatame (Chest hold); Osae-komi (Holding technique); Randori (Free practice); Rei (Standing bow); Toketa (Hold broken); Yoko-ukemi (Side breakfall)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "BJA Mon: 2nd to 3rd Mon",
+   "content": "From the BJA Mon Grade Promotion Syllabus (January 2025). Recommended age 8-10. Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Mon-Grade-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Ukemi: Mae mawari ukemi (3 versions)"
+      },
+      {
+       "name": "Tachi-waza: Uki-goshi"
+      },
+      {
+       "name": "Osae-komi-waza: Kuzure-kesa-gatame"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Transition: Uki-goshi into Kuzure-kesa-gatame"
+      },
+      {
+       "name": "Ne-waza: Escape from Kuzure-kesa-gatame using sit up and push"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Two additional techniques: one tachi-waza and one osae-komi-waza (left or right, any suitable grip)"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Explain the meaning of: Dojo, Judogi, Zori, Uke, Tori"
+      },
+      {
+       "name": "Demonstrate the correct wearing of the judogi and tying of the belt"
+      },
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Dojo (Judo practice hall); Judogi (Judo uniform); Kuzure-kesa-gatame (Modified scarf hold); Mae mawari ukemi (Forward rolling breakfall); Tori (The attacking judoka); Uke (The defending judoka); Uki-goshi (Floating hip throw); Zori (Judo footwear)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "BJA Mon: 3rd to 4th Mon",
+   "content": "From the BJA Mon Grade Promotion Syllabus (January 2025). Recommended age 8-10. Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Mon-Grade-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Tai-otoshi"
+      },
+      {
+       "name": "Osae-komi-waza: Yoko-shiho-gatame"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Transition: Tai-otoshi into Yoko-shiho-gatame"
+      },
+      {
+       "name": "Ne-waza: Escape from Yoko-shiho-gatame using trap, bridge and roll"
+      },
+      {
+       "name": "Ne-waza: With Uke face-down and prone, turn them into Yoko-shiho-gatame"
+      },
+      {
+       "name": "Kumi-kata: Demonstrate the right and left standard grips"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Two additional techniques: one tachi-waza and one osae-komi-waza (left or right, any suitable grip)"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Demonstrate a basic knowledge of the Judo Moral Code"
+      },
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Kumi-kata (Engagement position); Tai-otoshi (Body drop throw); Yoko-shiho-gatame (Side four quarters hold)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "BJA Mon: 4th to 5th Mon",
+   "content": "From the BJA Mon Grade Promotion Syllabus (January 2025). Recommended age 8-10. Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Mon-Grade-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Ippon-seoi-nage"
+      },
+      {
+       "name": "Osae-komi-waza: Kami-shiho-gatame"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Transition: Ippon-seoi-nage into Kami-shiho-gatame"
+      },
+      {
+       "name": "Ne-waza: With Uke on all fours, turn them into Kesa-gatame"
+      },
+      {
+       "name": "Ne-waza: Escape from Kami-shiho-gatame using action and reaction"
+      },
+      {
+       "name": "Kumi-kata: Demonstrate alternatives to the right and left standard grips"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Two additional techniques: one tachi-waza and one osae-komi-waza (left or right, any suitable grip)"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Demonstrate a sound knowledge of the Judo Moral Code"
+      },
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Ippon-seoi-nage (One arm shoulder throw); Kami-shiho-gatame (Upper four quarters hold)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "BJA Mon: 5th to 6th Mon",
+   "content": "From the BJA Mon Grade Promotion Syllabus (January 2025). Recommended age 8-10. Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Mon-Grade-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Ukemi: Mae ukemi"
+      },
+      {
+       "name": "Tachi-waza: Ouchi-gari"
+      },
+      {
+       "name": "Osae-komi-waza: Tate-shiho-gatame"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Transition: Ouchi-gari into Tate-shiho-gatame"
+      },
+      {
+       "name": "Ne-waza: Escape from Tate-shiho-gatame using a clamp and roll"
+      },
+      {
+       "name": "Ne-waza: With Uke on all fours, turn them into Mune-gatame"
+      },
+      {
+       "name": "Kumi-kata: Demonstrate double lapel and high collar grips"
+      },
+      {
+       "name": "Nage-komi: Light randori with a cooperative partner for about two minutes, alternating throws with a wide range of techniques"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Two additional techniques: one tachi-waza and one osae-komi-waza (left or right, any suitable grip)"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Give two examples of actions against the contest rules"
+      },
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Mae ukemi (Front breakfall); Nage-komi (Repetitive throwing); Ouchi-gari (Major inner reaping throw); Randori (Free practice); Tate-shiho-gatame (Lengthwise four quarters hold)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "BJA Mon: 6th to 7th Mon",
+   "content": "From the BJA Mon Grade Promotion Syllabus (January 2025). Recommended age 8-11. Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Mon-Grade-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Kouchi-gari"
+      },
+      {
+       "name": "Tachi-waza: Tsuri-komi-goshi"
+      },
+      {
+       "name": "Tachi-waza: O-goshi"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Ouchi-gari into Kouchi-gari"
+      },
+      {
+       "name": "Tachi-waza: Kouchi-gari into Osoto-gari or Osoto-gake"
+      },
+      {
+       "name": "Tachi-waza: Ouchi-gari countered by Tsuri-komi-goshi"
+      },
+      {
+       "name": "Ne-waza: Escape from Kesa-gatame using a bridge and roll"
+      },
+      {
+       "name": "Ne-waza: Move into Kesa-gatame from between Uke's legs"
+      },
+      {
+       "name": "Randori: Light randori with a cooperative partner for about three minutes"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Two tachi-waza and one ne-waza technique (left or right, any suitable grip)"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Give two examples of actions against the contest rules"
+      },
+      {
+       "name": "Name three items from the judo moral code"
+      },
+      {
+       "name": "Explain the meaning of: Waza-ari-awasete-ippon"
+      },
+      {
+       "name": "Demonstrate the proper procedure for entering and leaving the mat for a contest"
+      },
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Kouchi-gari (Minor inner reaping throw); O-goshi (Major hip throw); Tsuri-komi-goshi (Drawing hip throw); Waza-ari-awasete-ippon (Almost ippon); Yoko-shiho-gatame (Side four quarters hold)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "BJA Mon: 7th to 8th Mon",
+   "content": "From the BJA Mon Grade Promotion Syllabus (January 2025). Recommended age 8-11. Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Mon-Grade-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Kosoto-gari"
+      },
+      {
+       "name": "Tachi-waza: Kosoto-gake"
+      },
+      {
+       "name": "Tachi-waza: Morote-seoi-nage"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Kouchi-gari into Morote-seoi-nage"
+      },
+      {
+       "name": "Tachi-waza: Tai-otoshi countered by Kosoto-gake or Kosoto-gari"
+      },
+      {
+       "name": "Ne-waza: Move into Yoko-shiho-gatame from between Uke's legs"
+      },
+      {
+       "name": "Ne-waza: Turnover from underneath Uke into Tate-shiho-gatame"
+      },
+      {
+       "name": "Randori: Light randori with a cooperative partner for about three minutes"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Two tachi-waza and one ne-waza technique (left or right, any suitable grip)"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Name three items from the judo moral code"
+      },
+      {
+       "name": "Explain the meaning of: Shido, Hansoku-make"
+      },
+      {
+       "name": "Demonstrate the referee's signals for Mate, Osaekomi, Toketa and adjusting the judogi"
+      },
+      {
+       "name": "Give two examples of actions (not grips) against the contest rules for negative and safety reasons"
+      },
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Kosoto-gake (Minor outer hook throw); Kosoto-gari (Minor outer reaping throw); Morote-seoi-nage (Two-handed shoulder throw); Shido (Minor infringement); Hansoku-make (Disqualification)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "BJA Mon: 8th to 9th Mon",
+   "content": "From the BJA Mon Grade Promotion Syllabus (January 2025). Recommended age 8-11. Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Mon-Grade-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Osoto-gari"
+      },
+      {
+       "name": "Tachi-waza: Seoi-otoshi"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Ippon-seoi-nage into Kouchi-gari"
+      },
+      {
+       "name": "Tachi-waza: Any techniques as combinations with Seoi-otoshi and Kouchi-gari"
+      },
+      {
+       "name": "Ne-waza: Arm roll with Uke approaching from the front"
+      },
+      {
+       "name": "Ne-waza: Arm roll with Uke approaching from behind"
+      },
+      {
+       "name": "Randori: Light randori with a cooperative partner for about three minutes"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Two tachi-waza and one ne-waza technique (left or right, any suitable grip)"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Name three items from the judo moral code"
+      },
+      {
+       "name": "Explain the meaning of: Hiki-wake"
+      },
+      {
+       "name": "Give two examples of grips against the contest rules for negative or safety reasons"
+      },
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Osoto-gari (Major outer reaping throw); Seoi-otoshi (Shoulder drop throw); Hiki-wake (Draw)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "BJA Mon: 9th to 10th Mon",
+   "content": "From the BJA Mon Grade Promotion Syllabus (January 2025). Recommended age 11-15. Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Mon-Grade-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Harai-goshi"
+      },
+      {
+       "name": "Tachi-waza: Uchi-mata"
+      },
+      {
+       "name": "Kansetsu-waza: Ude-gatame (controlled, never to submission)"
+      },
+      {
+       "name": "Kansetsu-waza: Waki-gatame (controlled, never to submission)"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Randori: Light randori with a cooperative partner for about three minutes, showing basic performance skills such as combinations and counters"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Four techniques shown individually, then as a series of combinations and counters (including a transition into ne-waza)"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Harai-goshi (Sweeping hip); Kansetsu-waza (Joint techniques); Uchi-mata (Inner thigh); Ude-gatame (Straight armlock); Waki-gatame (Armlock applied with the armpit)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "BJA Mon: 10th to 11th Mon",
+   "content": "From the BJA Mon Grade Promotion Syllabus (January 2025). Recommended age 11-15. Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Mon-Grade-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Hiza-guruma"
+      },
+      {
+       "name": "Tachi-waza: Sasae-tsuri-komi-ashi"
+      },
+      {
+       "name": "Kansetsu-waza: Juji-gatame"
+      },
+      {
+       "name": "Kansetsu-waza: Hiza-gatame"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Kansetsu-waza: Juji-gatame with a sit-back entry"
+      },
+      {
+       "name": "Kansetsu-waza: Juji-gatame with a rollover entry"
+      },
+      {
+       "name": "Randori: Light randori with a cooperative partner for about three minutes, showing basic performance skills such as combinations and counters"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Four techniques shown individually, then as a series of combinations and counters (including a transition into ne-waza)"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Hiza-gatame (Armlock applied with the knee); Hiza-guruma (Knee wheel); Juji-gatame (Cross armlock); Kansetsu-waza (Joint techniques); Sasae-tsuri-komi-ashi (Propping drawing ankle)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "BJA Mon: 11th to 12th Mon",
+   "content": "From the BJA Mon Grade Promotion Syllabus (January 2025). Recommended age 11-15. Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Mon-Grade-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Hane-goshi"
+      },
+      {
+       "name": "Tachi-waza: Okuri-ashi-barai"
+      },
+      {
+       "name": "Tachi-waza: Morote-eri-seoi-nage"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Kansetsu-waza: Juji-gatame with an over-the-shoulder entry"
+      },
+      {
+       "name": "Kansetsu-waza: Juji-gatame with an entry from beneath"
+      },
+      {
+       "name": "Randori: Light randori with a cooperative partner for about three minutes, showing basic performance skills such as combinations and counters"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Four techniques shown individually, then as a series of combinations and counters (including a transition into ne-waza)"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Hane-goshi (Spring hip); Juji-gatame (Cross armlock); Morote-eri-seoi-nage (Two-handed lapel shoulder throw); Okuri-ashi-barai (Foot sweep)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "BJA Mon: 12th to 13th Mon",
+   "content": "From the BJA Mon Grade Promotion Syllabus (January 2025). Recommended age 11-15. Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Mon-Grade-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Tani-otoshi"
+      },
+      {
+       "name": "Tachi-waza: Yoko-guruma"
+      },
+      {
+       "name": "Kansetsu-waza: Ude-garami"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Ne-waza: Ude-garami from Kuzure-kesa-gatame"
+      },
+      {
+       "name": "Randori: Attacking and defending with a cooperative partner for about three minutes, showing combinations and counters"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Four techniques shown individually, then as a series of combinations and counters (tachi-waza, ne-waza transitions or both), showing an understanding of judo principles and the ability to adapt to different opponents"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Kuzure-kesa-gatame (Modified scarf hold); Tani-otoshi (Valley drop throw); Ude-garami (Entangled armlock); Yoko-guruma (Side wheel throw)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "BJA Mon: 13th to 14th Mon",
+   "content": "From the BJA Mon Grade Promotion Syllabus (January 2025). Recommended age 11-15. Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Mon-Grade-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Tomoe-nage"
+      },
+      {
+       "name": "Tachi-waza: Yoko-tomoe-nage"
+      },
+      {
+       "name": "Shime-waza: Okuri-eri-jime"
+      },
+      {
+       "name": "Shime-waza: Kata-juji-jime"
+      },
+      {
+       "name": "Shime-waza: Nami-juji-jime"
+      },
+      {
+       "name": "Shime-waza: Gyaku-juji-jime"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Shime-waza: Nami-juji-jime with Uke underneath (between Tori's legs)"
+      },
+      {
+       "name": "Shime-waza: Gyaku-juji-jime with Uke on top (between Tori's legs)"
+      },
+      {
+       "name": "Shime-waza: Okuri-eri-jime when Uke attempts Seoi-otoshi (or another dropping attack)"
+      },
+      {
+       "name": "Randori: Attacking and defending with a cooperative partner for about three minutes, showing combinations and counters"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Four techniques shown individually, then as a series of combinations and counters (tachi-waza, ne-waza transitions or both), showing an understanding of judo principles and the ability to adapt to different opponents"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Gyaku-juji-jime (Reverse cross strangle); Kata-juji-jime (Half cross strangle); Nami-juji-jime (Normal cross strangle); Okuri-eri-jime (Sliding collar strangle); Seoi-otoshi (Shoulder drop); Tomoe-nage (Circle throw); Yoko-tomoe-nage (Side circle throw)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "BJA Mon: 14th to 15th Mon",
+   "content": "From the BJA Mon Grade Promotion Syllabus (January 2025). Recommended age 11-15. Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Mon-Grade-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Uki-waza"
+      },
+      {
+       "name": "Tachi-waza: Soto-maki-komi"
+      },
+      {
+       "name": "Shime-waza: Koshi-jime"
+      },
+      {
+       "name": "Shime-waza: Kata-te-jime"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Shime-waza: Koshi-jime when Uke has attempted a dropping attack"
+      },
+      {
+       "name": "Shime-waza: Kata-te-jime with Uke in an all-fours position"
+      },
+      {
+       "name": "Randori: Attacking and defending with a cooperative partner for about three minutes, showing combinations and counters"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Four techniques shown individually, then as a series of combinations and counters (tachi-waza, ne-waza transitions or both), showing an understanding of judo principles and the ability to adapt to different opponents"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Kata-te-jime (Strangle with one hand); Koshi-jime (Strangle using the hip); Shime-waza (Strangle techniques); Soto-maki-komi (Outside winding); Uki-waza (Floating throw)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "BJA Mon: 15th to 16th Mon",
+   "content": "From the BJA Mon Grade Promotion Syllabus (January 2025). Recommended age 13-15. Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Mon-Grade-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Uki-otoshi"
+      },
+      {
+       "name": "Tachi-waza: Koshi-guruma"
+      },
+      {
+       "name": "Tachi-waza: Ura-nage (safety first: show the technique's effectiveness, a landing mat is advised)"
+      },
+      {
+       "name": "Shime-waza: Kata-ha-jime"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Counter Koshi-guruma with Ura-nage"
+      },
+      {
+       "name": "Shime-waza: Kata-ha-jime with Uke in an all-fours position"
+      },
+      {
+       "name": "Randori: Attacking and defending with a cooperative partner for about three minutes, showing combinations and counters"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Four techniques shown individually, then as a series of combinations and counters (tachi-waza, ne-waza transitions or both), showing an understanding of judo principles and the ability to adapt to different opponents"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Kata-ha-jime (Single collar strangle); Koshi-guruma (Hip wheel throw); Uki-otoshi (Floating drop); Ura-nage (Rear throw)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "BJA Mon: 16th to 17th Mon",
+   "content": "From the BJA Mon Grade Promotion Syllabus (January 2025). Recommended age 13-15. Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Mon-Grade-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Ushiro-goshi"
+      },
+      {
+       "name": "Tachi-waza: Sumi-gaeshi"
+      },
+      {
+       "name": "Tachi-waza: Yoko-gake"
+      },
+      {
+       "name": "Shime-waza: Hadaka-jime"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Sumi-gaeshi as a combination with Uchi-mata"
+      },
+      {
+       "name": "Tachi-waza: Ushiro-goshi as a counter to Harai-goshi"
+      },
+      {
+       "name": "Shime-waza: Hadaka-jime with Uke face-down and prone"
+      },
+      {
+       "name": "Randori: Attacking and defending with a cooperative partner for about three minutes, showing combinations and counters"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Four techniques shown individually, then as a series of combinations and counters (tachi-waza, ne-waza transitions or both), showing an understanding of judo principles and the ability to adapt to different opponents"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Hadaka-jime (Naked strangle); Sumi-gaeshi (Corner throw); Ushiro-goshi (Rear hip throw); Yoko-gake (Side hook throw)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "BJA Mon: 17th to 18th Mon",
+   "content": "From the BJA Mon Grade Promotion Syllabus (January 2025). Recommended age 13-15. Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Mon-Grade-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Sode-tsuri-komi-goshi"
+      },
+      {
+       "name": "Tachi-waza: Ko-uchi-gake-maki-komi"
+      },
+      {
+       "name": "Shime-waza: San-gaku-jime"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Any two variations of Sumi-gaeshi"
+      },
+      {
+       "name": "Ne-waza: San-gaku-gatame with a complex entry"
+      },
+      {
+       "name": "Ne-waza: San-gaku-jime with a complex entry"
+      },
+      {
+       "name": "Ne-waza: San-gaku-osae-gatame with a turnover and hold"
+      },
+      {
+       "name": "Randori: Attacking and defending with a cooperative partner for about three minutes, showing combinations and counters"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Four techniques shown individually, then as a series of combinations and counters (tachi-waza, ne-waza transitions or both), showing an understanding of judo principles and the ability to adapt to different opponents"
+      },
+      {
+       "name": "Or instead: one set of the Nage-no-kata or the Katame-no-kata (not needed with a BJA Junior Referee Award or Kata Award)"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Give three examples of penalties in the competition rules"
+      },
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Kata (Forms); Katame-no-kata (Grappling forms); Ko-uchi-gake-maki-komi (Minor inner hook thigh winding); Nage-no-kata (Throwing forms); San-gaku-gatame (Triangular hold down); San-gaku-jime (Triangular strangle); San-gaku-osae-gatame (Triangular strangle and hold down); Sode-tsuri-komi-goshi (Sleeve lift pull hip throw); Sumi-gaeshi (Corner throw)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "BJA Kyu: Novice to 6th Kyu",
+   "content": "From the BJA Kyu Grade Promotion Syllabus (January 2025). Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Kyu-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Ukemi: Ushiro ukemi"
+      },
+      {
+       "name": "Ukemi: Yoko ukemi"
+      },
+      {
+       "name": "Ukemi: Mae mawari ukemi (3 versions)"
+      },
+      {
+       "name": "Tachi-waza: O-soto-otoshi"
+      },
+      {
+       "name": "Tachi-waza: De-ashi-barai"
+      },
+      {
+       "name": "Tachi-waza: Uki-goshi"
+      },
+      {
+       "name": "Osae-komi-waza: Kesa-gatame"
+      },
+      {
+       "name": "Osae-komi-waza: Mune-gatame"
+      },
+      {
+       "name": "Osae-komi-waza: Kuzure-kesa-gatame"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Transition into ne-waza: O-soto-otoshi into Kesa-gatame"
+      },
+      {
+       "name": "Transition into ne-waza: De-ashi-barai into Mune-gatame"
+      },
+      {
+       "name": "Transition into ne-waza: Uki-goshi into Kuzure-kesa-gatame (any osae-komi-waza may be substituted)"
+      },
+      {
+       "name": "Ne-waza: Escape from Kesa-gatame by trapping Uke's leg"
+      },
+      {
+       "name": "Ne-waza: Escape from Mune-gatame using a bridge and roll"
+      },
+      {
+       "name": "Ne-waza: Escape from Kuzure-kesa-gatame using sit up and push"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Two additional techniques: one tachi-waza and one ne-waza (left or right, any suitable grip)"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Demonstrate the correct wearing of the judogi and tying of the belt"
+      },
+      {
+       "name": "Demonstrate the correct procedure for standing and kneeling bows"
+      },
+      {
+       "name": "In which country was judo devised?"
+      },
+      {
+       "name": "Who was the founder of modern judo?"
+      },
+      {
+       "name": "What is the Judo Code?"
+      },
+      {
+       "name": "Explain the meaning of: Dojo, Judogi, Zori, Hajime, Mate, Osae-komi, Rei, Randori, Toketa, Tori, Uke"
+      },
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Deashi-barai (Advanced foot sweep throw); Dojo (Judo hall); Hajime (Begin); Judogi (Judo uniform); Judoka (Judo player); Kuzure-kesa-gatame (Broken scarf hold); Mae mawari ukemi (Forward rolling breakfall); Mate (Wait / stop); Mune-gatame (Chest hold); Ne-waza (Groundwork techniques); Osae-komi (Hold down); Osae-komi-waza (Holding techniques); Osoto-otoshi (Major outer drop throw); Randori (Free practice); Rei (Standing bow); Tachi-waza (Standing techniques); Tori (The attacking judoka); Toketa (Hold broken); Uke (The defending judoka); Uki-goshi (Floating hip throw); Ushiro ukemi (Rear breakfall); Yoko ukemi (Side breakfall); Zori (Judo footwear)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "BJA Kyu: 6th to 5th Kyu",
+   "content": "From the BJA Kyu Grade Promotion Syllabus (January 2025). Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Kyu-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Ukemi: Mae ukemi"
+      },
+      {
+       "name": "Tachi-waza: Tai-otoshi"
+      },
+      {
+       "name": "Tachi-waza: Ippon-seoi-nage"
+      },
+      {
+       "name": "Tachi-waza: Ouchi-gari"
+      },
+      {
+       "name": "Osae-komi-waza: Yoko-shiho-gatame"
+      },
+      {
+       "name": "Osae-komi-waza: Tate-shiho-gatame"
+      },
+      {
+       "name": "Osae-komi-waza: Kami-shiho-gatame"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Transition into ne-waza: Tai-otoshi into Yoko-shiho-gatame"
+      },
+      {
+       "name": "Transition into ne-waza: Ippon-seoi-nage into Kami-shiho-gatame"
+      },
+      {
+       "name": "Transition into ne-waza: Ouchi-gari into Tate-shiho-gatame (any osae-komi-waza may be substituted)"
+      },
+      {
+       "name": "Ne-waza: Escape from Kami-shiho-gatame using action and reaction"
+      },
+      {
+       "name": "Ne-waza: Escape from Tate-shiho-gatame using a clamp and roll"
+      },
+      {
+       "name": "Ne-waza: Escape from Yoko-shiho-gatame using trap, bridge and roll"
+      },
+      {
+       "name": "Ne-waza: Turnover into Kesa-gatame (Uke on all fours)"
+      },
+      {
+       "name": "Ne-waza: Turnover into Mune-gatame (Uke on all fours)"
+      },
+      {
+       "name": "Ne-waza: Turnover into Yoko-shiho-gatame (Uke face-down and prone)"
+      },
+      {
+       "name": "Kumi-kata: Demonstrate the right and left standard grips"
+      },
+      {
+       "name": "Kumi-kata: Demonstrate right against left grips, double lapel and high collar grips"
+      },
+      {
+       "name": "Nage-komi: Light randori with a cooperative partner for about two minutes, alternating throws with a wide range of techniques"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Two additional techniques: one tachi-waza and one ne-waza (left or right, any suitable grip)"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Give two examples of actions against the contest rules"
+      },
+      {
+       "name": "Demonstrate a sound knowledge of the Judo Moral Code"
+      },
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Ippon-seoi-nage (One arm shoulder throw); Kami-shiho-gatame (Upper four quarters hold); Kumi-kata (Engagement position); Mae ukemi (Front breakfall); Mune-gatame (Chest hold); Nage-komi (Repetitive throwing); O-uchi-gari (Major inner reaping throw); Randori (Free practice); Tai-otoshi (Body drop throw); Tate-shiho-gatame (Lengthwise four quarters hold); Yoko-shiho-gatame (Side four quarters hold)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "BJA Kyu: 5th to 4th Kyu",
+   "content": "From the BJA Kyu Grade Promotion Syllabus (January 2025). Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Kyu-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Tsuri-komi-goshi"
+      },
+      {
+       "name": "Tachi-waza: O-goshi"
+      },
+      {
+       "name": "Tachi-waza: Seoi-otoshi"
+      },
+      {
+       "name": "Tachi-waza: Morote-seoi-nage"
+      },
+      {
+       "name": "Tachi-waza: Kouchi-gari"
+      },
+      {
+       "name": "Tachi-waza: Kosoto-gake"
+      },
+      {
+       "name": "Tachi-waza: Kosoto-gari"
+      },
+      {
+       "name": "Tachi-waza: Osoto-gari"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Combination: Ouchi-gari into Kouchi-gari"
+      },
+      {
+       "name": "Combination: Kouchi-gari into Osoto-gari or Osoto-gake"
+      },
+      {
+       "name": "Combination: Kouchi-gari into Morote-seoi-nage"
+      },
+      {
+       "name": "Combination: Ippon-seoi-nage into Kouchi-gari"
+      },
+      {
+       "name": "Combination: Any technique with Seoi-otoshi or Kouchi-gari"
+      },
+      {
+       "name": "Counter: Ouchi-gari countered by Tsuri-komi-goshi"
+      },
+      {
+       "name": "Counter: Tai-otoshi countered by Kosoto-gari or Kosoto-gake"
+      },
+      {
+       "name": "Ne-waza: Escape from Kesa-gatame using a bridge and roll"
+      },
+      {
+       "name": "Ne-waza: Move into Kesa-gatame from between Uke's legs"
+      },
+      {
+       "name": "Ne-waza: Move into Yoko-shiho-gatame from between Uke's legs"
+      },
+      {
+       "name": "Ne-waza: Arm roll with Uke approaching from the front"
+      },
+      {
+       "name": "Ne-waza: Arm roll with Uke approaching from behind"
+      },
+      {
+       "name": "Ne-waza: Turnover from underneath Uke into Tate-shiho-gatame"
+      },
+      {
+       "name": "Randori: Light randori with a cooperative partner for about three minutes"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Two tachi-waza and one ne-waza technique, shown as a combination, a counter and a transition into ne-waza"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Name three items from the judo moral code"
+      },
+      {
+       "name": "Give two examples of actions (not grips) against the contest rules for negative or safety reasons"
+      },
+      {
+       "name": "Demonstrate the proper procedure for entering and leaving the mat for a contest"
+      },
+      {
+       "name": "Explain the meaning of: Shido, Hansoku-make"
+      },
+      {
+       "name": "Demonstrate the referee's signals for Mate, Osaekomi, Toketa and adjusting the judogi"
+      },
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Kosoto-gake (Minor outer hook throw); Kosoto-gari (Minor outer reaping throw); Kouchi-gari (Minor inner reaping throw); Morote-seoi-nage (Two-handed shoulder throw); Ogoshi (Major hip throw); Osoto-gari (Major outer reaping throw); Seoi-otoshi (Shoulder drop throw); Tai-otoshi (Body drop throw); Tsuri-komi-goshi (Drawing hip throw); Yoko-shiho-gatame (Side four quarters hold)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "BJA Kyu: 4th to 3rd Kyu",
+   "content": "From the BJA Kyu Grade Promotion Syllabus (January 2025). Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Kyu-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Harai-goshi"
+      },
+      {
+       "name": "Tachi-waza: Uchi-mata"
+      },
+      {
+       "name": "Tachi-waza: Hiza-guruma"
+      },
+      {
+       "name": "Tachi-waza: Sasae-tsuri-komi-ashi"
+      },
+      {
+       "name": "Tachi-waza: Hane-goshi"
+      },
+      {
+       "name": "Tachi-waza: Okuri-ashi-barai"
+      },
+      {
+       "name": "Tachi-waza: Morote-eri-seoi-nage"
+      },
+      {
+       "name": "Kansetsu-waza: Ude-gatame (controlled; candidates under 16 on a junior licence must not apply it to the point of submission)"
+      },
+      {
+       "name": "Kansetsu-waza: Waki-gatame (controlled; candidates under 16 on a junior licence must not apply it to the point of submission)"
+      },
+      {
+       "name": "Kansetsu-waza: Hiza-gatame (controlled; candidates under 16 on a junior licence must not apply it to the point of submission)"
+      },
+      {
+       "name": "Kansetsu-waza: Juji-gatame (controlled; candidates under 16 on a junior licence must not apply it to the point of submission)"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Kansetsu-waza: Juji-gatame with a sit-back entry"
+      },
+      {
+       "name": "Kansetsu-waza: Juji-gatame with a rollover entry"
+      },
+      {
+       "name": "Kansetsu-waza: Juji-gatame with an over-the-shoulder entry"
+      },
+      {
+       "name": "Kansetsu-waza: Juji-gatame with an entry from beneath"
+      },
+      {
+       "name": "Randori: About four minutes with a cooperative partner, showing attack, defence, avoidance and continuous attacking in tachi-waza and ne-waza (kumi-kata, renzoku-waza, renraku-waza, kaeshi-waza)"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Four techniques shown individually, then as a series of combinations and counters (two combinations, two counters, two transitions into ne-waza)"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Hane-goshi (Spring hip); Harai-goshi (Sweeping hip); Hiza-gatame (Armlock applied with the knee); Hiza-guruma (Knee wheel); Juji-gatame (Cross armlock); Kansetsu-waza (Joint techniques); Morote-eri-seoi-nage (Two-handed lapel shoulder); Okuri-ashi-barai (Foot sweep); Renraku-waza (Combination techniques in the opposite direction); Renzoku-waza (Combination techniques in the same or similar direction); Sasae-tsuri-komi-ashi (Propping drawing ankle); Uchi-mata (Inner thigh); Ude-gatame (Straight armlock); Waki-gatame (Armlock applied with the armpit)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "BJA Kyu: 3rd to 2nd Kyu",
+   "content": "From the BJA Kyu Grade Promotion Syllabus (January 2025). Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Kyu-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Soto-maki-komi"
+      },
+      {
+       "name": "Tachi-waza: Tani-otoshi"
+      },
+      {
+       "name": "Tachi-waza: Yoko-guruma"
+      },
+      {
+       "name": "Tachi-waza: Tomoe-nage"
+      },
+      {
+       "name": "Tachi-waza: Yoko-tomoe-nage"
+      },
+      {
+       "name": "Tachi-waza: Uki-waza"
+      },
+      {
+       "name": "Shime-waza: Okuri-eri-jime (controlled; candidates under 16 on a junior licence must not apply it to the point of submission)"
+      },
+      {
+       "name": "Shime-waza: Nami-juji-jime (controlled; candidates under 16 on a junior licence must not apply it to the point of submission)"
+      },
+      {
+       "name": "Shime-waza: Gyaku-juji-jime (controlled; candidates under 16 on a junior licence must not apply it to the point of submission)"
+      },
+      {
+       "name": "Shime-waza: Kata-juji-jime (controlled; candidates under 16 on a junior licence must not apply it to the point of submission)"
+      },
+      {
+       "name": "Shime-waza: Koshi-jime (controlled; candidates under 16 on a junior licence must not apply it to the point of submission)"
+      },
+      {
+       "name": "Shime-waza: Kata-te-jime (controlled; candidates under 16 on a junior licence must not apply it to the point of submission)"
+      },
+      {
+       "name": "Kansetsu-waza: Ude-garami"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Combination: Ude-garami from Kuzure-kesa-gatame"
+      },
+      {
+       "name": "Ne-waza: Koshi-jime when Uke attempts Seoi-otoshi (a dropping attack)"
+      },
+      {
+       "name": "Ne-waza: Kata-te-jime with Uke in an all-fours position"
+      },
+      {
+       "name": "Ne-waza: Nami-juji-jime with Uke underneath (between Tori's legs)"
+      },
+      {
+       "name": "Ne-waza: Gyaku-juji-jime with Uke on top (between Tori's legs)"
+      },
+      {
+       "name": "Ne-waza: Okuri-eri-jime when Uke makes Seoi-otoshi (a dropping attack)"
+      },
+      {
+       "name": "Randori: About four minutes with a cooperative partner, showing attack, defence, avoidance and continuous attacking in tachi-waza and ne-waza"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Four techniques shown individually, then as a series of combinations and counters (two combinations, two counters, two transitions into ne-waza)"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Gyaku-juji-jime (Reverse cross strangle); Kaeshi-waza (Counter techniques); Kata-te-jime (Strangle with one hand); Kata-juji-jime (Half cross handed strangle); Koshi-jime (Strangle using the hip); Kuzure-kesa-gatame (Broken scarf hold); Nami-juji-jime (Normal cross strangle); Okuri-eri-jime (Sliding collar strangle); Renraku-waza (Combination techniques in the opposite direction); Renzoku-waza (Combination techniques in the same or similar direction); Seoi-otoshi (Shoulder drop); Shime-waza (Strangle techniques); Soto-maki-komi (Outside winding); Tani-otoshi (Valley drop throw); Tomoe-nage (Circle throw); Ude-garami (Entangled armlock); Uki-waza (Floating throw); Yoko-guruma (Side wheel throw); Yoko-tomoe-nage (Side circle throw)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "BJA Kyu: 2nd to 1st Kyu",
+   "content": "From the BJA Kyu Grade Promotion Syllabus (January 2025). Full syllabus: https://www.britishjudo.org.uk/wp-content/uploads/2025/02/Kyu-Syllabus-January-2025.pdf",
+   "subsections": [
+    {
+     "name": "Fundamental skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Sode-tsuri-komi-goshi"
+      },
+      {
+       "name": "Tachi-waza: Sumi-gaeshi"
+      },
+      {
+       "name": "Tachi-waza: Yoko-gake"
+      },
+      {
+       "name": "Tachi-waza: Ko-uchi-gake-maki-komi"
+      },
+      {
+       "name": "Tachi-waza: Ushiro-goshi"
+      },
+      {
+       "name": "Tachi-waza: Ura-nage (safety first: show the technique's effectiveness, a landing mat is advised)"
+      },
+      {
+       "name": "Tachi-waza: Uki-otoshi"
+      },
+      {
+       "name": "Tachi-waza: Koshi-guruma"
+      },
+      {
+       "name": "Shime-waza: Kata-ha-jime"
+      },
+      {
+       "name": "Shime-waza: Hadaka-jime"
+      },
+      {
+       "name": "Shime-waza: San-gaku-jime"
+      },
+      {
+       "name": "Shime-waza: San-gaku-gatame"
+      },
+      {
+       "name": "Shime-waza: San-gaku-osae-gatame"
+      }
+     ]
+    },
+    {
+     "name": "Performance skills",
+     "items": [
+      {
+       "name": "Tachi-waza: Any two variations of Sumi-gaeshi"
+      },
+      {
+       "name": "Tachi-waza: Ushiro-goshi as a counter to Harai-goshi"
+      },
+      {
+       "name": "Tachi-waza: Sumi-gaeshi as a combination with Uchi-mata"
+      },
+      {
+       "name": "Tachi-waza: Counter Koshi-guruma with Ura-nage"
+      },
+      {
+       "name": "Ne-waza: San-gaku-jime with a complex entry"
+      },
+      {
+       "name": "Ne-waza: San-gaku-gatame with a complex entry"
+      },
+      {
+       "name": "Ne-waza: San-gaku-osae-gatame with a turnover and hold"
+      },
+      {
+       "name": "Ne-waza: Hadaka-jime with Uke face-down and prone"
+      },
+      {
+       "name": "Ne-waza: Kata-ha-jime with Uke in an all-fours position"
+      },
+      {
+       "name": "Randori: About four minutes with a cooperative partner, showing attack, defence, avoidance and continuous attacking in tachi-waza and ne-waza"
+      }
+     ]
+    },
+    {
+     "name": "Personal choice",
+     "items": [
+      {
+       "name": "Four techniques shown individually, then as a series of combinations and counters (two combinations, two counters, two transitions into ne-waza)"
+      },
+      {
+       "name": "Or instead: one set of the Nage-no-kata or one set of the Katame-no-kata, performed traditionally with the formal opening and closing bows"
+      }
+     ]
+    },
+    {
+     "name": "Supplementary knowledge",
+     "items": [
+      {
+       "name": "Give three examples of penalties in the competition rules"
+      },
+      {
+       "name": "Explain the Japanese terminology for this grade",
+       "description": "Hadaka-jime (Naked strangle); Kata (Forms); Kata-ha-jime (Single collar strangle); Katame-no-kata (Grappling forms); Koshi-guruma (Hip wheel throw); Ko-uchi-gake-maki-komi (Minor inner hook thigh winding); Nage-no-kata (Throwing forms); Renraku-waza (Combination techniques in the opposite direction); Renzoku-waza (Combination techniques in the same or similar direction); San-gaku-gatame (Triangular hold down); San-gaku-jime (Triangular strangle); San-gaku-osae-gatame (Triangular strangle and hold down); Sode-tsuri-komi-goshi (Sleeve lift pull hip throw); Sumi-gaeshi (Corner throw); Uki-otoshi (Floating drop); Ura-nage (Rear throw); Ushiro-goshi (Rear hip throw); Yoko-gake (Side hook throw)"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

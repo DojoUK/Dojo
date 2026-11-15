@@ -38,6 +38,21 @@
                         <label class="form-label small fw-semibold">Organisation name</label>
                         <input type="text" name="org_name" value="{{ org_name|default:'' }}" class="form-control" required autofocus>
                     </div>
+                    {% if club_templates %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold" for="club-template">Club type <span class="text-muted fw-normal">(optional)</span></label>
+                        <select name="club_template" id="club-template" class="form-select">
+                            <option value="">Start empty: I'll set up grades myself</option>
+                            {% for t in club_templates %}
+                            <option value="{{ t.key }}" {% if club_template == t.key %}selected{% endif %}>{{ t.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">
+                            Pre-fills the grades for your sport, and switches on Grades. You can edit or add to them afterwards.
+                            {% for t in club_templates %}<span class="d-block">{{ t.name }}: {{ t.description }}</span>{% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Contact email</label>
                         <input type="email" name="org_email" value="{{ org_email|default:'' }}" class="form-control" placeholder="e.g. secretary@sportclub.co.uk">

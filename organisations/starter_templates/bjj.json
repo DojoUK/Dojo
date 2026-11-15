@@ -1,0 +1,408 @@
+{
+ "key": "bjj",
+ "name": "Brazilian Jiu-Jitsu",
+ "description": "Kids belts (grey, yellow, orange and green, with their white and black variants) and the adult belts from white to red, each with stripes or degrees.",
+ "enable_features": [
+  "grades"
+ ],
+ "progression_systems": [
+  {
+   "name": "BJJ Kids Belts",
+   "uses_gradings": false,
+   "assign_to_new_members": false,
+   "stages": [
+    {
+     "name": "White Belt",
+     "colour": "#FFFFFF"
+    },
+    {
+     "name": "White Belt - 1 Stripe",
+     "colour": "#FFFFFF"
+    },
+    {
+     "name": "White Belt - 2 Stripes",
+     "colour": "#FFFFFF"
+    },
+    {
+     "name": "White Belt - 3 Stripes",
+     "colour": "#FFFFFF"
+    },
+    {
+     "name": "White Belt - 4 Stripes",
+     "colour": "#FFFFFF"
+    },
+    {
+     "name": "Grey-White Belt",
+     "colour": "#D1D5DB"
+    },
+    {
+     "name": "Grey-White Belt - 1 Stripe",
+     "colour": "#D1D5DB"
+    },
+    {
+     "name": "Grey-White Belt - 2 Stripes",
+     "colour": "#D1D5DB"
+    },
+    {
+     "name": "Grey-White Belt - 3 Stripes",
+     "colour": "#D1D5DB"
+    },
+    {
+     "name": "Grey-White Belt - 4 Stripes",
+     "colour": "#D1D5DB"
+    },
+    {
+     "name": "Grey Belt",
+     "colour": "#9CA3AF"
+    },
+    {
+     "name": "Grey Belt - 1 Stripe",
+     "colour": "#9CA3AF"
+    },
+    {
+     "name": "Grey Belt - 2 Stripes",
+     "colour": "#9CA3AF"
+    },
+    {
+     "name": "Grey Belt - 3 Stripes",
+     "colour": "#9CA3AF"
+    },
+    {
+     "name": "Grey Belt - 4 Stripes",
+     "colour": "#9CA3AF"
+    },
+    {
+     "name": "Grey-Black Belt",
+     "colour": "#6B7280"
+    },
+    {
+     "name": "Grey-Black Belt - 1 Stripe",
+     "colour": "#6B7280"
+    },
+    {
+     "name": "Grey-Black Belt - 2 Stripes",
+     "colour": "#6B7280"
+    },
+    {
+     "name": "Grey-Black Belt - 3 Stripes",
+     "colour": "#6B7280"
+    },
+    {
+     "name": "Grey-Black Belt - 4 Stripes",
+     "colour": "#6B7280"
+    },
+    {
+     "name": "Yellow-White Belt",
+     "colour": "#FEF08A"
+    },
+    {
+     "name": "Yellow-White Belt - 1 Stripe",
+     "colour": "#FEF08A"
+    },
+    {
+     "name": "Yellow-White Belt - 2 Stripes",
+     "colour": "#FEF08A"
+    },
+    {
+     "name": "Yellow-White Belt - 3 Stripes",
+     "colour": "#FEF08A"
+    },
+    {
+     "name": "Yellow-White Belt - 4 Stripes",
+     "colour": "#FEF08A"
+    },
+    {
+     "name": "Yellow Belt",
+     "colour": "#FACC15"
+    },
+    {
+     "name": "Yellow Belt - 1 Stripe",
+     "colour": "#FACC15"
+    },
+    {
+     "name": "Yellow Belt - 2 Stripes",
+     "colour": "#FACC15"
+    },
+    {
+     "name": "Yellow Belt - 3 Stripes",
+     "colour": "#FACC15"
+    },
+    {
+     "name": "Yellow Belt - 4 Stripes",
+     "colour": "#FACC15"
+    },
+    {
+     "name": "Yellow-Black Belt",
+     "colour": "#CA8A04"
+    },
+    {
+     "name": "Yellow-Black Belt - 1 Stripe",
+     "colour": "#CA8A04"
+    },
+    {
+     "name": "Yellow-Black Belt - 2 Stripes",
+     "colour": "#CA8A04"
+    },
+    {
+     "name": "Yellow-Black Belt - 3 Stripes",
+     "colour": "#CA8A04"
+    },
+    {
+     "name": "Yellow-Black Belt - 4 Stripes",
+     "colour": "#CA8A04"
+    },
+    {
+     "name": "Orange-White Belt",
+     "colour": "#FDBA74"
+    },
+    {
+     "name": "Orange-White Belt - 1 Stripe",
+     "colour": "#FDBA74"
+    },
+    {
+     "name": "Orange-White Belt - 2 Stripes",
+     "colour": "#FDBA74"
+    },
+    {
+     "name": "Orange-White Belt - 3 Stripes",
+     "colour": "#FDBA74"
+    },
+    {
+     "name": "Orange-White Belt - 4 Stripes",
+     "colour": "#FDBA74"
+    },
+    {
+     "name": "Orange Belt",
+     "colour": "#F97316"
+    },
+    {
+     "name": "Orange Belt - 1 Stripe",
+     "colour": "#F97316"
+    },
+    {
+     "name": "Orange Belt - 2 Stripes",
+     "colour": "#F97316"
+    },
+    {
+     "name": "Orange Belt - 3 Stripes",
+     "colour": "#F97316"
+    },
+    {
+     "name": "Orange Belt - 4 Stripes",
+     "colour": "#F97316"
+    },
+    {
+     "name": "Orange-Black Belt",
+     "colour": "#C2410C"
+    },
+    {
+     "name": "Orange-Black Belt - 1 Stripe",
+     "colour": "#C2410C"
+    },
+    {
+     "name": "Orange-Black Belt - 2 Stripes",
+     "colour": "#C2410C"
+    },
+    {
+     "name": "Orange-Black Belt - 3 Stripes",
+     "colour": "#C2410C"
+    },
+    {
+     "name": "Orange-Black Belt - 4 Stripes",
+     "colour": "#C2410C"
+    },
+    {
+     "name": "Green-White Belt",
+     "colour": "#86EFAC"
+    },
+    {
+     "name": "Green-White Belt - 1 Stripe",
+     "colour": "#86EFAC"
+    },
+    {
+     "name": "Green-White Belt - 2 Stripes",
+     "colour": "#86EFAC"
+    },
+    {
+     "name": "Green-White Belt - 3 Stripes",
+     "colour": "#86EFAC"
+    },
+    {
+     "name": "Green-White Belt - 4 Stripes",
+     "colour": "#86EFAC"
+    },
+    {
+     "name": "Green Belt",
+     "colour": "#22C55E"
+    },
+    {
+     "name": "Green Belt - 1 Stripe",
+     "colour": "#22C55E"
+    },
+    {
+     "name": "Green Belt - 2 Stripes",
+     "colour": "#22C55E"
+    },
+    {
+     "name": "Green Belt - 3 Stripes",
+     "colour": "#22C55E"
+    },
+    {
+     "name": "Green Belt - 4 Stripes",
+     "colour": "#22C55E"
+    },
+    {
+     "name": "Green-Black Belt",
+     "colour": "#15803D"
+    },
+    {
+     "name": "Green-Black Belt - 1 Stripe",
+     "colour": "#15803D"
+    },
+    {
+     "name": "Green-Black Belt - 2 Stripes",
+     "colour": "#15803D"
+    },
+    {
+     "name": "Green-Black Belt - 3 Stripes",
+     "colour": "#15803D"
+    },
+    {
+     "name": "Green-Black Belt - 4 Stripes",
+     "colour": "#15803D"
+    }
+   ]
+  },
+  {
+   "name": "BJJ Adult Belts",
+   "uses_gradings": false,
+   "assign_to_new_members": false,
+   "stages": [
+    {
+     "name": "White Belt",
+     "colour": "#FFFFFF"
+    },
+    {
+     "name": "White Belt - 1 Stripe",
+     "colour": "#FFFFFF"
+    },
+    {
+     "name": "White Belt - 2 Stripes",
+     "colour": "#FFFFFF"
+    },
+    {
+     "name": "White Belt - 3 Stripes",
+     "colour": "#FFFFFF"
+    },
+    {
+     "name": "White Belt - 4 Stripes",
+     "colour": "#FFFFFF"
+    },
+    {
+     "name": "Blue Belt",
+     "colour": "#2563EB"
+    },
+    {
+     "name": "Blue Belt - 1 Stripe",
+     "colour": "#2563EB"
+    },
+    {
+     "name": "Blue Belt - 2 Stripes",
+     "colour": "#2563EB"
+    },
+    {
+     "name": "Blue Belt - 3 Stripes",
+     "colour": "#2563EB"
+    },
+    {
+     "name": "Blue Belt - 4 Stripes",
+     "colour": "#2563EB"
+    },
+    {
+     "name": "Purple Belt",
+     "colour": "#7C3AED"
+    },
+    {
+     "name": "Purple Belt - 1 Stripe",
+     "colour": "#7C3AED"
+    },
+    {
+     "name": "Purple Belt - 2 Stripes",
+     "colour": "#7C3AED"
+    },
+    {
+     "name": "Purple Belt - 3 Stripes",
+     "colour": "#7C3AED"
+    },
+    {
+     "name": "Purple Belt - 4 Stripes",
+     "colour": "#7C3AED"
+    },
+    {
+     "name": "Brown Belt",
+     "colour": "#78350F"
+    },
+    {
+     "name": "Brown Belt - 1 Stripe",
+     "colour": "#78350F"
+    },
+    {
+     "name": "Brown Belt - 2 Stripes",
+     "colour": "#78350F"
+    },
+    {
+     "name": "Brown Belt - 3 Stripes",
+     "colour": "#78350F"
+    },
+    {
+     "name": "Brown Belt - 4 Stripes",
+     "colour": "#78350F"
+    },
+    {
+     "name": "Black Belt",
+     "colour": "#111827"
+    },
+    {
+     "name": "Black Belt - 1st Degree",
+     "colour": "#111827"
+    },
+    {
+     "name": "Black Belt - 2nd Degree",
+     "colour": "#111827"
+    },
+    {
+     "name": "Black Belt - 3rd Degree",
+     "colour": "#111827"
+    },
+    {
+     "name": "Black Belt - 4th Degree",
+     "colour": "#111827"
+    },
+    {
+     "name": "Black Belt - 5th Degree",
+     "colour": "#111827"
+    },
+    {
+     "name": "Black Belt - 6th Degree",
+     "colour": "#111827"
+    },
+    {
+     "name": "Red and Black Belt (7th Degree)",
+     "colour": "#991B1B"
+    },
+    {
+     "name": "Red and White Belt (8th Degree)",
+     "colour": "#FCA5A5"
+    },
+    {
+     "name": "Red Belt (9th Degree)",
+     "colour": "#DC2626"
+    },
+    {
+     "name": "Red Belt (10th Degree)",
+     "colour": "#B91C1C"
+    }
+   ]
+  }
+ ]
+}
