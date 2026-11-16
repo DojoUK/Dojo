@@ -78,6 +78,11 @@
         <a href="{% url 'portal_classes' token=member.token %}" class="{% if active == 'classes' %}active{% endif %}">
             <i class="bi bi-people"></i> Classes
         </a>
+        {% if org.has_bookable_classes %}
+        <a href="{% url 'portal_bookings' token=member.token %}" class="{% if active == 'bookings' %}active{% endif %}">
+            <i class="bi bi-calendar-check"></i> Book
+        </a>
+        {% endif %}
         {% if 'billing' in org.enabled_features %}
         <a href="{% url 'portal_payments' token=member.token %}" class="{% if active == 'payments' %}active{% endif %}">
             <i class="bi bi-receipt"></i> Payments
@@ -92,9 +97,15 @@
 {% if messages %}
 <div class="portal-container pt-3 pb-0">
     {% for message in messages %}
+    {% if message.level_tag == 'error' or message.level_tag == 'warning' %}
+    <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:12px 16px;margin-bottom:12px;">
+        <span style="color:#991b1b;font-weight:600;font-size:14px;">{{ message }}</span>
+    </div>
+    {% else %}
     <div style="background:#d1fae5;border:1px solid #6ee7b7;border-radius:8px;padding:12px 16px;margin-bottom:12px;">
         <span style="color:#065f46;font-weight:600;font-size:14px;">{{ message }}</span>
     </div>
+    {% endif %}
     {% endfor %}
 </div>
 {% endif %}

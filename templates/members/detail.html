@@ -348,9 +348,23 @@
                     <div class="card-body p-0">
                         <ul class="list-group list-group-flush">
                             {% for enrolment in enrolments %}
-                            <li class="list-group-item py-2 px-3">
-                                <div class="small fw-semibold">{{ enrolment.assigned_class.name }}</div>
-                                <div class="small text-muted">{{ enrolment.assigned_class.schedule_display }}</div>
+                            <li class="list-group-item py-2 px-3 d-flex justify-content-between align-items-center gap-2">
+                                <div>
+                                    <div class="small fw-semibold">{{ enrolment.assigned_class.name }}</div>
+                                    <div class="small text-muted">{{ enrolment.assigned_class.schedule_display }}</div>
+                                    <div class="small {% if enrolment.auto_enrol %}text-muted{% else %}text-warning-emphasis{% endif %}">
+                                        {% if enrolment.auto_enrol %}On every register{% else %}Only on sessions they book{% endif %}
+                                    </div>
+                                </div>
+                                <form method="post" action="{% url 'class_set_auto_enrol' org_slug=org.slug pk=enrolment.assigned_class.pk member_pk=member.pk %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="member">
+                                    <input type="hidden" name="auto_enrol" value="{% if enrolment.auto_enrol %}0{% else %}1{% endif %}">
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary" style="font-size:0.7rem;"
+                                            title="{% if enrolment.auto_enrol %}Stop adding them to every register{% else %}Add them to every register{% endif %}">
+                                        {% if enrolment.auto_enrol %}Auto-enrolled{% else %}Not auto-enrolled{% endif %}
+                                    </button>
+                                </form>
                             </li>
                             {% endfor %}
                         </ul>

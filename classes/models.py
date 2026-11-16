@@ -26,6 +26,27 @@ class Class(models.Model):
             parts.append(f"{self.DAYS[entry['day']]} {time_str}".strip())
         return ', '.join(parts)
 
+    is_active = models.BooleanField(
+        default=False,
+        help_text='Active classes appear in the member portal timetable, where members can enrol or '
+                  'book single sessions. The description above is shown to them.',
+    )
+    min_age = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text='Youngest age (in whole years) that can book this class in the member portal. Leave blank for no limit.',
+    )
+    max_age = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text='Oldest age (in whole years, inclusive) that can book this class in the member portal. Leave blank for no limit.',
+    )
+    min_stage = models.ForeignKey(
+        'progression.ProgressionStage', null=True, blank=True, on_delete=models.SET_NULL, related_name='+',
+        help_text='Lowest grade that can book this class in the member portal.',
+    )
+    max_stage = models.ForeignKey(
+        'progression.ProgressionStage', null=True, blank=True, on_delete=models.SET_NULL, related_name='+',
+        help_text='Highest grade that can book this class in the member portal.',
+    )
     max_capacity = models.PositiveIntegerField(null=True, blank=True)
     billing_policy = models.ForeignKey('billing.BillingPolicy', null=True, blank=True, on_delete=models.SET_NULL, related_name='classes')
     default_leader = models.ForeignKey(
@@ -33,6 +54,54 @@ class Class(models.Model):
         help_text='The coach who normally runs this whole class series — carried onto newly generated '
                    'sessions and used on the calendar when a session has no leader of its own set yet.',
     )
+
+    @property
+    def has_restrictions(self):
+        return any([self.min_age is not None, self.max_age is not None, self.min_stage_id, self.max_stage_id])
+
+    def restriction_text(self):
+        """Plain-English summary of who can book, e.g. 'Ages 7 to 11 · Orange belt and above'."""
+        parts = []
+        if self.min_age is not None and self.max_age is not None:
+            parts.append(f'Ages {self.min_age} to {self.max_age}')
+        elif self.min_age is not None:
+            parts.append(f'Ages {self.min_age} and over')
+        elif self.max_age is not None:
+            parts.append(f'Ages {self.max_age} and under')
+        if self.min_stage_id and self.max_stage_id:
+            parts.append(self.min_stage.name if self.min_stage_id == self.max_stage_id
+                         else f'{self.min_stage.name} to {self.max_stage.name}')
+        elif self.min_stage_id:
+            parts.append(f'{self.min_stage.name} and above')
+        elif self.max_stage_id:
+            parts.append(f'{self.max_stage.name} and below')
+        return ' · '.join(parts)
+
+    def ineligible_reason(self, member, today=None):
+        """Why this member can't book the class from the portal (age / grade limits), or '' if they can."""
+        from django.utils import timezone
+        if self.min_age is not None or self.max_age is not None:
+            if not member.date_of_birth:
+                return "We don't have your date of birth, so we can't check the age range. Please ask the club."
+            today = today or timezone.localdate()
+            dob = member.date_of_birth
+            age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+            if (self.min_age is not None and age < self.min_age) or (self.max_age is not None and age > self.max_age):
+                return f'This class is for {self.restriction_text().split(" · ")[0].lower()}.'
+        stages = [st for st in (self.min_stage, self.max_stage) if st is not None]
+        if stages and self.organisation.has_feature('grades'):
+            system_id = stages[0].system_id
+            current = None
+            for prog in member.progressions.filter(stage__system_id=system_id).select_related('stage'):
+                if current is None or (prog.stage.order, prog.achieved_date) > (current.stage.order, current.achieved_date):
+                    current = prog
+            level = current.stage.order if current else None
+            low = self.min_stage.order if self.min_stage_id else None
+            high = self.max_stage.order if self.max_stage_id else None
+            if (low is not None and (level is None or level < low)) or (high is not None and level is not None and level > high):
+                grade = self.restriction_text().split(' · ')[-1]
+                return f'This class is for grades: {grade}.'
+        return ''
 
     @property
     def enrolled_count(self):
@@ -94,6 +163,11 @@ class ClassHelper(models.Model):
 class ClassMember(models.Model):
     assigned_class = models.ForeignKey(Class, on_delete=models.CASCADE, related_name='enrolments')
     member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='enrolments')
+    auto_enrol = models.BooleanField(
+        default=True,
+        help_text='On: the member is on every register for this class. Off: they are enrolled but only '
+                  'appear on the registers of sessions they have booked.',
+    )
 
     def __str__(self):
         return f"{self.member} → {self.assigned_class}"
@@ -131,6 +205,32 @@ class Session(models.Model):
 
     class Meta:
         ordering = ['-date']
+
+
+class SessionBooking(models.Model):
+    """A member who has booked onto one session without being enrolled on every register for the class."""
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name='bookings')
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='session_bookings')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.member} → {self.session}"
+
+    class Meta:
+        unique_together = ('session', 'member')
+
+
+class SessionAbsence(models.Model):
+    """A member enrolled on every register for a class who has told the club they can't make one session."""
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name='absences')
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='session_absences')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.member} can't attend {self.session}"
+
+    class Meta:
+        unique_together = ('session', 'member')
 
 
 class Attendance(models.Model):

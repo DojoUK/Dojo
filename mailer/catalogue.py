@@ -216,4 +216,73 @@ The link works once and expires in {link_expires}. If you didn't ask for this, y
     ),
 )
 
+EMAIL_TYPES += (
+    EmailType(
+        'class_enrolled', 'Class enrolment confirmed', 'When a member is enrolled in a class, so they are on all of its registers.',
+        'You\'re enrolled in {class_name} ({club_name})',
+        """{greeting},
+
+This is to confirm that {first_name} is now **enrolled in {class_name}** at {club_name}.
+
+{booking_box}
+
+You'll be on the register for every session of this class. If you need to leave the class, you can do that from your member portal.
+
+See you on the mat,
+**{club_name}**""",
+        fields=(('class_name', 'The class'), ('class_schedule', 'When the class runs, e.g. "Tuesday 18:00–18:45"')),
+        blocks=(('booking_box', 'Highlighted box with the class and when it runs'),),
+        example={'class_name': 'Juniors', 'class_schedule': 'Tuesday 18:00–18:45'},
+    ),
+    EmailType(
+        'class_enrolment_cancelled', 'Class enrolment cancelled', 'When a member is taken off a class they were enrolled in.',
+        'You\'ve left {class_name} ({club_name})',
+        """{greeting},
+
+This is to confirm that {first_name} is **no longer enrolled in {class_name}** at {club_name}.
+
+{booking_box}
+
+If this wasn't what you meant to do, you can enrol again from your member portal, or just get in touch.
+
+**{club_name}**""",
+        fields=(('class_name', 'The class'), ('class_schedule', 'When the class runs, e.g. "Tuesday 18:00–18:45"')),
+        blocks=(('booking_box', 'Highlighted box with the class and when it runs'),),
+        example={'class_name': 'Juniors', 'class_schedule': 'Tuesday 18:00–18:45'},
+    ),
+    EmailType(
+        'session_booked', 'Session booking confirmed', 'When a member books onto a single session.',
+        'Booked: {class_name} on {session_date} ({club_name})',
+        """{greeting},
+
+This is to confirm that {first_name} is **booked in** for this session:
+
+{booking_box}
+
+If you can't make it any more, please cancel from your member portal so someone else can take the place.
+
+See you on the mat,
+**{club_name}**""",
+        fields=(('class_name', 'The class'), ('session_date', 'The session\'s date, e.g. "Tuesday 3 November 2026"')),
+        blocks=(('booking_box', 'Highlighted box with the class and date'),),
+        example={'class_name': 'Juniors', 'session_date': 'Tuesday 3 November 2026'},
+    ),
+    EmailType(
+        'session_booking_cancelled', 'Session booking cancelled', 'When a member cancels their booking onto a single session.',
+        'Booking cancelled: {class_name} on {session_date} ({club_name})',
+        """{greeting},
+
+This is to confirm that {first_name}'s booking for this session has been **cancelled**:
+
+{booking_box}
+
+If this wasn't what you meant to do, you can book again from your member portal while there's space.
+
+**{club_name}**""",
+        fields=(('class_name', 'The class'), ('session_date', 'The session\'s date, e.g. "Tuesday 3 November 2026"')),
+        blocks=(('booking_box', 'Highlighted box with the class and date'),),
+        example={'class_name': 'Juniors', 'session_date': 'Tuesday 3 November 2026'},
+    ),
+)
+
 BY_KEY = {email_type.key: email_type for email_type in EMAIL_TYPES}

@@ -1,0 +1,313 @@
+{% extends 'portal/base.html' %}
+
+{% block title_suffix %} — Book a class{% endblock %}
+
+{% block content %}
+
+<div class="mb-3">
+    <h5 class="mb-1">Book a class</h5>
+    <p class="text-muted small mb-0">
+        Book single sessions day by day, or enrol to be on every register for a class. Only classes you're eligible for are shown.
+        You can book or cancel up to {{ cutoff_hours }} hour{{ cutoff_hours|pluralize }} before a session starts.
+    </p>
+</div>
+
+{% if plan.policy or plans %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom py-3"><h6 class="mb-0">My plan</h6></div>
+    <div class="card-body">
+        {% if plan.policy %}
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+            <div>
+                <div class="fw-semibold">{{ plan.policy.name }}</div>
+                <div class="small text-muted">{{ plan.policy.limit_text }}</div>
+            </div>
+            {% if plan.limited %}
+            <div class="text-end">
+                <div class="fw-semibold">{{ plan.used }} of {{ plan.limit }} used</div>
+                <div class="small text-muted">in {{ plan.period_label }}</div>
+            </div>
+            {% endif %}
+        </div>
+        {% if plan.limited %}
+        <div class="progress mb-2" style="height:8px;"><div class="progress-bar" style="width:{% widthratio plan.used plan.limit 100 %}%;"></div></div>
+        <p class="small text-muted mb-0">
+            {% if plan.remaining %}{{ plan.remaining }} session{{ plan.remaining|pluralize }} left. {% else %}You've reached your limit for {{ plan.period_label }}. {% endif %}
+            Sessions you're enrolled on count towards it, and cancelling one frees it up.
+        </p>
+        {% endif %}
+        {% else %}
+        <p class="small text-muted mb-0">You're not on a plan yet, so there's no limit on how many sessions you can book.</p>
+        {% endif %}
+
+        {% if plans %}
+        <hr>
+        <div class="small fw-semibold mb-2">Choose a plan</div>
+        <div class="d-grid gap-2">
+            {% for p in plans %}
+            <form method="post" action="{% url 'portal_booking_action' token=member.token %}"
+                  class="d-flex flex-wrap justify-content-between align-items-center gap-2 border rounded p-2"
+                  onsubmit="return confirm('Switch to {{ p.name|escapejs }}? This changes what you are billed from your next invoice.');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="choose_plan">
+                <input type="hidden" name="policy_id" value="{{ p.pk }}">
+                <div>
+                    <div class="small fw-semibold">{{ p.name }} <span class="text-muted fw-normal">· {{ p.display_amount }} {{ p.get_billing_cycle_display|lower }}</span></div>
+                    <div class="small text-muted">{{ p.limit_text }}{% if p.plan_description %} · {{ p.plan_description }}{% endif %}</div>
+                </div>
+                {% if plan.policy.pk == p.pk %}
+                <span class="badge bg-success-subtle text-success">Your plan</span>
+                {% else %}
+                <button type="submit" class="btn btn-sm btn-outline-dark">Choose</button>
+                {% endif %}
+            </form>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% if my_enrolments or my_sessions %}
+<div class="portal-grid">
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3"><h6 class="mb-0">My classes</h6></div>
+        {% if my_enrolments %}
+        <ul class="list-group list-group-flush">
+            {% for cm in my_enrolments %}
+            <li class="list-group-item py-2 px-3 d-flex justify-content-between align-items-center gap-2">
+                <div>
+                    <div class="small fw-semibold">{{ cm.assigned_class.name }}</div>
+                    <div class="small text-muted">
+                        {{ cm.assigned_class.schedule_display }}
+                        {% if not cm.auto_enrol %}· booked session by session{% endif %}
+                    </div>
+                </div>
+                <form method="post" action="{% url 'portal_booking_action' token=member.token %}"
+                      onsubmit="return confirm('Leave {{ cm.assigned_class.name|escapejs }}?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="leave">
+                    <input type="hidden" name="class_id" value="{{ cm.assigned_class.pk }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Leave</button>
+                </form>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="card-body"><p class="text-muted small mb-0">You're not enrolled in any classes.</p></div>
+        {% endif %}
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3"><h6 class="mb-0">My upcoming sessions</h6></div>
+        {% if my_sessions %}
+        <ul class="list-group list-group-flush">
+            {% for row in my_sessions %}
+            <li class="list-group-item py-2 px-3 d-flex justify-content-between align-items-center gap-2">
+                <div>
+                    <div class="small fw-semibold{% if row.absent %} text-decoration-line-through text-muted{% endif %}">{{ row.session.assigned_class.name }}</div>
+                    <div class="small text-muted">
+                        {{ row.session.date|date:"l j F Y" }}{% if row.time %} · {{ row.time }}{% endif %}
+                        {% if row.kind == 'enrolled' %}· enrolled{% endif %}
+                        {% if row.absent %}· <span class="text-danger">not attending</span>{% endif %}
+                    </div>
+                </div>
+                {% if not row.can_change %}
+                <span class="small text-muted">Too close to change online</span>
+                {% else %}
+                <form method="post" action="{% url 'portal_booking_action' token=member.token %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="session_id" value="{{ row.session.pk }}">
+                    {% if row.absent %}
+                    <input type="hidden" name="action" value="rejoin_session">
+                    <button type="submit" class="btn btn-sm btn-outline-dark">Undo</button>
+                    {% elif row.kind == 'enrolled' %}
+                    <input type="hidden" name="action" value="skip_session">
+                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Tell the club you can't make this session">Can't attend</button>
+                    {% else %}
+                    <input type="hidden" name="action" value="cancel_booking">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Cancel</button>
+                    {% endif %}
+                </form>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <div class="card-body"><p class="text-muted small mb-0">No upcoming sessions.</p></div>
+        {% endif %}
+    </div>
+{% endif %}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h6 class="mb-0">Available sessions <span class="text-muted fw-normal small">· next {{ days_ahead }} days</span></h6>
+    <div class="btn-group btn-group-sm" role="group" aria-label="View">
+        <button type="button" class="btn btn-outline-dark" id="view-list"><i class="bi bi-list-ul me-1"></i>Daily list</button>
+        <button type="button" class="btn btn-outline-dark" id="view-cal"><i class="bi bi-calendar3 me-1"></i>Calendar</button>
+    </div>
+</div>
+
+<div id="cal-wrap" class="card border-0 shadow-sm mb-3 d-none">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="cal-prev" aria-label="Previous month"><i class="bi bi-chevron-left"></i></button>
+            <strong id="cal-title"></strong>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="cal-next" aria-label="Next month"><i class="bi bi-chevron-right"></i></button>
+        </div>
+        <div id="cal-grid" class="book-cal"></div>
+        <p class="small text-muted mb-0 mt-2"><span class="book-cal-key"></span> Days with classes you can book. Tap one to see them below.</p>
+    </div>
+</div>
+
+<p id="cal-hint" class="text-muted small d-none">Choose a highlighted day to see its classes.</p>
+<p id="day-empty" class="text-muted small d-none">No classes on that day.</p>
+
+{% for day in days %}
+<div class="card border-0 shadow-sm mb-3 book-day" data-date="{{ day.iso }}">
+    <div class="card-header bg-white border-bottom py-2"><h6 class="mb-0">{{ day.date|date:"l j F" }}</h6></div>
+    <ul class="list-group list-group-flush">
+        {% for e in day.entries %}
+        <li class="list-group-item px-3 py-2 d-flex justify-content-between align-items-start gap-3">
+            <div>
+                <div class="small fw-semibold">{% if e.time %}{{ e.time }} · {% endif %}{{ e.cls.name }}</div>
+                {% if e.cls.description %}<div class="small text-muted" style="white-space:pre-line;">{{ e.cls.description }}</div>{% endif %}
+                {% if e.cls.has_restrictions %}<div class="small text-muted"><i class="bi bi-person-check me-1"></i>{{ e.cls.restriction_text }}</div>{% endif %}
+            </div>
+            <div class="text-nowrap">
+                {% if e.enrolled and e.absent %}
+                <span class="small text-danger">Not attending</span>
+                {% elif e.enrolled %}
+                <span class="badge bg-success-subtle text-success">Enrolled</span>
+                {% elif e.booked %}
+                <span class="badge bg-success-subtle text-success">Booked</span>
+                {% elif e.full %}
+                <span class="small text-muted">Full</span>
+                {% elif e.over_limit %}
+                <span class="small text-muted" title="Your plan's session limit is reached for this period">Plan limit reached</span>
+                {% else %}
+                <form method="post" action="{% url 'portal_booking_action' token=member.token %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="book">
+                    <input type="hidden" name="session_id" value="{{ e.session.pk }}">
+                    <button type="submit" class="btn btn-sm btn-outline-dark">Book</button>
+                </form>
+                {% endif %}
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% empty %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body text-center py-4"><p class="text-muted small mb-0">No sessions are open for booking right now.</p></div>
+</div>
+{% endfor %}
+
+{% if cards %}
+<h6 class="mt-4 mb-2">Enrol on a whole class</h6>
+<p class="text-muted small">Enrolling puts you on every register for the class.</p>
+<div class="portal-grid">
+    {% for card in cards %}
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+            <div class="fw-semibold">{{ card.cls.name }}</div>
+            <div class="small text-muted mb-2">{{ card.cls.schedule_display }}</div>
+            {% if card.cls.description %}<p class="small mb-2" style="white-space:pre-line;">{{ card.cls.description }}</p>{% endif %}
+            {% if card.cls.has_restrictions %}<p class="small text-muted mb-2"><i class="bi bi-person-check me-1"></i>{{ card.cls.restriction_text }}</p>{% endif %}
+            {% if card.auto %}
+            <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>You're enrolled.</p>
+            {% elif card.full %}
+            <p class="small text-muted mb-0">This class is full, so it can't take new members right now.</p>
+            {% elif card.limit_msg %}
+            <p class="small text-muted mb-0">{{ card.limit_msg }}</p>
+            {% else %}
+            <form method="post" action="{% url 'portal_booking_action' token=member.token %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="enrol">
+                <input type="hidden" name="class_id" value="{{ card.cls.pk }}">
+                <button type="submit" class="btn btn-dark btn-sm">Enrol in this class</button>
+                {% if card.spots_left is not None %}<span class="small text-muted ms-2">{{ card.spots_left }} place{{ card.spots_left|pluralize }} left</span>{% endif %}
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<style>
+.book-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+.book-cal .dow { font-size: .7rem; color: #64748b; text-transform: uppercase; }
+.book-cal button { border: 1px solid transparent; background: transparent; border-radius: 8px; padding: 8px 0; font-size: .85rem; color: #94a3b8; }
+.book-cal button.has { background: rgba(37,99,235,.14); color: #1d4ed8; font-weight: 700; border-color: rgba(37,99,235,.35); cursor: pointer; }
+.book-cal button.has.sel { background: #2563EB; color: #fff; }
+.book-cal button.today { text-decoration: underline; }
+.book-cal button:not(.has) { cursor: default; }
+.book-cal-key { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: rgba(37,99,235,.3); vertical-align: -1px; }
+</style>
+{{ calendar_days|json_script:"booking-days" }}
+<script>
+(function () {
+    var counts = JSON.parse(document.getElementById('booking-days').textContent);
+    var dates = Object.keys(counts).sort();
+    var view = localStorage.getItem('bookView') === 'cal' ? 'cal' : 'list';
+    var selected = localStorage.getItem('bookDay');
+    if (!counts[selected]) selected = null;
+    var now = new Date();
+    var first = dates.length ? new Date(dates[0] + 'T00:00:00') : now;
+    var month = new Date(first.getFullYear(), first.getMonth(), 1);
+    var last = dates.length ? new Date(dates[dates.length - 1] + 'T00:00:00') : now;
+    var lastMonth = new Date(last.getFullYear(), last.getMonth(), 1);
+    var firstMonth = new Date(month);
+    var $ = function (id) { return document.getElementById(id); };
+    var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+
+    function drawCalendar() {
+        var grid = $('cal-grid'), html = '';
+        ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].forEach(function (d) { html += '<div class="dow">' + d + '</div>'; });
+        var offset = (new Date(month.getFullYear(), month.getMonth(), 1).getDay() + 6) % 7;
+        for (var i = 0; i < offset; i++) html += '<div></div>';
+        var days = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+        var todayIso = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+        for (var d = 1; d <= days; d++) {
+            var iso = month.getFullYear() + '-' + pad(month.getMonth() + 1) + '-' + pad(d);
+            var cls = (counts[iso] ? 'has' : '') + (iso === selected ? ' sel' : '') + (iso === todayIso ? ' today' : '');
+            html += '<button type="button" class="' + cls + '" data-iso="' + iso + '"' + (counts[iso] ? '' : ' tabindex="-1"') + '>' + d + '</button>';
+        }
+        grid.innerHTML = html;
+        $('cal-title').textContent = month.toLocaleDateString(undefined, {month: 'long', year: 'numeric'});
+        $('cal-prev').disabled = month <= firstMonth;
+        $('cal-next').disabled = month >= lastMonth;
+    }
+
+    function apply() {
+        $('view-list').classList.toggle('active', view === 'list');
+        $('view-cal').classList.toggle('active', view === 'cal');
+        $('cal-wrap').classList.toggle('d-none', view !== 'cal');
+        $('cal-hint').classList.toggle('d-none', !(view === 'cal' && !selected && dates.length));
+        var shown = 0;
+        document.querySelectorAll('.book-day').forEach(function (el) {
+            var show = view === 'list' || el.dataset.date === selected;
+            el.classList.toggle('d-none', !show);
+            if (show) shown++;
+        });
+        if (view === 'cal') drawCalendar();
+    }
+
+    $('view-list').addEventListener('click', function () { view = 'list'; localStorage.setItem('bookView', 'list'); apply(); });
+    $('view-cal').addEventListener('click', function () { view = 'cal'; localStorage.setItem('bookView', 'cal'); apply(); });
+    $('cal-prev').addEventListener('click', function () { month = new Date(month.getFullYear(), month.getMonth() - 1, 1); drawCalendar(); });
+    $('cal-next').addEventListener('click', function () { month = new Date(month.getFullYear(), month.getMonth() + 1, 1); drawCalendar(); });
+    $('cal-grid').addEventListener('click', function (e) {
+        var btn = e.target.closest('button.has');
+        if (!btn) return;
+        selected = btn.dataset.iso;
+        localStorage.setItem('bookDay', selected);
+        apply();
+    });
+    if (selected) { var s = new Date(selected + 'T00:00:00'); month = new Date(s.getFullYear(), s.getMonth(), 1); }
+    apply();
+})();
+</script>
+
+{% endblock %}

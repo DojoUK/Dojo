@@ -82,6 +82,12 @@
                                             No longer enrolled
                                         </span>
                                         {% endif %}
+                                        {% if cm.is_booked %}
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size:0.65rem;"
+                                              title="Booked onto this session only, not on every register for the class.">
+                                            Booked
+                                        </span>
+                                        {% endif %}
                                         {% if cm.member.photo_consent %}
                                         <span title="Photo consent given">📷</span>
                                         {% endif %}

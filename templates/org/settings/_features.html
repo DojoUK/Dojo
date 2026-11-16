@@ -2,5 +2,14 @@
     {% csrf_token %}
     <input type="hidden" name="action" value="features">
     {% include 'org/_feature_checkboxes.html' %}
+
+    <hr class="my-4">
+    <label class="form-label small fw-semibold" for="booking-cutoff">Class booking cut-off (hours)</label>
+    <input type="number" name="booking_cutoff_hours" id="booking-cutoff" class="form-control form-control-sm"
+           style="max-width:140px;" min="0" max="{{ org.MAX_BOOKING_CUTOFF_HOURS }}" value="{{ org.booking_cutoff_hours }}">
+    <div class="form-text">
+        Members can book or cancel a single session, from their portal, up to this many hours before it starts.
+        Classes are opened for booking from each class's edit page.
+    </div>
     <button type="submit" class="btn btn-dark btn-sm mt-3">Save features</button>
 </form>

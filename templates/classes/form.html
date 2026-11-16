@@ -37,6 +37,40 @@
                             {{ form.description }}
                             {% if form.description.errors %}<div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>{% endif %}
                         </div>
+                        <div class="col-sm-4">
+                            <label class="form-label fw-semibold small d-block">Member bookings</label>
+                            <div class="form-check form-switch">
+                                {{ form.is_active }}
+                                <label class="form-check-label small" for="{{ form.is_active.id_for_label }}">Active in member portal</label>
+                            </div>
+                            <div class="form-text">Active classes show in the portal timetable, with the description, for members to enrol in or book single sessions.</div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small d-block mb-0">Who can book (member portal)</label>
+                            <div class="form-text mt-0">Members outside these limits can see the class but can't enrol or book sessions. Leave blank for no limit. Staff can still add anyone.</div>
+                        </div>
+                        <div class="col-sm-3">
+                            <label class="form-label small">Youngest age</label>
+                            {{ form.min_age }}
+                            {% if form.min_age.errors %}<div class="text-danger small mt-1">{{ form.min_age.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-sm-3">
+                            <label class="form-label small">Oldest age</label>
+                            {{ form.max_age }}
+                            {% if form.max_age.errors %}<div class="text-danger small mt-1">{{ form.max_age.errors.0 }}</div>{% endif %}
+                        </div>
+                        {% if 'min_stage' in form.fields %}
+                        <div class="col-sm-3">
+                            <label class="form-label small">Lowest grade</label>
+                            {{ form.min_stage }}
+                            {% if form.min_stage.errors %}<div class="text-danger small mt-1">{{ form.min_stage.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-sm-3">
+                            <label class="form-label small">Highest grade</label>
+                            {{ form.max_stage }}
+                            {% if form.max_stage.errors %}<div class="text-danger small mt-1">{{ form.max_stage.errors.0 }}</div>{% endif %}
+                        </div>
+                        {% endif %}
                         {% if 'max_capacity' in form.fields %}
                         <div class="col-sm-4">
                             <label class="form-label fw-semibold small">Max capacity</label>

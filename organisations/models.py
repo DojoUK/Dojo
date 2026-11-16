@@ -140,6 +140,22 @@ class Organisation(models.Model):
         allowed = {minutes for minutes, _ in self.SESSION_TIMEOUT_CHOICES}
         return value if value in allowed else self.DEFAULT_SESSION_TIMEOUT
 
+    @property
+    def has_bookable_classes(self):
+        """Whether any class is switched on for booking in the member portal."""
+        return self.classes.filter(is_active=True).exists()
+
+    DEFAULT_BOOKING_CUTOFF_HOURS = 2
+    MAX_BOOKING_CUTOFF_HOURS = 168
+
+    @property
+    def booking_cutoff_hours(self):
+        """How many hours before a session starts members can no longer book or cancel it themselves."""
+        value = (self.settings or {}).get('booking_cutoff_hours', self.DEFAULT_BOOKING_CUTOFF_HOURS)
+        if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= self.MAX_BOOKING_CUTOFF_HOURS:
+            return self.DEFAULT_BOOKING_CUTOFF_HOURS
+        return value
+
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugify(self.name)

@@ -5,7 +5,7 @@ members who have left the class but were marked for the session.
 """
 from members.models import CustomField, Member
 
-from .models import Attendance, ClassMember
+from .models import Attendance, ClassMember, SessionAbsence, SessionBooking
 
 
 def register_flag_fields(org):
@@ -32,6 +32,32 @@ def _is_yes(value):
     if isinstance(value, str):
         return value.strip().lower() in ('yes', 'y', 'true', '1')
     return value is True
+
+
+def register_enrolments(assigned_class, session):
+    """
+    Who is on a session's register: members enrolled on every register for the
+    class (auto-enrolled), plus anyone who booked this session, as unsaved
+    ClassMember rows with `.is_booked` set. Sorted by name.
+    """
+    away = SessionAbsence.objects.filter(session=session).values_list('member_id', flat=True)
+    enrolments = list(
+        ClassMember.objects.filter(assigned_class=assigned_class, auto_enrol=True)
+        .exclude(member_id__in=list(away))
+        .select_related('member').order_by('member__name')
+    )
+    for cm in enrolments:
+        cm.is_booked = False
+    listed = {cm.member_id for cm in enrolments}
+    booked = (
+        SessionBooking.objects.filter(session=session).exclude(member_id__in=listed).select_related('member')
+    )
+    for booking in booked:
+        row = ClassMember(assigned_class=assigned_class, member=booking.member, auto_enrol=False)
+        row.is_booked = True
+        enrolments.append(row)
+    enrolments.sort(key=lambda cm: (cm.member.name or '').lower())
+    return enrolments
 
 
 def with_former_members(assigned_class, session, enrolments):
