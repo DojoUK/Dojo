@@ -15,11 +15,23 @@ TEMPLATE_DIR = Path(__file__).resolve().parent / 'starter_templates'
 
 
 def available():
-    """[{'key', 'name', 'description'}] for every template, by name."""
+    """
+    One entry per template, by name: {'key', 'name', 'description', 'systems', 'syllabus'}.
+    `systems` is [{'name', 'stages': [{'name', 'colour'}]}] and `syllabus` the checklist section
+    names, so setup can show exactly what picking a template adds.
+    """
     found = []
     for path in sorted(TEMPLATE_DIR.glob('*.json')):
         data = json.loads(path.read_text(encoding='utf-8'))
-        found.append({'key': data['key'], 'name': data['name'], 'description': data.get('description', '')})
+        found.append({
+            'key': data['key'], 'name': data['name'], 'description': data.get('description', ''),
+            'systems': [
+                {'name': system['name'],
+                 'stages': [{'name': stage['name'], 'colour': stage.get('colour', '')} for stage in system.get('stages', [])]}
+                for system in data.get('progression_systems', [])
+            ],
+            'syllabus': [section['name'] for section in data.get('syllabus_sections', [])],
+        })
     return sorted(found, key=lambda t: t['name'])
 
 

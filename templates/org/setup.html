@@ -8,7 +8,7 @@
     body { background: linear-gradient(135deg, #1E3A5F 0%, #0f2139 100%); min-height: 100vh; }
 </style>
 <div class="min-vh-100 d-flex align-items-center justify-content-center px-3 py-5">
-    <div class="w-100" style="max-width: 480px;">
+    <div class="w-100" style="max-width: 1040px;">
 
         <div class="text-center mb-5">
             {% load static %}
@@ -17,7 +17,7 @@
         </div>
 
         <div class="card" style="border:none!important;box-shadow:0 20px 60px rgba(0,0,0,.3)!important;">
-            <div class="card-body p-4">
+            <div class="card-body p-4 p-lg-5">
                 <h5 class="fw-semibold mb-4" style="font-size:1rem;">Create your organisation</h5>
 
                 {% if errors %}
@@ -31,6 +31,8 @@
                 <form method="post">
                     {% csrf_token %}
 
+                    <div class="row g-4 g-xl-5">
+                        <div class="col-lg-6">
                     <div class="mb-2 mt-1">
                         <span class="text-uppercase text-muted" style="font-size:0.7rem;letter-spacing:.05em;">Organisation</span>
                     </div>
@@ -47,10 +49,24 @@
                             <option value="{{ t.key }}" {% if club_template == t.key %}selected{% endif %}>{{ t.name }}</option>
                             {% endfor %}
                         </select>
-                        <div class="form-text">
-                            Pre-fills the grades for your sport, and switches on Grades. You can edit or add to them afterwards.
-                            {% for t in club_templates %}<span class="d-block">{{ t.name }}: {{ t.description }}</span>{% endfor %}
+                        <div class="form-text" id="club-template-none">Start empty and add your own grades later, or pick a club type to pre-fill the grades for your sport (and switch on Grades). You can edit or add to them afterwards.</div>
+                        {% for t in club_templates %}
+                        <div class="border rounded p-3 mt-2 bg-light d-none" data-club-template="{{ t.key }}">
+                            <p class="small text-muted mb-2">{{ t.description }}</p>
+                            {% for system in t.systems %}
+                            <div class="small fw-semibold mb-1">{{ system.name }} <span class="text-muted fw-normal">({{ system.stages|length }} grade{{ system.stages|length|pluralize }})</span></div>
+                            <div class="d-flex flex-wrap gap-1 mb-2" style="max-height:140px;overflow-y:auto;">
+                                {% for stage in system.stages %}
+                                <span class="badge text-bg-light border fw-normal">{% if stage.colour %}<span style="display:inline-block;width:.7em;height:.7em;border-radius:50%;border:1px solid #adb5bd;background:{{ stage.colour }};margin-right:.35em;"></span>{% endif %}{{ stage.name }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endfor %}
+                            {% if t.syllabus %}
+                            <div class="small fw-semibold mb-1">Syllabus checklists <span class="text-muted fw-normal">({{ t.syllabus|length }} section{{ t.syllabus|length|pluralize }})</span></div>
+                            <div class="small text-muted" style="max-height:90px;overflow-y:auto;">{{ t.syllabus|join:", " }}</div>
+                            {% endif %}
                         </div>
+                        {% endfor %}
                     </div>
                     {% endif %}
                     <div class="mb-3">
@@ -65,6 +81,33 @@
                         <div class="col-6 mb-3">
                             <label class="form-label small fw-semibold">Website</label>
                             <input type="url" name="org_website" value="{{ org_website|default:'' }}" class="form-control" placeholder="https://...">
+                        </div>
+                    </div>
+
+                        </div>
+                        <div class="col-lg-6">
+                    <div class="mb-2 mt-1">
+                        <span class="text-uppercase text-muted" style="font-size:0.7rem;letter-spacing:.05em;">Your admin account</span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Username</label>
+                        <input type="text" name="username" value="{{ username|default:'' }}" class="form-control" autocomplete="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Email</label>
+                        <input type="email" name="admin_email" value="{{ admin_email|default:'' }}" class="form-control" autocomplete="email">
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-4">
+                            <label class="form-label small fw-semibold">Password</label>
+                            <input type="password" name="password" class="form-control" autocomplete="new-password" required>
+                        </div>
+                        <div class="col-6 mb-4">
+                            <label class="form-label small fw-semibold">Confirm password</label>
+                            <input type="password" name="password_confirm" class="form-control" autocomplete="new-password" required>
+                        </div>
+                    </div>
+
                         </div>
                     </div>
 
@@ -107,37 +150,15 @@
                         {% include 'mailer/_provider_fields.html' %}
                     </div>
 
-                    <hr class="my-4">
-
-                    <div class="mb-2">
-                        <span class="text-uppercase text-muted" style="font-size:0.7rem;letter-spacing:.05em;">Your admin account</span>
+                    <div class="d-flex justify-content-end mt-4">
+                        <button type="submit" class="btn btn-dark px-5 py-2">Create organisation</button>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold">Username</label>
-                        <input type="text" name="username" value="{{ username|default:'' }}" class="form-control" autocomplete="username" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold">Email</label>
-                        <input type="email" name="admin_email" value="{{ admin_email|default:'' }}" class="form-control" autocomplete="email">
-                    </div>
-                    <div class="row">
-                        <div class="col-6 mb-4">
-                            <label class="form-label small fw-semibold">Password</label>
-                            <input type="password" name="password" class="form-control" autocomplete="new-password" required>
-                        </div>
-                        <div class="col-6 mb-4">
-                            <label class="form-label small fw-semibold">Confirm password</label>
-                            <input type="password" name="password_confirm" class="form-control" autocomplete="new-password" required>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn btn-dark w-100 py-2">Create organisation</button>
                 </form>
             </div>
         </div>
 
         {% if demo_mode %}
-        <div class="card mt-3" style="border:none!important;box-shadow:0 20px 60px rgba(0,0,0,.3)!important;">
+        <div class="card mt-3 mx-auto" style="max-width:480px;border:none!important;box-shadow:0 20px 60px rgba(0,0,0,.3)!important;">
             <div class="card-body p-4">
                 <h6 class="fw-semibold mb-2" style="font-size:0.9rem;">
                     <i class="bi bi-bug-fill me-1"></i> Seed demo data instead
@@ -158,4 +179,18 @@
 
     </div>
 </div>
+<script>
+(function () {
+    var select = document.getElementById('club-template');
+    if (!select) return;
+    function sync() {
+        document.querySelectorAll('[data-club-template]').forEach(function (panel) {
+            panel.classList.toggle('d-none', panel.dataset.clubTemplate !== select.value);
+        });
+        document.getElementById('club-template-none').classList.toggle('d-none', select.value !== '');
+    }
+    select.addEventListener('change', sync);
+    sync();
+})();
+</script>
 {% endblock %}
