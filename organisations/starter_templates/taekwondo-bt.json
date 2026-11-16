@@ -1,0 +1,114 @@
+{
+ "key": "taekwondo-bt",
+ "name": "Taekwondo (British Taekwondo)",
+ "description": "The British Taekwondo grades: 10th to 1st Kup coloured belts (with tags), then 1st to 9th Dan, plus 1st to 4th Poom for black belts aged 14 and under. Typical minimum waits between Dan grades: 1st to 2nd Dan 1 year, 2nd to 3rd 2 years, 3rd to 4th 3 years, 4th to 5th 4 years, 5th to 6th 5 years, 6th to 7th 6 years, 7th to 8th 8 years, 8th to 9th 9 years.",
+ "enable_features": [
+  "grades"
+ ],
+ "progression_systems": [
+  {
+   "name": "Taekwondo Grades",
+   "assign_to_new_members": true,
+   "stages": [
+    {
+     "name": "10th Kup - White Belt",
+     "colour": "#FFFFFF"
+    },
+    {
+     "name": "9th Kup - White Belt, Yellow Tag",
+     "colour": "#FEF08A"
+    },
+    {
+     "name": "8th Kup - Yellow Belt",
+     "colour": "#FACC15"
+    },
+    {
+     "name": "7th Kup - Yellow Belt, Green Tag",
+     "colour": "#A3E635"
+    },
+    {
+     "name": "6th Kup - Green Belt",
+     "colour": "#22C55E"
+    },
+    {
+     "name": "5th Kup - Green Belt, Blue Tag",
+     "colour": "#14B8A6"
+    },
+    {
+     "name": "4th Kup - Blue Belt",
+     "colour": "#2563EB"
+    },
+    {
+     "name": "3rd Kup - Blue Belt, Red Tag",
+     "colour": "#7C3AED"
+    },
+    {
+     "name": "2nd Kup - Red Belt",
+     "colour": "#DC2626"
+    },
+    {
+     "name": "1st Kup - Red Belt, Black Tag",
+     "colour": "#991B1B"
+    },
+    {
+     "name": "1st Dan - Black Belt",
+     "colour": "#111827"
+    },
+    {
+     "name": "2nd Dan - Black Belt",
+     "colour": "#111827"
+    },
+    {
+     "name": "3rd Dan - Black Belt",
+     "colour": "#111827"
+    },
+    {
+     "name": "4th Dan - Black Belt",
+     "colour": "#111827"
+    },
+    {
+     "name": "5th Dan - Black Belt (Master)",
+     "colour": "#111827"
+    },
+    {
+     "name": "6th Dan - Black Belt (Master)",
+     "colour": "#111827"
+    },
+    {
+     "name": "7th Dan - Black Belt (Master)",
+     "colour": "#111827"
+    },
+    {
+     "name": "8th Dan - Black Belt (Grand Master)",
+     "colour": "#111827"
+    },
+    {
+     "name": "9th Dan - Black Belt (Grand Master)",
+     "colour": "#111827"
+    }
+   ]
+  },
+  {
+   "name": "Taekwondo Poom (14 and under)",
+   "first_stage_is_default": false,
+   "stages": [
+    {
+     "name": "1st Poom - Black and Red Belt",
+     "colour": "#7F1D1D"
+    },
+    {
+     "name": "2nd Poom - Black and Red Belt",
+     "colour": "#7F1D1D"
+    },
+    {
+     "name": "3rd Poom - Black and Red Belt",
+     "colour": "#7F1D1D"
+    },
+    {
+     "name": "4th Poom - Black and Red Belt",
+     "colour": "#7F1D1D"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,76 @@
+{
+ "key": "karate-gkr",
+ "name": "Karate (GKR Karate)",
+ "description": "The GKR Karate belt journey: White to Brown (10th to 1st Kyu, with a Yellow Tip first grade), Shodan Ho, then the Black Belt Dan grades.",
+ "enable_features": [
+  "grades"
+ ],
+ "progression_systems": [
+  {
+   "name": "GKR Karate Grades",
+   "assign_to_new_members": true,
+   "stages": [
+    {
+     "name": "White Belt (10th Kyu)",
+     "colour": "#FFFFFF"
+    },
+    {
+     "name": "Yellow Tip (9th Kyu)",
+     "colour": "#FEF08A"
+    },
+    {
+     "name": "Yellow Belt (8th Kyu)",
+     "colour": "#FACC15"
+    },
+    {
+     "name": "Orange Belt (7th Kyu)",
+     "colour": "#F97316"
+    },
+    {
+     "name": "Green Belt (6th Kyu)",
+     "colour": "#22C55E"
+    },
+    {
+     "name": "Blue Belt (5th Kyu)",
+     "colour": "#2563EB"
+    },
+    {
+     "name": "Red Belt (4th Kyu)",
+     "colour": "#DC2626"
+    },
+    {
+     "name": "Brown Belt (3rd Kyu)",
+     "colour": "#78350F"
+    },
+    {
+     "name": "Brown Belt (2nd Kyu)",
+     "colour": "#78350F"
+    },
+    {
+     "name": "Brown Belt (1st Kyu)",
+     "colour": "#78350F"
+    },
+    {
+     "name": "Black Belt - Shodan Ho",
+     "colour": "#111827"
+    },
+    {
+     "name": "Black Belt - 1st Dan (Shodan)",
+     "colour": "#111827"
+    },
+    {
+     "name": "Black Belt - 2nd Dan (Nidan)",
+     "colour": "#111827"
+    },
+    {
+     "name": "Black Belt - 3rd Dan (Sandan)",
+     "colour": "#111827"
+    },
+    {
+     "name": "Black Belt - 4th Dan and above",
+     "colour": "#111827"
+    }
+   ]
+  }
+ ]
+}
