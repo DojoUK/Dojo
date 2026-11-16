@@ -256,13 +256,20 @@ class PortalBookingView(View):
             if cls.pk in enrolments or not cls.ineligible_reason(member)
         ]
         auto_ids = {pk for pk, cm in enrolments.items() if cm.auto_enrol}
+        quota = booking.Quota(member, today)
         bookable = [cls for cls in classes if not cls.ineligible_reason(member)]
 
         # Whole-class enrolment cards.
-        cards = [
-            {'cls': cls, 'auto': cls.pk in auto_ids, 'full': cls.is_full, 'spots_left': cls.spots_left}
-            for cls in classes
-        ]
+        cards = []
+        for cls in classes:
+            limit_msg = ''
+            if cls.pk not in auto_ids:
+                try:
+                    quota.check(list(cls.sessions.filter(is_cancelled=False, date__gte=today)), f'enrol in {cls.name}')
+                except booking.BookingError as e:
+                    limit_msg = str(e)
+            cards.append({'cls': cls, 'auto': cls.pk in auto_ids, 'full': cls.is_full,
+                          'spots_left': cls.spots_left, 'limit_msg': limit_msg})
 
         # Day-by-day breakdown of the sessions that can be booked.
         horizon = today + timedelta(days=self.DAYS_AHEAD)
@@ -277,7 +284,7 @@ class PortalBookingView(View):
             by_date.setdefault(s.date, []).append({
                 'session': s, 'cls': s.assigned_class, 'time': booking.session_time_text(s),
                 'enrolled': s.assigned_class_id in auto_ids, 'absent': s.pk in absent_ids, 'booked': s.pk in booked_ids,
-                'full': booking.session_is_full(s),
+                'full': booking.session_is_full(s), 'over_limit': not quota.can_add(s),
             })
         days = [
             {'date': day, 'iso': day.isoformat(), 'entries': sorted(entries, key=lambda e: (e['time'] or '99', e['cls'].name))}
@@ -305,8 +312,21 @@ class PortalBookingView(View):
         for row in my_sessions:
             row['time'] = booking.session_time_text(row['session'])
 
+        from billing.models import BillingPolicy
+        plans = []
+        if org.has_feature('billing'):
+            plans = list(BillingPolicy.objects.filter(organisation=org, is_active=True, member_selectable=True)
+                         .order_by('name'))
+        plan = {
+            'policy': member.billing_policy, 'limited': quota.limited, 'limit': quota.limit,
+            'used': quota.used(), 'period': quota.period, 'period_label': quota.label(today),
+            'remaining': max(0, quota.limit - quota.used()) if quota.limited else None,
+        }
+
         return render(request, 'portal/bookings.html', {
             'active': 'bookings',
+            'plan': plan,
+            'plans': plans,
             'member': member,
             'org': org,
             'cards': cards,
@@ -339,6 +359,19 @@ class PortalBookingActionView(View):
                 else:
                     booking.cancel_enrolment(member, cls)
                     messages.success(request, f'You\'ve left {cls.name}. A confirmation email is on its way.')
+            elif action == 'choose_plan':
+                from django.http import Http404
+
+                from billing.models import BillingPolicy
+                if not org.has_feature('billing'):
+                    raise Http404
+                policy = get_object_or_404(
+                    BillingPolicy, pk=request.POST.get('policy_id'), organisation=org,
+                    is_active=True, member_selectable=True,
+                )
+                member.billing_policy = policy
+                member.save(update_fields=['billing_policy'])
+                messages.success(request, f'You\'re now on the {policy.name} plan ({policy.limit_text().lower()}).')
             elif action in ('book', 'cancel_booking', 'skip_session', 'rejoin_session'):
                 session = get_object_or_404(
                     Session.objects.select_related('assigned_class__organisation'),
