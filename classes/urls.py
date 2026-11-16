@@ -8,6 +8,7 @@ urlpatterns = [
     path('<int:pk>/', views.ClassDetailView.as_view(), name='class_detail'),
     path('<int:pk>/edit/', views.ClassUpdateView.as_view(), name='class_edit'),
     path('<int:pk>/enrol/', views.EnrolMemberView.as_view(), name='class_enrol'),
+    path('<int:pk>/auto-enrol/<int:member_pk>/', views.SetAutoEnrolView.as_view(), name='class_set_auto_enrol'),
     path('<int:pk>/unenrol/<int:member_pk>/', views.UnenrolMemberView.as_view(), name='class_unenrol'),
     path('<int:pk>/waiting-list/<int:member_pk>/remove/', views.RemoveFromWaitingListView.as_view(), name='class_waiting_remove'),
     path('<int:pk>/generate-sessions/', views.GenerateSessionsView.as_view(), name='class_generate_sessions'),

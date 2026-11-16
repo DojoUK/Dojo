@@ -37,6 +37,10 @@
                         {% if policy.description %}
                         <p class="text-muted small mb-3">{{ policy.description }}</p>
                         {% endif %}
+                        <div class="d-flex flex-wrap gap-1 mb-3">
+                            <span class="badge bg-light text-dark border"><i class="bi bi-calendar-check me-1"></i>{{ policy.limit_text }}</span>
+                            {% if policy.member_selectable %}<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">Members can choose</span>{% endif %}
+                        </div>
 
                         <!-- Discounts for this policy -->
                         {% if policy.discounts.all %}
@@ -117,6 +121,29 @@
                                 <div class="mb-3">
                                     <label class="form-label small fw-semibold">Description</label>
                                     <textarea name="description" class="form-control" rows="2">{{ policy.description }}</textarea>
+                                </div>
+                                <div class="border rounded p-3 mb-3 bg-light">
+                                    <div class="small fw-semibold mb-2">Booking plan <span class="text-muted fw-normal">(member portal)</span></div>
+                                    <div class="row g-2 mb-2">
+                                        <div class="col">
+                                            <label class="form-label small">Session limit</label>
+                                            <input type="number" name="session_limit" class="form-control" min="1" max="999" placeholder="Unlimited" value="{{ policy.session_limit|default_if_none:'' }}">
+                                        </div>
+                                        <div class="col">
+                                            <label class="form-label small">Per</label>
+                                            <select name="limit_period" class="form-select">
+                                                <option value="week" {% if policy.limit_period == 'week' %}selected{% endif %}>Week</option>
+                                                <option value="month" {% if policy.limit_period != 'week' %}selected{% endif %}>Month</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="form-text mb-2">The most sessions a member on this policy can be booked into. Leave blank for unlimited. Staff can still add members to any class.</div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" name="member_selectable" value="1" id="plan{{ policy.pk }}Selectable" {% if policy.member_selectable %}checked{% endif %}>
+                                        <label class="form-check-label small" for="plan{{ policy.pk }}Selectable">Members can choose this plan on the Book page</label>
+                                    </div>
+                                    <label class="form-label small">Description shown to members</label>
+                                    <textarea name="plan_description" class="form-control" rows="2" placeholder="e.g. Train as often as you like">{{ policy.plan_description }}</textarea>
                                 </div>
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" name="is_active" value="1" id="isActive{{ policy.pk }}" {% if policy.is_active %}checked{% endif %}>
@@ -255,6 +282,29 @@
                         <label class="form-label small fw-semibold">Description <span class="text-muted fw-normal">(optional)</span></label>
                         <textarea name="description" class="form-control" rows="2" placeholder="Internal notes about this policy"></textarea>
                     </div>
+                            <div class="border rounded p-3 mb-3 bg-light">
+                                <div class="small fw-semibold mb-2">Booking plan <span class="text-muted fw-normal">(member portal)</span></div>
+                                <div class="row g-2 mb-2">
+                                    <div class="col">
+                                        <label class="form-label small">Session limit</label>
+                                        <input type="number" name="session_limit" class="form-control" min="1" max="999" placeholder="Unlimited">
+                                    </div>
+                                    <div class="col">
+                                        <label class="form-label small">Per</label>
+                                        <select name="limit_period" class="form-select">
+                                            <option value="week" >Week</option>
+                                            <option value="month" selected>Month</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-text mb-2">The most sessions a member on this policy can be booked into. Leave blank for unlimited. Staff can still add members to any class.</div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="member_selectable" value="1" id="planNewSelectable" >
+                                    <label class="form-check-label small" for="planNewSelectable">Members can choose this plan on the Book page</label>
+                                </div>
+                                <label class="form-label small">Description shown to members</label>
+                                <textarea name="plan_description" class="form-control" rows="2" placeholder="e.g. Train as often as you like"></textarea>
+                            </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>

@@ -720,7 +720,20 @@ class OrgSettingsView(OrgAdminMixin, View):
         if action == 'features':
             from .features import choices_from_keys
             self.org.set_features(choices_from_keys(request.POST.getlist('features')))
-            self.org.save(update_fields=['features'])
+            update_fields = ['features']
+            cutoff_raw = request.POST.get('booking_cutoff_hours')
+            if cutoff_raw is not None:
+                try:
+                    hours = int(cutoff_raw)
+                except ValueError:
+                    hours = -1
+                if 0 <= hours <= Organisation.MAX_BOOKING_CUTOFF_HOURS:
+                    self.org.settings = {**(self.org.settings or {}), 'booking_cutoff_hours': hours}
+                    update_fields.append('settings')
+                else:
+                    messages.error(request, f'The booking cut-off must be between 0 and '
+                                            f'{Organisation.MAX_BOOKING_CUTOFF_HOURS} hours, so it wasn\'t changed.')
+            self.org.save(update_fields=update_fields)
             messages.success(request, 'Features saved.')
             return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#features")
 

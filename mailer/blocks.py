@@ -32,6 +32,14 @@ def session_box(class_name, session_date):
     }
 
 
+def booking_box(title, detail):
+    """Box for booking emails: the class, and when it runs (a whole class) or the session's date."""
+    return {
+        'html': render_to_string('emails/blocks/booking_box.html', {'title': title, 'detail': detail}),
+        'text': f'{title}, {detail}' if detail else title,
+    }
+
+
 def message(text):
     return {'html': render_to_string('emails/blocks/message.html', {'message': text}), 'text': text}
 
@@ -43,7 +51,7 @@ def invoice_values(invoice):
         'period': invoice.period,
         # What's left to pay; for a paid invoice, its total (the summary then says Paid).
         'amount': f'£{invoice.balance_due if invoice.balance_due else invoice.amount:.2f}',
-        'due_date': invoice.due_date.strftime('%-d %b %Y'),
+        'due_date': f'{invoice.due_date.day} {invoice.due_date:%b %Y}',
         'reference': invoice.payment_reference,
         'pay_link': pay_url(invoice),
         'portal_link': portal_url_for(invoice.member) or '',
@@ -103,6 +111,8 @@ def example(org, key):
         blocks['reset_button'] = reset_button(org, values['reset_link'])
     if 'session_box' in names:
         blocks['session_box'] = session_box(values['class_name'], values['session_date'])
+    if 'booking_box' in names:
+        blocks['booking_box'] = booking_box(values['class_name'], values.get('session_date') or values.get('class_schedule', ''))
     if 'message' in names:
         blocks['message'] = message(values['message'])
     if 'invoice_summary' in names:

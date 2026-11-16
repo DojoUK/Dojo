@@ -14,7 +14,8 @@ from .models import (
     WaitingList,
 )
 from .register import (
-    attach_member_contacts, attach_register_flags, attach_staff_contacts, with_former_members,
+    attach_member_contacts, attach_register_flags, attach_staff_contacts, register_enrolments,
+    with_former_members,
 )
 from mailer import blocks as email_blocks
 from mailer import compose
@@ -91,13 +92,25 @@ def _class_form_class(org=None):
     class ClassForm(forms.ModelForm):
         class Meta:
             model = Class
-            fields = ['name', 'description', 'max_capacity', 'billing_policy']
+            fields = ['name', 'description', 'is_active', 'min_age', 'max_age', 'min_stage', 'max_stage',
+                      'max_capacity', 'billing_policy']
             widgets = {'description': forms.Textarea(attrs={'rows': 3})}
 
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
-            for field in self.fields.values():
-                field.widget.attrs['class'] = 'form-control'
+            for name, field in self.fields.items():
+                field.widget.attrs['class'] = 'form-check-input' if name == 'is_active' else 'form-control'
+            for name in ('min_age', 'max_age'):
+                self.fields[name].widget.attrs.update({'min': 0, 'max': 120})
+            if org and org.has_feature('grades'):
+                from progression.models import ProgressionStage
+                stages = ProgressionStage.objects.filter(system__organisation=org).select_related('system')
+                for name in ('min_stage', 'max_stage'):
+                    self.fields[name].queryset = stages
+                    self.fields[name].empty_label = '— No limit —'
+                    self.fields[name].widget.attrs['class'] = 'form-select'
+            else:
+                del self.fields['min_stage'], self.fields['max_stage']
             if org and not org.has_feature('waiting_lists'):
                 del self.fields['max_capacity']
             if org and not org.has_feature('billing'):
@@ -109,6 +122,19 @@ def _class_form_class(org=None):
                     )
                 self.fields['billing_policy'].required = False
                 self.fields['billing_policy'].empty_label = '— No policy —'
+
+        def clean(self):
+            data = super().clean()
+            low, high = data.get('min_age'), data.get('max_age')
+            if low is not None and high is not None and low > high:
+                self.add_error('max_age', 'The oldest age can\'t be below the youngest age.')
+            lo_s, hi_s = data.get('min_stage'), data.get('max_stage')
+            if lo_s and hi_s:
+                if lo_s.system_id != hi_s.system_id:
+                    self.add_error('max_stage', 'Choose both grades from the same progression system.')
+                elif lo_s.order > hi_s.order:
+                    self.add_error('max_stage', 'The highest grade can\'t be below the lowest grade.')
+            return data
 
     return ClassForm
 
@@ -325,6 +351,25 @@ class EnrolMemberView(ClassCapabilityMixin, View):
         return _back_to_class(self, request, cls)
 
 
+class SetAutoEnrolView(ClassCapabilityMixin, View):
+    """Staff choose whether an enrolled member is on every register for the class (on), or only on the
+    registers of sessions they book themselves (off)."""
+    required_capabilities = ('manage_class_members',)
+
+    def post(self, request, org_slug, pk, member_pk):
+        cls = self.assigned_class
+        enrolment = get_object_or_404(ClassMember, assigned_class=cls, member_id=member_pk, member__organisation=self.org)
+        enrolment.auto_enrol = request.POST.get('auto_enrol') == '1'
+        enrolment.save(update_fields=['auto_enrol'])
+        if enrolment.auto_enrol:
+            messages.success(request, f'{enrolment.member.name} is now on every {cls.name} register.')
+        else:
+            messages.success(request, f'{enrolment.member.name} will only be on registers for sessions they book.')
+        if request.POST.get('next') == 'member':
+            return redirect('member_detail', org_slug=self.org.slug, pk=member_pk)
+        return _back_to_class(self, request, cls)
+
+
 class UnenrolMemberView(OrgAdminMixin, View):
     def post(self, request, org_slug, pk, member_pk):
         cls = get_object_or_404(Class, pk=pk, organisation=self.org)
@@ -466,12 +511,7 @@ class AttendanceRegisterView(ClassCoachMixin, View):
 
     def _enrolled(self, session):
         """Register rows: the class's members plus anyone marked for this session who has since left."""
-        enrolled = (
-            ClassMember.objects.filter(assigned_class=self.assigned_class)
-            .select_related('member')
-            .order_by('member__name')
-        )
-        enrolled = with_former_members(self.assigned_class, session, enrolled)
+        enrolled = with_former_members(self.assigned_class, session, register_enrolments(self.assigned_class, session))
         members = [cm.member for cm in enrolled]
         attach_register_flags(self.org, members)
         attach_member_contacts(self.org, members)
@@ -724,10 +764,7 @@ class RemoveHelperView(OrgAdminMixin, View):
 class PrintRegisterView(ClassCoachMixin, View):
     def get(self, request, org_slug, pk, session_pk):
         session = get_object_or_404(Session, pk=session_pk, assigned_class=self.assigned_class)
-        enrolled = with_former_members(
-            self.assigned_class, session,
-            ClassMember.objects.filter(assigned_class=self.assigned_class).select_related('member').order_by('member__name'),
-        )
+        enrolled = with_former_members(self.assigned_class, session, register_enrolments(self.assigned_class, session))
         members = [cm.member for cm in enrolled]
         attach_register_flags(self.org, members)
         attach_member_contacts(self.org, members)
@@ -800,7 +837,7 @@ class CancelSessionView(OrgAdminMixin, View):
             if not recipient:
                 continue
 
-            session_date = session.date.strftime('%A %-d %B %Y')
+            session_date = f'{session.date:%A} {session.date.day} {session.date:%B %Y}'
             try:
                 compose.send(self.org, 'session_cancelled', [recipient],
                              {**compose.member_values(member, to_guardian=has_guardians),
