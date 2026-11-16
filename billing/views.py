@@ -743,6 +743,24 @@ class BillingPolicyListView(BillingManagerMixin, View):
         })
 
 
+def _plan_fields(post):
+    """The booking-plan part of a policy form: (values, error). A blank limit means unlimited."""
+    raw = post.get('session_limit', '').strip()
+    limit = None
+    if raw:
+        if not raw.isdigit() or not 1 <= int(raw) <= 999:
+            return None, 'The session limit must be a whole number from 1 to 999, or blank for unlimited.'
+        limit = int(raw)
+    period = post.get('limit_period', BillingPolicy.LimitPeriod.MONTH)
+    if period not in BillingPolicy.LimitPeriod.values:
+        period = BillingPolicy.LimitPeriod.MONTH
+    return {
+        'session_limit': limit, 'limit_period': period,
+        'member_selectable': post.get('member_selectable') == '1',
+        'plan_description': post.get('plan_description', '').strip(),
+    }, None
+
+
 class BillingPolicyCreateView(BillingManagerMixin, View):
     def post(self, request, org_slug):
         name = request.POST.get('name', '').strip()
@@ -761,12 +779,18 @@ class BillingPolicyCreateView(BillingManagerMixin, View):
             messages.error(request, f'Invalid amount: {"; ".join(e.messages) if hasattr(e, "messages") else "not a valid number"}')
             return redirect('billing_policies', org_slug=self.org.slug)
 
+        plan, error = _plan_fields(request.POST)
+        if error:
+            messages.error(request, error)
+            return redirect('billing_policies', org_slug=self.org.slug)
+
         BillingPolicy.objects.create(
             organisation=self.org,
             name=name,
             billing_cycle=billing_cycle,
             amount=amount_val,
             description=description,
+            **plan,
         )
         messages.success(request, f'Policy "{name}" created.')
         return redirect('billing_policies', org_slug=self.org.slug)
@@ -784,6 +808,12 @@ class BillingPolicyEditView(BillingManagerMixin, View):
         except (InvalidOperation, ValidationError) as e:
             messages.error(request, f'Invalid amount: {"; ".join(e.messages) if hasattr(e, "messages") else "not a valid number"}')
             return redirect('billing_policies', org_slug=self.org.slug)
+        plan, error = _plan_fields(request.POST)
+        if error:
+            messages.error(request, error)
+            return redirect('billing_policies', org_slug=self.org.slug)
+        for field, value in plan.items():
+            setattr(policy, field, value)
         policy.is_active = request.POST.get('is_active') == '1'
         policy.save()
         messages.success(request, f'Policy "{policy.name}" updated.')

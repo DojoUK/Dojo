@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from mailer import blocks, compose
 
-from .models import Class, ClassMember, Session, SessionAbsence, SessionBooking, WaitingList
+from .models import Attendance, Class, ClassMember, Session, SessionAbsence, SessionBooking, WaitingList
 
 
 class BookingError(Exception):
@@ -56,6 +56,91 @@ def bookable_sessions(cls, now=None):
         .order_by('date')
     )
     return [s for s in sessions if not changes_closed(s, now)]
+
+
+class Quota:
+    """
+    How many sessions a member's billing plan lets them be down for in a week or month.
+
+    "Down for" means single-session bookings, sessions of classes they're fully enrolled on (unless
+    they've cancelled that session) and past sessions they attended. No plan, or a plan with no
+    limit, is unlimited.
+    """
+
+    def __init__(self, member, today=None):
+        self.member = member
+        self.today = today or timezone.localdate()
+        self.policy = member.billing_policy
+        self.limit = (self.policy.session_limit or None) if self.policy else None
+        self.period = self.policy.limit_period if self.policy else 'month'
+        self._cache = {}
+
+    @property
+    def limited(self):
+        return self.limit is not None
+
+    def bounds(self, day):
+        """First and last day of the week (Monday to Sunday) or month containing `day`."""
+        if self.period == 'week':
+            start = day - timedelta(days=day.weekday())
+            return start, start + timedelta(days=6)
+        start = day.replace(day=1)
+        return start, (start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+
+    def label(self, day):
+        start, _ = self.bounds(day)
+        return f'the week starting {start.day} {start:%B}' if self.period == 'week' else f'{start:%B %Y}'
+
+    def used_ids(self, day):
+        """Ids of the sessions the member is down for in the period containing `day`."""
+        start, end = self.bounds(day)
+        if start in self._cache:
+            return self._cache[start]
+        ids = set(
+            SessionBooking.objects.filter(
+                member=self.member, session__date__range=(start, end), session__is_cancelled=False,
+            ).values_list('session_id', flat=True)
+        )
+        ids |= set(
+            Attendance.objects.filter(
+                member=self.member, present=True, session__date__range=(start, end),
+                session__date__lt=self.today, session__is_cancelled=False,
+            ).values_list('session_id', flat=True)
+        )
+        future_start = max(start, self.today)
+        if future_start <= end:
+            enrolled = list(ClassMember.objects.filter(member=self.member, auto_enrol=True)
+                            .values_list('assigned_class_id', flat=True))
+            ids |= set(
+                Session.objects.filter(
+                    assigned_class_id__in=enrolled, date__range=(future_start, end), is_cancelled=False,
+                ).exclude(absences__member=self.member).values_list('pk', flat=True)
+            )
+        self._cache[start] = ids
+        return ids
+
+    def used(self, day=None):
+        return len(self.used_ids(day or self.today))
+
+    def can_add(self, session):
+        if not self.limited:
+            return True
+        ids = self.used_ids(session.date)
+        return session.pk in ids or len(ids) + 1 <= self.limit
+
+    def check(self, sessions, what):
+        """Raise BookingError if being down for `sessions` too would take the member over their plan's limit."""
+        if not self.limited:
+            return
+        by_period = {}
+        for session in sessions:
+            by_period.setdefault(self.bounds(session.date)[0], []).append(session)
+        for group in by_period.values():
+            if len(self.used_ids(group[0].date) | {s.pk for s in group}) > self.limit:
+                raise BookingError(
+                    f'You can\'t {what}: your {self.policy.name} plan allows {self.policy.limit_text().lower()}, '
+                    f'and this would take you over that for {self.label(group[0].date)}.'
+                )
 
 
 def session_headcount(session):
@@ -112,6 +197,8 @@ def enrol(member, cls):
             raise BookingError(f'You\'re already enrolled in {cls.name}.')
         if existing is None and cls.is_full:
             raise BookingError(f'{cls.name} is full, so it can\'t take new members right now.')
+        upcoming = Session.objects.filter(assigned_class=cls, is_cancelled=False, date__gte=timezone.localdate())
+        Quota(member).check(list(upcoming), f'enrol in {cls.name}')
         if existing:
             existing.auto_enrol = True
             existing.save(update_fields=['auto_enrol'])
@@ -168,6 +255,7 @@ def book_session(member, session):
             raise BookingError('You\'re already booked onto that session.')
         if session_is_full(session):
             raise BookingError('That session is full.')
+        Quota(member).check([session], 'book this session')
         SessionBooking.objects.create(session=session, member=member)
     day = _date_text(session.date)
     _notify(member, 'session_booked', {'class_name': cls.name, 'session_date': day}, (cls.name, day))
@@ -214,6 +302,7 @@ def rejoin_session(member, session):
         raise BookingError('You\'re already down to attend that session.')
     if session_is_full(session):
         raise BookingError('That session is full.')
+    Quota(member).check([session], 'rejoin this session')
     SessionAbsence.objects.filter(session=session, member=member).delete()
     cls = session.assigned_class
     day = _date_text(session.date)

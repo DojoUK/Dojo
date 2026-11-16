@@ -12,6 +12,62 @@
     </p>
 </div>
 
+{% if plan.policy or plans %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom py-3"><h6 class="mb-0">My plan</h6></div>
+    <div class="card-body">
+        {% if plan.policy %}
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+            <div>
+                <div class="fw-semibold">{{ plan.policy.name }}</div>
+                <div class="small text-muted">{{ plan.policy.limit_text }}</div>
+            </div>
+            {% if plan.limited %}
+            <div class="text-end">
+                <div class="fw-semibold">{{ plan.used }} of {{ plan.limit }} used</div>
+                <div class="small text-muted">in {{ plan.period_label }}</div>
+            </div>
+            {% endif %}
+        </div>
+        {% if plan.limited %}
+        <div class="progress mb-2" style="height:8px;"><div class="progress-bar" style="width:{% widthratio plan.used plan.limit 100 %}%;"></div></div>
+        <p class="small text-muted mb-0">
+            {% if plan.remaining %}{{ plan.remaining }} session{{ plan.remaining|pluralize }} left. {% else %}You've reached your limit for {{ plan.period_label }}. {% endif %}
+            Sessions you're enrolled on count towards it, and cancelling one frees it up.
+        </p>
+        {% endif %}
+        {% else %}
+        <p class="small text-muted mb-0">You're not on a plan yet, so there's no limit on how many sessions you can book.</p>
+        {% endif %}
+
+        {% if plans %}
+        <hr>
+        <div class="small fw-semibold mb-2">Choose a plan</div>
+        <div class="d-grid gap-2">
+            {% for p in plans %}
+            <form method="post" action="{% url 'portal_booking_action' token=member.token %}"
+                  class="d-flex flex-wrap justify-content-between align-items-center gap-2 border rounded p-2"
+                  onsubmit="return confirm('Switch to {{ p.name|escapejs }}? This changes what you are billed from your next invoice.');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="choose_plan">
+                <input type="hidden" name="policy_id" value="{{ p.pk }}">
+                <div>
+                    <div class="small fw-semibold">{{ p.name }} <span class="text-muted fw-normal">· {{ p.display_amount }} {{ p.get_billing_cycle_display|lower }}</span></div>
+                    <div class="small text-muted">{{ p.limit_text }}{% if p.plan_description %} · {{ p.plan_description }}{% endif %}</div>
+                </div>
+                {% if plan.policy.pk == p.pk %}
+                <span class="badge bg-success-subtle text-success">Your plan</span>
+                {% else %}
+                <button type="submit" class="btn btn-sm btn-outline-dark">Choose</button>
+                {% endif %}
+            </form>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
 {% if my_enrolments or my_sessions %}
 <div class="portal-grid">
     <div class="card border-0 shadow-sm mb-4">
@@ -126,6 +182,8 @@
                 <span class="badge bg-success-subtle text-success">Booked</span>
                 {% elif e.full %}
                 <span class="small text-muted">Full</span>
+                {% elif e.over_limit %}
+                <span class="small text-muted" title="Your plan's session limit is reached for this period">Plan limit reached</span>
                 {% else %}
                 <form method="post" action="{% url 'portal_booking_action' token=member.token %}">
                     {% csrf_token %}
@@ -160,6 +218,8 @@
             <p class="small text-success mb-0"><i class="bi bi-check-circle me-1"></i>You're enrolled.</p>
             {% elif card.full %}
             <p class="small text-muted mb-0">This class is full, so it can't take new members right now.</p>
+            {% elif card.limit_msg %}
+            <p class="small text-muted mb-0">{{ card.limit_msg }}</p>
             {% else %}
             <form method="post" action="{% url 'portal_booking_action' token=member.token %}">
                 {% csrf_token %}

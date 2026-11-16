@@ -33,6 +33,30 @@ class BillingPolicy(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # Booking plan: what the policy allows a member to book from the member portal.
+    class LimitPeriod(models.TextChoices):
+        WEEK = 'week', 'a week'
+        MONTH = 'month', 'a month'
+
+    member_selectable = models.BooleanField(
+        default=False,
+        help_text='Members can pick this as their plan from the Book page of the member portal.',
+    )
+    plan_description = models.TextField(
+        blank=True, help_text='Shown to members when they choose a plan (the description above is internal).',
+    )
+    session_limit = models.PositiveSmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1)],
+        help_text='The most sessions a member on this policy can be booked into in each period. Blank means unlimited.',
+    )
+    limit_period = models.CharField(max_length=10, choices=LimitPeriod.choices, default=LimitPeriod.MONTH)
+
+    def limit_text(self):
+        """'Unlimited sessions' or e.g. '2 sessions a week'."""
+        if not self.session_limit:
+            return 'Unlimited sessions'
+        return f"{self.session_limit} session{'s' if self.session_limit != 1 else ''} {self.get_limit_period_display()}"
+
     def __str__(self):
         if self.pricing_model == self.PricingModel.PER_SESSION:
             return f"{self.name} (£{self.per_session_rate}/session / {self.get_billing_cycle_display()})"
