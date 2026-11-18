@@ -1,4 +1,24 @@
 # <img width="600" height="327" alt="Dojo" src="https://github.com/user-attachments/assets/e477db25-db4f-45b8-8df3-3902b4b8e4a9" />
+
+[![Licence: AGPL-3.0](https://img.shields.io/github/license/DojoUK/Dojo?label=licence&color=blue)](./LICENSE)
+[![Website](https://img.shields.io/github/actions/workflow/status/DojoUK/Dojo/pages.yml?branch=main&label=website)](https://github.com/DojoUK/Dojo/actions/workflows/pages.yml)
+[![Last commit](https://img.shields.io/github/last-commit/DojoUK/Dojo)](https://github.com/DojoUK/Dojo/commits/main)
+[![Commit activity](https://img.shields.io/github/commit-activity/m/DojoUK/Dojo)](https://github.com/DojoUK/Dojo/pulse)
+[![Open issues](https://img.shields.io/github/issues/DojoUK/Dojo)](https://github.com/DojoUK/Dojo/issues)
+[![Open pull requests](https://img.shields.io/github/issues-pr/DojoUK/Dojo)](https://github.com/DojoUK/Dojo/pulls)
+[![Contributors](https://img.shields.io/github/contributors/DojoUK/Dojo)](https://github.com/DojoUK/Dojo/graphs/contributors)
+[![GitHub stars](https://img.shields.io/github/stars/DojoUK/Dojo)](https://github.com/DojoUK/Dojo/stargazers)
+[![Self-hosted](https://img.shields.io/badge/self--hosted-yes-success)](./SELF_HOSTING.md)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)](#contributing)
+
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](#tech-stack)
+[![Django 6.1](https://img.shields.io/badge/Django-6.1-092E20?logo=django&logoColor=white)](#tech-stack)
+[![MySQL 8.4](https://img.shields.io/badge/MySQL-8.4-4479A1?logo=mysql&logoColor=white)](#tech-stack)
+[![HTMX 2.0](https://img.shields.io/badge/HTMX-2.0-3366CC?logo=htmx&logoColor=white)](#tech-stack)
+[![Bootstrap 5.3](https://img.shields.io/badge/Bootstrap-5.3-7952B3?logo=bootstrap&logoColor=white)](#tech-stack)
+[![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](#getting-started)
+[![Stripe payments](https://img.shields.io/badge/Stripe-payments-635BFF?logo=stripe&logoColor=white)](#billing-and-payments)
+
 Open source club and class management platform. Manage members, classes, attendance, gradings, billing and payments, and documents. Self-hostable.
 
 **[Website](https://dojouk.github.io/Dojo/)** · [Self-hosting guide](./SELF_HOSTING.md) · A hosted version is planned
