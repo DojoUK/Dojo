@@ -91,6 +91,16 @@ class MemberForm(forms.ModelForm):
             )
 
 
+    def clean_billing_policy(self):
+        policy = self.cleaned_data.get('billing_policy')
+        if policy is not None and self.instance.pk and policy.pk != self.instance.billing_policy_id:
+            from .family import plan_room_error
+            error = plan_room_error(self.instance, policy)
+            if error:
+                raise forms.ValidationError(error + ' Take someone off the plan first.')
+        return policy
+
+
 class GuardianForm(forms.ModelForm):
     class Meta:
         model = Guardian

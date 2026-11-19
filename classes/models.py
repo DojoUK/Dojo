@@ -213,6 +213,20 @@ class SessionBooking(models.Model):
     member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='session_bookings')
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Status(models.TextChoices):
+        CONFIRMED = 'confirmed', 'Confirmed'
+        PENDING = 'pending', 'Awaiting payment'
+
+    # A member with no plan pays for a single session up front: the booking holds its place
+    # as 'pending' until Stripe's webhook says the invoice is paid, then becomes 'confirmed'.
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.CONFIRMED)
+    invoice = models.ForeignKey('billing.Invoice', null=True, blank=True, on_delete=models.SET_NULL,
+                                related_name='session_bookings')
+
+    @property
+    def is_pending(self):
+        return self.status == self.Status.PENDING
+
     def __str__(self):
         return f"{self.member} → {self.session}"
 

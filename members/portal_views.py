@@ -34,6 +34,14 @@ def _visible_invoices(member):
     return member.invoices.exclude(run__status='awaiting_review').order_by('-created_at')
 
 
+def _family_invoices(member):
+    """Invoices for everyone in the member's family (just the member's own if they have no family), newest first."""
+    from .family import family_members
+    people = family_members(member, active_only=False)
+    return (Invoice.objects.filter(member__in=people).exclude(run__status='awaiting_review')
+            .select_related('member').order_by('-created_at')), len(people) > 1
+
+
 def _with_pay_pages(outstanding):
     """Each unpaid invoice's button opens its payment page: card, bank transfer and in-person options."""
     for inv in outstanding:
@@ -223,6 +231,49 @@ class PortalClassesView(View):
         })
 
 
+def _plan_context(member, quota, today):
+    """What the portal shows about a member's plan: shared by the Book and Plan pages."""
+    from billing.models import BillingPolicy
+    from classes import booking
+    org = member.organisation
+    needs_plan = booking.needs_plan(member)
+    plans = []
+    if org.has_feature('billing'):
+        plans = list(BillingPolicy.objects.filter(organisation=org, is_active=True, member_selectable=True)
+                     .order_by('name'))
+    return {
+        'plan': {
+            'policy': member.billing_policy, 'limited': quota.limited, 'limit': quota.limit,
+            'used': quota.used(), 'period': quota.period, 'period_label': quota.label(today),
+            'remaining': max(0, quota.limit - quota.used()) if quota.limited else None,
+        },
+        'plans': plans,
+        'needs_plan': needs_plan,
+        'single_price': org.single_session_price if needs_plan else None,
+        'single_payable': needs_plan and booking.single_session_payable(org),
+    }
+
+
+class PortalPlansView(View):
+    """Choose or change a plan: its own section, with how much of the plan has been used."""
+
+    def get(self, request, token):
+        from django.utils import timezone
+
+        from classes import booking
+
+        from .family import family_members
+        member = _portal_member(token, 'billing')
+        today = timezone.localdate()
+        return render(request, 'portal/plans.html', {
+            'active': 'plans',
+            'member': member,
+            'org': member.organisation,
+            'family_size': len(family_members(member)),
+            **_plan_context(member, booking.Quota(member, today), today),
+        })
+
+
 class PortalBookingView(View):
     """The timetable of active classes, with enrol / single-session booking, and the member's own bookings."""
     DAYS_AHEAD = 60
@@ -239,10 +290,16 @@ class PortalBookingView(View):
         from classes.models import Class, ClassMember, Session, SessionAbsence, SessionBooking
 
         today = timezone.localdate()
+        booking.release_expired()
         enrolments = {cm.assigned_class_id: cm for cm in ClassMember.objects.filter(member=member)}
         booked_ids = set(
             SessionBooking.objects.filter(member=member, session__date__gte=today).values_list('session_id', flat=True)
         )
+        pending_ids = set(
+            SessionBooking.objects.filter(member=member, session__date__gte=today, status='pending')
+            .values_list('session_id', flat=True)
+        )
+        needs_plan = booking.needs_plan(member)
 
         absent_ids = set(
             SessionAbsence.objects.filter(member=member, session__date__gte=today).values_list('session_id', flat=True)
@@ -263,13 +320,14 @@ class PortalBookingView(View):
         cards = []
         for cls in classes:
             limit_msg = ''
-            if cls.pk not in auto_ids:
+            if cls.pk not in auto_ids and not needs_plan:
                 try:
                     quota.check(list(cls.sessions.filter(is_cancelled=False, date__gte=today)), f'enrol in {cls.name}')
                 except booking.BookingError as e:
                     limit_msg = str(e)
             cards.append({'cls': cls, 'auto': cls.pk in auto_ids, 'full': cls.is_full,
-                          'spots_left': cls.spots_left, 'limit_msg': limit_msg})
+                          'spots_left': cls.spots_left, 'limit_msg': limit_msg,
+                          'needs_plan': needs_plan and cls.pk not in auto_ids})
 
         # Day-by-day breakdown of the sessions that can be booked.
         horizon = today + timedelta(days=self.DAYS_AHEAD)
@@ -284,13 +342,22 @@ class PortalBookingView(View):
             by_date.setdefault(s.date, []).append({
                 'session': s, 'cls': s.assigned_class, 'time': booking.session_time_text(s),
                 'enrolled': s.assigned_class_id in auto_ids, 'absent': s.pk in absent_ids, 'booked': s.pk in booked_ids,
-                'full': booking.session_is_full(s), 'over_limit': not quota.can_add(s),
+                'pending': s.pk in pending_ids, 'full': booking.session_is_full(s), 'over_limit': not quota.can_add(s),
             })
         days = [
             {'date': day, 'iso': day.isoformat(), 'entries': sorted(entries, key=lambda e: (e['time'] or '99', e['cls'].name))}
             for day, entries in sorted(by_date.items())
         ]
         calendar_days = {d['iso']: len(d['entries']) for d in days}
+        # Each day's colour in the calendar: blue if the member is booked in, otherwise green if any
+        # session still has space, red if every session is full, grey if their plan's limit is all that stops them.
+        def day_status(entries):
+            if any(e['booked'] or (e['enrolled'] and not e['absent']) for e in entries):
+                return 'booked'
+            if any(not e['full'] and not e['over_limit'] for e in entries):
+                return 'open'
+            return 'full' if any(e['full'] for e in entries) else 'limit'
+        calendar_status = {d['iso']: day_status(d['entries']) for d in days}
 
         my_enrolments = (
             ClassMember.objects.filter(member=member).select_related('assigned_class').order_by('assigned_class__name')
@@ -300,8 +367,8 @@ class PortalBookingView(View):
         my_sessions = []
         for b in SessionBooking.objects.filter(member=member, session__date__gte=today, session__is_cancelled=False) \
                 .select_related('session__assigned_class__organisation'):
-            my_sessions.append({'session': b.session, 'kind': 'booking', 'absent': False,
-                                'can_change': not booking.changes_closed(b.session)})
+            my_sessions.append({'session': b.session, 'kind': 'booking', 'absent': False, 'pending': b.is_pending,
+                                'can_change': b.is_pending or not booking.changes_closed(b.session)})
         enrolled_classes = [pk for pk in auto_ids]
         for s in Session.objects.filter(assigned_class_id__in=enrolled_classes, is_cancelled=False,
                                         date__gte=today, date__lte=horizon) \
@@ -311,30 +378,22 @@ class PortalBookingView(View):
         my_sessions.sort(key=lambda row: (row['session'].date, row['session'].assigned_class.name))
         for row in my_sessions:
             row['time'] = booking.session_time_text(row['session'])
-
-        from billing.models import BillingPolicy
-        plans = []
-        if org.has_feature('billing'):
-            plans = list(BillingPolicy.objects.filter(organisation=org, is_active=True, member_selectable=True)
-                         .order_by('name'))
-        plan = {
-            'policy': member.billing_policy, 'limited': quota.limited, 'limit': quota.limit,
-            'used': quota.used(), 'period': quota.period, 'period_label': quota.label(today),
-            'remaining': max(0, quota.limit - quota.used()) if quota.limited else None,
-        }
+        session_classes = sorted({row['session'].assigned_class for row in my_sessions}, key=lambda c: c.name)
 
         return render(request, 'portal/bookings.html', {
             'active': 'bookings',
-            'plan': plan,
-            'plans': plans,
+            **_plan_context(member, quota, today),
+            'just_paid': request.GET.get('paid') == '1',
             'member': member,
             'org': org,
             'cards': cards,
             'days': days,
             'calendar_days': calendar_days,
+            'calendar_status': calendar_status,
             'days_ahead': self.DAYS_AHEAD,
             'my_enrolments': my_enrolments,
             'my_sessions': my_sessions,
+            'session_classes': session_classes,
             'cutoff_hours': org.booking_cutoff_hours,
         })
 
@@ -369,16 +428,29 @@ class PortalBookingActionView(View):
                     BillingPolicy, pk=request.POST.get('policy_id'), organisation=org,
                     is_active=True, member_selectable=True,
                 )
-                member.billing_policy = policy
-                member.save(update_fields=['billing_policy'])
-                messages.success(request, f'You\'re now on the {policy.name} plan ({policy.limit_text().lower()}).')
+                from members.family import FamilyPlanFull, assign_plan
+                try:
+                    changed = assign_plan(member, policy)
+                except FamilyPlanFull as e:
+                    raise booking.BookingError(str(e))
+                if len(changed) > 1:
+                    others = ', '.join(m.name for m in changed if m.pk != member.pk)
+                    messages.success(request, f'{policy.name} is a family plan ({policy.limit_text().lower()}): '
+                                              f'{member.name} and {others} are now on it.')
+                else:
+                    messages.success(request, f'{member.name} is now on the {policy.name} plan '
+                                              f'({policy.limit_text().lower()}).')
             elif action in ('book', 'cancel_booking', 'skip_session', 'rejoin_session'):
                 session = get_object_or_404(
                     Session.objects.select_related('assigned_class__organisation'),
                     pk=request.POST.get('session_id'), assigned_class__organisation=org,
                 )
                 if action == 'book':
-                    booking.book_session(member, session)
+                    made = booking.book_session(member, session)
+                    if made.is_pending:
+                        # No plan: pay for the session first. It's confirmed when Stripe's webhook says it's paid.
+                        back = request.build_absolute_uri(reverse('portal_bookings', kwargs={'token': token}))
+                        return redirect(booking.start_payment(made, back), permanent=False)
                     messages.success(request, 'You\'re booked in. A confirmation email is on its way.')
                 elif action == 'skip_session':
                     booking.skip_session(member, session)
@@ -387,13 +459,17 @@ class PortalBookingActionView(View):
                     booking.rejoin_session(member, session)
                     messages.success(request, 'You\'re back on the register for that session. A confirmation email is on its way.')
                 else:
-                    booking.cancel_session_booking(member, session)
-                    messages.success(request, 'Your booking is cancelled. A confirmation email is on its way.')
+                    paid = booking.cancel_session_booking(member, session)
+                    if paid is not None:
+                        messages.success(request, 'Your booking is cancelled. You paid for this session, and '
+                                                  'refunds aren\'t automatic: please contact the club.')
+                    else:
+                        messages.success(request, 'Your booking is cancelled.')
             else:
                 messages.error(request, 'That wasn\'t something we could do.')
         except booking.BookingError as e:
             messages.error(request, str(e))
-        return redirect('portal_bookings', token=token)
+        return redirect('portal_plans' if action == 'choose_plan' else 'portal_bookings', token=token)
 
 
 class PortalCodeOfConductView(View):
@@ -412,12 +488,13 @@ class PortalPaymentHistoryView(View):
     def get(self, request, token):
         member = _portal_member(token, 'billing')
 
-        invoices = _visible_invoices(member)
+        invoices, is_family = _family_invoices(member)
         outstanding = _with_pay_pages([inv for inv in invoices if inv.status not in ('paid', 'cancelled')])
         paid = [inv for inv in invoices if inv.status == 'paid']
 
         return render(request, 'portal/payments.html', {
             'active': 'payments',
+            'show_member': is_family,
             'member': member,
             'org': member.organisation,
             'outstanding': outstanding,
@@ -677,7 +754,9 @@ class CreateCheckoutView(View):
         import stripe
 
         member = _portal_member(token, 'billing')
-        invoice = get_object_or_404(Invoice, pk=invoice_pk, member=member, status='unpaid')
+        from .family import family_members
+        invoice = get_object_or_404(Invoice, pk=invoice_pk, member__in=family_members(member, active_only=False),
+                                    status='unpaid')
 
         keys = stripe_keys(member.organisation)
         if keys is None:
@@ -694,7 +773,7 @@ class CreateCheckoutView(View):
                     'unit_amount': int(invoice.amount * 100),
                     'product_data': {
                         'name': f"{member.organisation.name} — {invoice.period}",
-                        'description': f"Membership fee for {member.name}",
+                        'description': f"Membership fee for {invoice.member.name}",
                     },
                 },
                 'quantity': 1,

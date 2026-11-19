@@ -54,6 +54,9 @@ class StripeWebhookView(View):
         elif event_type == 'checkout.session.completed':
             self._handle_checkout_completed(obj)
 
+        elif event_type == 'checkout.session.expired':
+            self._handle_checkout_expired(obj)
+
         elif event_type == 'payment_intent.succeeded' and self.organisation is not None:
             from .autopay import payment_intent_succeeded
             payment_intent_succeeded(self.organisation, obj)
@@ -110,12 +113,30 @@ class StripeWebhookView(View):
                     )
                     invoice.status = 'paid'
                     invoice.save(update_fields=['status'])
+                if invoice.status == 'paid':
+                    # A single session booked by a member with no plan is confirmed only now.
+                    from classes.booking import confirm_paid
+                    confirm_paid(invoice)
             except Invoice.DoesNotExist:
                 pass
 
         # If this was a subscription checkout, store subscription_id on member
         if getattr(session, 'mode', None) == 'subscription' and getattr(session, 'subscription', None):
             self._store_subscription_on_member(session)
+
+    def _handle_checkout_expired(self, session):
+        """A checkout page timed out unpaid: let go of the single session held for it."""
+        try:
+            invoice_pk = session.metadata['invoice_pk']
+        except (AttributeError, KeyError, TypeError):
+            return
+        invoices = Invoice.objects.filter(pk=invoice_pk)
+        if self.organisation is not None:
+            invoices = invoices.filter(organisation=self.organisation)
+        invoice = invoices.first()
+        if invoice is not None:
+            from classes.booking import release_for_invoice
+            release_for_invoice(invoice)
 
     def _store_subscription_on_member(self, session):
         from members.models import Member

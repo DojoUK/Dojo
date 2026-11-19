@@ -155,6 +155,7 @@ def create_run(schedule, period, invoice_date, term=None, year=None, month=None)
                 organisation=org, member=member, billing_policy=policy, amount=calc['net'],
                 discount_amount=calc['discount'], period=period,
                 due_date=invoice_date + timedelta(days=schedule.due_after_days), run=run,
+                notes=f"Family plan covering {', '.join(calc['covers'])}." if calc['covers'] else '',
             )
             if not review:
                 apply_member_credit(invoice)

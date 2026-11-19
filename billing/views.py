@@ -625,6 +625,7 @@ class BulkInvoiceView(BillingManagerMixin, View):
             except Member.DoesNotExist:
                 continue
 
+            family_note = ''
             # Use admin-overridden amount if provided, else calculated
             override_key = str(member_id)
             if override_key in amounts:
@@ -646,6 +647,8 @@ class BulkInvoiceView(BillingManagerMixin, View):
                     calc = calculate_invoice_amount(member, policy, term=term, year=year, month=month)
                     net = float(calc['net'])
                     discount = float(calc['discount'])
+                    if calc['covers']:
+                        family_note = f"Family plan covering {', '.join(calc['covers'])}."
                 else:
                     net = float(member.monthly_fee or 0)
                     discount = 0
@@ -661,6 +664,7 @@ class BulkInvoiceView(BillingManagerMixin, View):
                 discount_amount=discount,
                 period=period_label,
                 due_date=due_date,
+                notes=family_note,
             )
             apply_member_credit(inv)
             created_invoices.append(inv)
@@ -751,12 +755,20 @@ def _plan_fields(post):
         if not raw.isdigit() or not 1 <= int(raw) <= 999:
             return None, 'The session limit must be a whole number from 1 to 999, or blank for unlimited.'
         limit = int(raw)
+    max_raw = post.get('max_family_members', '').strip()
+    max_family = None
+    if max_raw:
+        if not max_raw.isdigit() or not 2 <= int(max_raw) <= 20:
+            return None, 'The most family members a family plan can cover must be a whole number from 2 to 20, or blank for no limit.'
+        max_family = int(max_raw)
     period = post.get('limit_period', BillingPolicy.LimitPeriod.MONTH)
     if period not in BillingPolicy.LimitPeriod.values:
         period = BillingPolicy.LimitPeriod.MONTH
     return {
         'session_limit': limit, 'limit_period': period,
         'member_selectable': post.get('member_selectable') == '1',
+        'is_family_plan': post.get('is_family_plan') == '1',
+        'max_family_members': max_family if post.get('is_family_plan') == '1' else None,
         'plan_description': post.get('plan_description', '').strip(),
     }, None
 

@@ -1,3 +1,4 @@
+import re
 from datetime import date, timedelta
 
 from django.contrib import messages
@@ -292,6 +293,17 @@ class DashboardView(OrgMixin, TemplateView):
             staff_expiring = staff.filter(expiring_q).count()
             staff_expired = staff.filter(expired_q).count()
 
+        # Offering class booking on a billing club means members without a plan pay per session,
+        # so the price (and a way to take card payments) must be set. Shown even if the rest of the
+        # checklist has been dismissed.
+        from billing.payments import stripe_keys
+        single_session_setup = []
+        if self.org.has_feature('billing') and self.org.has_bookable_classes:
+            if self.org.single_session_price is None:
+                single_session_setup.append('price')
+            if stripe_keys(self.org) is None:
+                single_session_setup.append('stripe')
+
         onboarding = None
         if is_admin and not self.org.settings.get('onboarding_dismissed'):
             from classes.models import ClassCoach
@@ -302,12 +314,15 @@ class DashboardView(OrgMixin, TemplateView):
                 not self.org.has_feature('billing')
                 or Invoice.objects.filter(organisation=self.org).exists()
             )
-            if not (has_member and has_class and has_coach and has_invoice):
+            if not (has_member and has_class and has_coach and has_invoice and not single_session_setup):
                 onboarding = {
                     'has_member': has_member,
                     'has_class': has_class,
                     'has_coach': has_coach,
                     'has_invoice': has_invoice,
+                    'booking_setup': self.org.has_feature('billing') and self.org.has_bookable_classes,
+                    'has_single_price': 'price' not in single_session_setup,
+                    'has_stripe': 'stripe' not in single_session_setup,
                 }
 
         unsigned_waivers_count = 0
@@ -347,6 +362,7 @@ class DashboardView(OrgMixin, TemplateView):
             'staff_check_names': ' or '.join(label for _, label in staff_checks),
             'unsigned_waivers_count': unsigned_waivers_count,
             'onboarding': onboarding,
+            'single_session_setup': single_session_setup if is_admin else [],
         })
         return context
 
@@ -733,7 +749,28 @@ class OrgSettingsView(OrgAdminMixin, View):
                 else:
                     messages.error(request, f'The booking cut-off must be between 0 and '
                                             f'{Organisation.MAX_BOOKING_CUTOFF_HOURS} hours, so it wasn\'t changed.')
-            self.org.save(update_fields=update_fields)
+            price_raw = request.POST.get('single_session_price')
+            if price_raw is not None:
+                from decimal import Decimal, InvalidOperation
+                price_raw = price_raw.strip().lstrip('£')
+                settings_now = dict(self.org.settings or {})
+                if not price_raw:
+                    settings_now.pop('single_session_price', None)
+                    self.org.settings = settings_now
+                    update_fields.append('settings')
+                else:
+                    try:
+                        price = Decimal(price_raw).quantize(Decimal('0.01'))
+                    except InvalidOperation:
+                        price = Decimal('0')
+                    if Decimal('0') < price <= Organisation.MAX_SINGLE_SESSION_PRICE:
+                        settings_now['single_session_price'] = str(price)
+                        self.org.settings = settings_now
+                        update_fields.append('settings')
+                    else:
+                        messages.error(request, f'The single session price must be more than £0 and at most '
+                                                f'£{Organisation.MAX_SINGLE_SESSION_PRICE}, so it wasn\'t changed.')
+            self.org.save(update_fields=sorted(set(update_fields)))
             messages.success(request, 'Features saved.')
             return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#features")
 
@@ -830,6 +867,15 @@ class OrgSettingsView(OrgAdminMixin, View):
             settings['sidebar_color_dark'] = darken(sidebar_color)
             settings['accent_color'] = accent_color
             settings['accent_hover'] = darken(accent_color)
+            # Two-tone sidebar: the top is the sidebar colour, the bottom is a second
+            # colour of the club's choosing. The end colour is kept when the gradient is
+            # switched off so it comes back if they switch it on again.
+            settings['sidebar_gradient'] = request.POST.get('sidebar_gradient') == '1'
+            sidebar_color_end = request.POST.get('sidebar_color_end', '').strip()
+            if re.fullmatch(r'#[0-9a-fA-F]{6}', sidebar_color_end):
+                settings['sidebar_color_end'] = sidebar_color_end
+            elif settings['sidebar_gradient'] and not settings.get('sidebar_color_end'):
+                settings['sidebar_gradient'] = False
             self.org.settings = settings
             self.org.save(update_fields=['settings'])
 

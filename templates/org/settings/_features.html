@@ -11,5 +11,14 @@
         Members can book or cancel a single session, from their portal, up to this many hours before it starts.
         Classes are opened for booking from each class's edit page.
     </div>
+
+    <label class="form-label small fw-semibold mt-4" for="single-session-price">Single session price (£)</label>
+    <input type="number" name="single_session_price" id="single-session-price" class="form-control form-control-sm"
+           style="max-width:140px;" min="0.01" max="{{ org.MAX_SINGLE_SESSION_PRICE }}" step="0.01"
+           value="{{ org.single_session_price|default_if_none:''|stringformat:'s' }}">
+    <div class="form-text">
+        Required if you offer class booking with Billing switched on. A member who hasn't chosen a plan can't enrol on a whole class;
+        to book a single session they pay this price through Stripe first, and the booking is confirmed once the payment clears.
+    </div>
     <button type="submit" class="btn btn-dark btn-sm mt-3">Save features</button>
 </form>

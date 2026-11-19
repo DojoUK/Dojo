@@ -39,6 +39,7 @@
                         {% endif %}
                         <div class="d-flex flex-wrap gap-1 mb-3">
                             <span class="badge bg-light text-dark border"><i class="bi bi-calendar-check me-1"></i>{{ policy.limit_text }}</span>
+                            {% if policy.is_family_plan %}<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle"><i class="bi bi-people me-1"></i>Family plan{% if policy.max_family_members %}: up to {{ policy.max_family_members }}{% endif %}</span>{% endif %}
                             {% if policy.member_selectable %}<span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">Members can choose</span>{% endif %}
                         </div>
 
@@ -141,6 +142,16 @@
                                     <div class="form-check mb-2">
                                         <input class="form-check-input" type="checkbox" name="member_selectable" value="1" id="plan{{ policy.pk }}Selectable" {% if policy.member_selectable %}checked{% endif %}>
                                         <label class="form-check-label small" for="plan{{ policy.pk }}Selectable">Members can choose this plan on the Book page</label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" name="is_family_plan" value="1" id="plan{{ policy.pk }}Family" {% if policy.is_family_plan %}checked{% endif %}>
+                                        <label class="form-check-label small" for="plan{{ policy.pk }}Family">Family plan: one plan covers every linked family member</label>
+                                        <div class="d-flex align-items-center gap-2 mt-1">
+                                            <label class="form-label small mb-0" for="plan{{ policy.pk }}MaxFamily">Covers up to</label>
+                                            <input type="number" name="max_family_members" id="plan{{ policy.pk }}MaxFamily" value="{{ policy.max_family_members|default_if_none:'' }}" min="2" max="20" class="form-control form-control-sm" style="width:80px;" placeholder="any">
+                                            <span class="small text-muted">family members</span>
+                                        </div>
+                                        <div class="form-text">A flat price is charged once per family, per-session prices add up all the children on one invoice, and any session limit is shared between them.</div>
                                     </div>
                                     <label class="form-label small">Description shown to members</label>
                                     <textarea name="plan_description" class="form-control" rows="2" placeholder="e.g. Train as often as you like">{{ policy.plan_description }}</textarea>
@@ -301,6 +312,16 @@
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" name="member_selectable" value="1" id="planNewSelectable" >
                                     <label class="form-check-label small" for="planNewSelectable">Members can choose this plan on the Book page</label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="is_family_plan" value="1" id="planNewFamily">
+                                    <label class="form-check-label small" for="planNewFamily">Family plan: one plan covers every linked family member</label>
+                                    <div class="d-flex align-items-center gap-2 mt-1">
+                                        <label class="form-label small mb-0" for="planNewMaxFamily">Covers up to</label>
+                                        <input type="number" name="max_family_members" id="planNewMaxFamily" min="2" max="20" class="form-control form-control-sm" style="width:80px;" placeholder="any">
+                                        <span class="small text-muted">family members</span>
+                                    </div>
+                                    <div class="form-text">A flat price is charged once per family, per-session prices add up all the children on one invoice, and any session limit is shared between them.</div>
                                 </div>
                                 <label class="form-label small">Description shown to members</label>
                                 <textarea name="plan_description" class="form-control" rows="2" placeholder="e.g. Train as often as you like"></textarea>

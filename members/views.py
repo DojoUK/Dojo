@@ -5,7 +5,7 @@ from django.views import View
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 from dojo.mixins import OrgAdminMixin
 from .forms import GuardianFormSet, MemberForm, build_custom_field_widgets, extract_custom_field_values
-from .models import Member
+from .models import FamilyGroupMember, Member
 from .navigation import redirect_to_member
 from mailer import connection_for
 
@@ -317,6 +317,14 @@ class MemberDetailView(OrgAdminMixin, DetailView):
         context['org_policies'] = BillingPolicy.objects.filter(
             organisation=self.org, is_active=True
         ).prefetch_related('discounts')
+        from . import family
+        context['family_group'] = family.family_group(self.object)
+        context['family_people'] = family.siblings(self.object) if context['family_group'] else []
+        in_family = {m.pk for m in family.family_members(self.object, active_only=False)}
+        in_any_group = set(FamilyGroupMember.objects.filter(family_group__organisation=self.org)
+                           .values_list('member_id', flat=True))
+        context['family_candidates'] = Member.objects.filter(organisation=self.org, is_active=True) \
+            .exclude(pk__in=in_family | in_any_group).order_by('name')
         context['available_discounts'] = PolicyDiscount.objects.filter(
             policy__organisation=self.org
         ).exclude(
@@ -378,14 +386,71 @@ class MemberBillingPolicySetView(OrgAdminMixin, View):
     def post(self, request, org_slug, pk):
         from billing.models import BillingPolicy
         member = get_object_or_404(Member, pk=pk, organisation=self.org)
+        from .family import assign_plan
         policy_id = request.POST.get('billing_policy')
-        if policy_id:
-            member.billing_policy = get_object_or_404(BillingPolicy, pk=policy_id, organisation=self.org)
+        policy = get_object_or_404(BillingPolicy, pk=policy_id, organisation=self.org) if policy_id else None
+        from .family import FamilyPlanFull
+        try:
+            changed = assign_plan(member, policy)
+        except FamilyPlanFull as e:
+            messages.error(request, str(e))
+            return redirect_to_member(self.org.slug, member.pk, 'billing')
+        if len(changed) > 1:
+            messages.success(request, f'{policy.name} is a family plan, so it is now on all {len(changed)} family '
+                                      f'members: {", ".join(m.name for m in changed)}.')
         else:
-            member.billing_policy = None
-        member.save(update_fields=['billing_policy'])
-        messages.success(request, f'Billing policy updated for {member.name}.')
+            messages.success(request, f'Billing policy updated for {member.name}.')
         return redirect_to_member(self.org.slug, member.pk, 'billing')
+
+
+class MemberFamilyView(OrgAdminMixin, View):
+    """Link members into a family (they then share one member portal), unlink them, or edit the family."""
+
+    def post(self, request, org_slug, pk):
+        from decimal import Decimal, InvalidOperation
+
+        from . import family
+        member = get_object_or_404(Member, pk=pk, organisation=self.org)
+        action = request.POST.get('action', '')
+        back = redirect_to_member(self.org.slug, member.pk, 'billing')
+        if action == 'add':
+            other = Member.objects.filter(pk=request.POST.get('member_id') or 0, organisation=self.org).first()
+            if other is None or other.pk == member.pk:
+                messages.error(request, 'Choose someone to add to the family.')
+                return back
+            existing = family.family_group(other)
+            if existing is not None and existing != family.family_group(member):
+                messages.error(request, f'{other.name} is already in the {existing.name} group. '
+                                        f'Remove them from it first.')
+                return back
+            group = family.link(member, other)
+            messages.success(request, f'{other.name} is now in the {group.name} group with {member.name}. '
+                                      f'They share one member portal.')
+        elif action == 'remove':
+            other = Member.objects.filter(pk=request.POST.get('member_id') or 0, organisation=self.org).first()
+            group = family.family_group(member)
+            if other is None or group is None or not group.memberships.filter(member=other).exists():
+                messages.error(request, 'That person isn\'t in this family.')
+                return back
+            family.unlink(other)
+            messages.success(request, f'{other.name} has been taken out of the family.')
+        elif action == 'update':
+            group = family.family_group(member)
+            if group is None:
+                return back
+            name = request.POST.get('name', '').strip()
+            try:
+                discount = Decimal(request.POST.get('discount_percentage', '0') or '0')
+            except InvalidOperation:
+                discount = Decimal('-1')
+            if not name or not Decimal('0') <= discount <= Decimal('100'):
+                messages.error(request, 'Give the family a name and a discount between 0 and 100%.')
+                return back
+            group.name = name
+            group.discount_percentage = discount.quantize(Decimal('0.01'))
+            group.save(update_fields=['name', 'discount_percentage'])
+            messages.success(request, 'Family updated.')
+        return back
 
 
 class MemberArchiveView(OrgAdminMixin, View):

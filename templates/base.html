@@ -19,6 +19,8 @@
             --dojo-sidebar-dark: #152d4a;
             --dojo-accent: #2563EB;
             --dojo-accent-hover: #1d4ed8;
+            --dojo-accent-text: #ffffff;
+            --dojo-accent-hover-text: #ffffff;
             --dojo-body-bg: #F1F5F9;
             --dojo-card-bg: #ffffff;
             --dojo-text: #0f172a;
@@ -35,6 +37,7 @@
         :root[data-bs-theme="dark"] {
             --dojo-sidebar: #161616;
             --dojo-sidebar-dark: #080808;
+            --dojo-sidebar-end: var(--dojo-sidebar-dark);
             --dojo-body-bg: #0a0a0a;
             --dojo-card-bg: #171717;
             --dojo-text: #e8e8e8;
@@ -60,22 +63,23 @@
         .dojo-alert-header { background: #fff5f5; border-bottom-color: #fca5a5 !important; }
         [data-bs-theme="dark"] .dojo-alert-header { background: #2a1214; border-bottom-color: #7f1d1d !important; }
         /* Personal colour themes (Appearance under My account), over the club's own colours.
-           html[data-accent-theme] outranks the club's :root colours whatever the order. */
-        html[data-accent-theme="blue"]   { --dojo-accent:#2563EB; --dojo-accent-hover:#1d4ed8; --dojo-sidebar:#1E3A5F; --dojo-sidebar-dark:#152d4a; }
-        html[data-accent-theme="green"]  { --dojo-accent:#16a34a; --dojo-accent-hover:#15803d; --dojo-sidebar:#14532d; --dojo-sidebar-dark:#052e13; }
-        html[data-accent-theme="purple"] { --dojo-accent:#7c3aed; --dojo-accent-hover:#6d28d9; --dojo-sidebar:#3b0764; --dojo-sidebar-dark:#1e0333; }
-        html[data-accent-theme="amber"]  { --dojo-accent:#d97706; --dojo-accent-hover:#b45309; --dojo-sidebar:#78350f; --dojo-sidebar-dark:#3f1d05; }
-        html[data-accent-theme="rose"]   { --dojo-accent:#e11d48; --dojo-accent-hover:#be123c; --dojo-sidebar:#4c0519; --dojo-sidebar-dark:#27020d; }
-        html[data-accent-theme="slate"]  { --dojo-accent:#475569; --dojo-accent-hover:#334155; --dojo-sidebar:#1e293b; --dojo-sidebar-dark:#0f172a; }
+           html[data-accent-theme] outranks the club's :root colours whatever the order.
+           Each also drops the club's two-tone sidebar end colour, as dark mode does. */
+        html[data-accent-theme="blue"]   { --dojo-accent:#2563EB; --dojo-accent-hover:#1d4ed8; --dojo-accent-text:#ffffff; --dojo-accent-hover-text:#ffffff; --dojo-sidebar:#1E3A5F; --dojo-sidebar-dark:#152d4a; --dojo-sidebar-end:var(--dojo-sidebar-dark); }
+        html[data-accent-theme="green"]  { --dojo-accent:#16a34a; --dojo-accent-hover:#15803d; --dojo-accent-text:#000000; --dojo-accent-hover-text:#ffffff; --dojo-sidebar:#14532d; --dojo-sidebar-dark:#052e13; --dojo-sidebar-end:var(--dojo-sidebar-dark); }
+        html[data-accent-theme="purple"] { --dojo-accent:#7c3aed; --dojo-accent-hover:#6d28d9; --dojo-accent-text:#ffffff; --dojo-accent-hover-text:#ffffff; --dojo-sidebar:#3b0764; --dojo-sidebar-dark:#1e0333; --dojo-sidebar-end:var(--dojo-sidebar-dark); }
+        html[data-accent-theme="amber"]  { --dojo-accent:#d97706; --dojo-accent-hover:#b45309; --dojo-accent-text:#000000; --dojo-accent-hover-text:#ffffff; --dojo-sidebar:#78350f; --dojo-sidebar-dark:#3f1d05; --dojo-sidebar-end:var(--dojo-sidebar-dark); }
+        html[data-accent-theme="rose"]   { --dojo-accent:#e11d48; --dojo-accent-hover:#be123c; --dojo-accent-text:#ffffff; --dojo-accent-hover-text:#ffffff; --dojo-sidebar:#4c0519; --dojo-sidebar-dark:#27020d; --dojo-sidebar-end:var(--dojo-sidebar-dark); }
+        html[data-accent-theme="slate"]  { --dojo-accent:#475569; --dojo-accent-hover:#334155; --dojo-accent-text:#ffffff; --dojo-accent-hover-text:#ffffff; --dojo-sidebar:#1e293b; --dojo-sidebar-dark:#0f172a; --dojo-sidebar-end:var(--dojo-sidebar-dark); }
         * { box-sizing: border-box; }
         body { font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 15px; color: var(--dojo-text); background: var(--dojo-body-bg); }
         h1,h2,h3,h4,h5,h6 { font-weight: 600; }
         .card { border-radius: var(--dojo-radius) !important; border: 1px solid var(--dojo-border) !important; box-shadow: var(--dojo-shadow) !important; }
         .btn { border-radius: 7px !important; font-weight: 500; font-size: 0.875rem; }
-        .btn-primary { background: var(--dojo-accent) !important; border-color: var(--dojo-accent) !important; }
-        .btn-primary:hover { background: var(--dojo-accent-hover) !important; border-color: var(--dojo-accent-hover) !important; }
-        .btn-dark { background: var(--dojo-sidebar) !important; border-color: var(--dojo-sidebar) !important; }
-        .btn-dark:hover { background: var(--dojo-sidebar-dark) !important; border-color: var(--dojo-sidebar-dark) !important; }
+        /* Most of Dojo's buttons are .btn-dark, so they take the club's "Accent / buttons" colour,
+           with black or white text, whichever reads better on it. */
+        .btn-primary, .btn-dark { background: var(--dojo-accent) !important; border-color: var(--dojo-accent) !important; color: var(--dojo-accent-text) !important; }
+        .btn-primary:hover, .btn-dark:hover { background: var(--dojo-accent-hover) !important; border-color: var(--dojo-accent-hover) !important; color: var(--dojo-accent-hover-text) !important; }
         .badge { border-radius: 5px !important; font-weight: 500; }
         .table { font-size: 0.875rem; }
         .table th { font-weight: 600; color: var(--dojo-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: .05em; }

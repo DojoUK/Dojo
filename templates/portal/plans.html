@@ -1,0 +1,81 @@
+{% extends 'portal/base.html' %}
+
+{% block title_suffix %} — Plan{% endblock %}
+
+{% block content %}
+
+<div class="mb-3">
+    <h5 class="mb-1">{{ member.name }}'s plan</h5>
+    <p class="text-muted small mb-0">
+        Your plan sets what you're billed and how many sessions you can book.
+        {% if family_size > 1 %}Each family member has their own plan unless you choose a family plan, which covers everyone in the family.{% endif %}
+    </p>
+</div>
+
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom py-3"><h6 class="mb-0">My plan</h6></div>
+    <div class="card-body">
+        {% if plan.policy %}
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+            <div>
+                <div class="fw-semibold">{{ plan.policy.name }}{% if plan.policy.is_family_plan %} <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-normal">Family plan</span>{% endif %}</div>
+                <div class="small text-muted">{{ plan.policy.limit_text }}</div>
+            </div>
+            {% if plan.limited %}
+            <div class="text-end">
+                <div class="fw-semibold">{{ plan.used }} of {{ plan.limit }} used</div>
+                <div class="small text-muted">in {{ plan.period_label }}</div>
+            </div>
+            {% endif %}
+        </div>
+        {% if plan.limited %}
+        <div class="progress mb-2" style="height:8px;"><div class="progress-bar" style="width:{% widthratio plan.used plan.limit 100 %}%;"></div></div>
+        <p class="small text-muted mb-0">
+            {% if plan.remaining %}{{ plan.remaining }} session{{ plan.remaining|pluralize }} left. {% else %}You've reached your limit for {{ plan.period_label }}. {% endif %}
+            Sessions you're enrolled on count towards it, and cancelling one frees it up.
+        </p>
+        {% endif %}
+        {% else %}
+        {% if needs_plan %}
+        <p class="small text-muted mb-0">You're not on a plan yet.
+            {% if plans %}Choose one below to enrol on whole classes.{% else %}Ask the club about plans to enrol on whole classes.{% endif %}
+            {% if single_payable %}Until then you can book single sessions at £{{ single_price|floatformat:2 }} each, paid online when you book.{% else %}You can still book single sessions without a plan.{% endif %}
+        </p>
+        {% else %}
+        <p class="small text-muted mb-0">You're not on a plan yet, so there's no limit on how many sessions you can book.</p>
+        {% endif %}
+        {% endif %}
+
+        {% if plans %}
+        <hr>
+        <div class="small fw-semibold mb-2">Choose a plan</div>
+        <div class="d-grid gap-2">
+            {% for p in plans %}
+            <form method="post" action="{% url 'portal_booking_action' token=member.token %}"
+                  class="d-flex flex-wrap justify-content-between align-items-center gap-2 border rounded p-2"
+                  onsubmit="return confirm('{% if p.is_family_plan %}{{ p.name|escapejs }} is a family plan: it will be put on everyone in your family. Continue?{% else %}Switch {{ member.name|escapejs }} to {{ p.name|escapejs }}? This changes what is billed from the next invoice.{% endif %}');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="choose_plan">
+                <input type="hidden" name="policy_id" value="{{ p.pk }}">
+                <div>
+                    <div class="small fw-semibold">{{ p.name }}{% if p.is_family_plan %} <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle fw-normal">Family plan{% if p.max_family_members %}: up to {{ p.max_family_members }} people{% endif %}</span>{% endif %}<span class="text-muted fw-normal"> · {{ p.display_amount }} {{ p.get_billing_cycle_display|lower }}</span></div>
+                    <div class="small text-muted">{{ p.limit_text }}{% if p.plan_description %} · {{ p.plan_description }}{% endif %}</div>
+                </div>
+                {% if plan.policy.pk == p.pk %}
+                <span class="badge bg-success-subtle text-success">Your plan</span>
+                {% else %}
+                <button type="submit" class="btn btn-sm btn-outline-dark">Choose</button>
+                {% endif %}
+            </form>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if not plans and not plan.policy %}
+<p class="text-muted small">The club hasn't made any plans available to choose yet. Please ask the club about joining a plan.</p>
+{% endif %}
+
+{% endblock %}

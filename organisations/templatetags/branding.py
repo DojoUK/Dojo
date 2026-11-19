@@ -1,9 +1,12 @@
 from django import template
 from django.utils.html import format_html
 
-from organisations.branding import backdrop_style
+from organisations.branding import backdrop_style, readable_text
 
 register = template.Library()
+
+# {{ colour|readable_text }}: black or white, whichever reads better on the colour.
+register.filter('readable_text', readable_text)
 
 
 @register.simple_tag

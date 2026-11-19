@@ -1,0 +1,65 @@
+{# Staff: link this member to siblings so they share one member portal. Context: family_group, family_people, family_candidates. #}
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+            <h6 class="mb-0">Family</h6>
+            {% if family_group %}<span class="badge bg-light text-dark border">{{ family_group.name }}</span>{% endif %}
+        </div>
+    </div>
+    <div class="card-body">
+        <p class="small text-muted">
+            Members in the same family share one member portal: whichever member's link a parent opens, they can switch
+            between their children to see each one's details, syllabus, classes, bookings and, together, every payment.
+            Each child can still have their own plan and bookings, or you can put the family on one family plan.
+        </p>
+        {% if family_group %}
+        <div class="small fw-semibold text-muted mb-1">Also in this family</div>
+        {% if family_people %}
+        <ul class="list-group list-group-flush mb-3">
+            {% for person in family_people %}
+            <li class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center gap-2">
+                <div>
+                    <a href="{% url 'member_detail' org_slug=org.slug pk=person.pk %}" class="small fw-semibold text-decoration-none">{{ person.name }}</a>
+                    <div class="small text-muted">{% if person.billing_policy %}{{ person.billing_policy.name }}{% else %}No plan{% endif %}</div>
+                </div>
+                <form method="post" action="{% url 'member_family' org_slug=org.slug pk=member.pk %}" onsubmit="return confirm('Take {{ person.name|escapejs }} out of this family?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="remove">
+                    <input type="hidden" name="member_id" value="{{ person.pk }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                </form>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="small text-muted">No one else yet.</p>
+        {% endif %}
+        <form method="post" action="{% url 'member_family' org_slug=org.slug pk=member.pk %}" class="row g-2 align-items-end mb-3">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update">
+            <div class="col-sm-6">
+                <label class="form-label small mb-1" for="family-name">Family name</label>
+                <input type="text" name="name" id="family-name" value="{{ family_group.name }}" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-sm-4">
+                <label class="form-label small mb-1" for="family-discount">Family discount %</label>
+                <input type="number" name="discount_percentage" id="family-discount" value="{{ family_group.discount_percentage|floatformat:2 }}" min="0" max="100" step="0.01" class="form-control form-control-sm">
+            </div>
+            <div class="col-sm-2"><button type="submit" class="btn btn-sm btn-outline-secondary w-100">Save</button></div>
+        </form>
+        {% endif %}
+        {% if family_candidates %}
+        <form method="post" action="{% url 'member_family' org_slug=org.slug pk=member.pk %}" class="d-flex gap-2 align-items-center">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add">
+            <select name="member_id" class="form-select form-select-sm" style="min-width:0;flex:1 1 auto;" aria-label="Add to family">
+                <option value="">{% if family_group %}Add another family member…{% else %}Link a brother, sister or other family member…{% endif %}</option>
+                {% for c in family_candidates %}<option value="{{ c.pk }}">{{ c.name }}</option>{% endfor %}
+            </select>
+            <button type="submit" class="btn btn-sm btn-dark flex-shrink-0">Add</button>
+        </form>
+        {% elif not family_group %}
+        <p class="small text-muted mb-0">There's no one else to link yet.</p>
+        {% endif %}
+    </div>
+</div>

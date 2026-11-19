@@ -11,7 +11,10 @@
     --dojo-sidebar-dark: {{ t.sidebar_color_dark }};
     --dojo-accent: {{ t.accent_color }};
     --dojo-accent-hover: {{ t.accent_hover }};
-}
+    --dojo-accent-text: {{ t.accent_text }};
+    --dojo-accent-hover-text: {{ t.accent_hover_text }};
+{% if t.sidebar_gradient_end %}    --dojo-sidebar-end: {{ t.sidebar_gradient_end }};
+{% endif %}}
 </style>
 {% endwith %}
 {% if org.custom_css %}<style>{{ org.custom_css }}</style>{% endif %}
@@ -24,7 +27,7 @@
 .dojo-sidebar {
     width: 240px;
     height: 100vh;
-    background: linear-gradient(180deg, var(--dojo-sidebar) 0%, var(--dojo-sidebar-dark) 100%);
+    background: linear-gradient(180deg, var(--dojo-sidebar) 0%, var(--dojo-sidebar-end, var(--dojo-sidebar-dark)) 100%);
     position: fixed;
     top: 0;
     left: 0;

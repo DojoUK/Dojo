@@ -47,6 +47,16 @@
             .portal-grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
             .portal-grid .span-2 { grid-column: 1 / -1; }
         }
+        .portal-family { background: #f1f5f9; border-bottom: 1px solid #e5e7eb; }
+        .portal-family .nav-scroll {
+            display: flex; align-items: center; gap: 6px; overflow-x: auto; max-width: 1200px; margin: 0 auto; padding: 8px 1rem;
+        }
+        .portal-family-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #64748b; margin-right: 4px; white-space: nowrap; }
+        .portal-family a {
+            font-size: 0.82rem; font-weight: 600; color: #334155; text-decoration: none; white-space: nowrap;
+            padding: 4px 12px; border-radius: 999px; border: 1px solid #cbd5e1; background: #fff;
+        }
+        .portal-family a.current { background: #212529; border-color: #212529; color: #fff; }
         @media print {
             .portal-nav, .portal-header, button, form { display: none !important; }
         }
@@ -55,12 +65,24 @@
 </head>
 <body>
 
+{% load portal_tags %}
 <header class="portal-header">
     <div class="container">
         <div class="org-name">{{ org.name }}</div>
         <div class="member-name">{{ member.name }}</div>
     </div>
 </header>
+{% portal_family member as family %}
+{% if family %}
+<div class="portal-family" role="navigation" aria-label="Family members">
+    <div class="nav-scroll">
+        <span class="portal-family-label"><i class="bi bi-people me-1"></i>Family</span>
+        {% for person in family %}
+        <a href="{{ person.url }}" class="{% if person.current %}current{% endif %}"{% if person.current %} aria-current="page"{% endif %}>{{ person.member.name }}</a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
 
 <nav class="portal-nav">
     <div class="nav-scroll">
@@ -84,6 +106,9 @@
         </a>
         {% endif %}
         {% if 'billing' in org.enabled_features %}
+        <a href="{% url 'portal_plans' token=member.token %}" class="{% if active == 'plans' %}active{% endif %}">
+            <i class="bi bi-stars"></i> Plan
+        </a>
         <a href="{% url 'portal_payments' token=member.token %}" class="{% if active == 'payments' %}active{% endif %}">
             <i class="bi bi-receipt"></i> Payments
         </a>

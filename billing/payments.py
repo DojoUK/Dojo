@@ -142,6 +142,37 @@ def checkout_line_items(invoice):
     return lines
 
 
+def start_checkout(invoice, success_url, cancel_url, minutes=32, metadata=None):
+    """
+    Open a Stripe Checkout page for what's left to pay on `invoice` and return its URL.
+    The page expires after `minutes` (Stripe's minimum is 30). Raises stripe.error.StripeError
+    if Stripe refuses, and ValueError if the club hasn't set up card payments.
+    """
+    import time
+
+    import stripe
+    from members.emails import _recipient
+    org = invoice.organisation
+    keys = stripe_keys(org)
+    if keys is None:
+        raise ValueError('Card payments are not set up.')
+    meta = {'invoice_pk': str(invoice.pk), 'organisation': org.slug, **(metadata or {})}
+    session = stripe.checkout.Session.create(
+        api_key=keys.secret,
+        mode='payment',
+        line_items=checkout_line_items(invoice),
+        custom_text={'submit': {'message': checkout_note(invoice)}},
+        success_url=success_url,
+        cancel_url=cancel_url,
+        customer_email=_recipient(invoice.member) or None,
+        client_reference_id=invoice.payment_reference,
+        expires_at=int(time.time()) + minutes * 60,
+        metadata=meta,
+        payment_intent_data={'metadata': meta},
+    )
+    return session.url
+
+
 def checkout_note(invoice):
     """A line of text Stripe shows above the Pay button."""
     org = invoice.organisation

@@ -60,6 +60,23 @@ def hex_luminance(colour):
     return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
 
 
+def readable_text(colour):
+    """Black or white, whichever is easier to read on the #rrggbb colour (WCAG contrast).
+    White if the colour can't be read."""
+    match = re.fullmatch(r'#?([0-9a-fA-F]{6})', (colour or '').strip())
+    if not match:
+        return '#ffffff'
+
+    def linear(channel):
+        c = channel / 255
+        return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+    r, g, b = (linear(int(match.group(1)[i:i + 2], 16)) for i in (0, 2, 4))
+    luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    # Contrast with white is 1.05 / (L + 0.05), with black (L + 0.05) / 0.05.
+    return '#000000' if (luminance + 0.05) / 0.05 > 1.05 / (luminance + 0.05) else '#ffffff'
+
+
 def backdrop_style(logo_luminance, background):
     """CSS for a contrasting backing behind the logo, or '' when it already stands out."""
     if logo_luminance is None:

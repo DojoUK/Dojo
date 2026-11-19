@@ -6,6 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from billing.models import BillingPolicy
 from classes import booking
 from classes.models import Class, ClassMember, Session, SessionAbsence, SessionBooking
 from classes.register import register_enrolments
@@ -23,8 +24,12 @@ class BookingTestBase(TestCase):
         cls.org = Organisation.objects.create(name='Test Club', slug='test-club', features=dict(ALL_ON))
         cls.admin = User.objects.create_user('admin', password='pw')
         OrganisationMember.objects.create(user=cls.admin, organisation=cls.org, role='org_admin')
-        cls.member = Member.objects.create(organisation=cls.org, name='Alice Able', email='alice@example.com')
-        cls.other = Member.objects.create(organisation=cls.org, name='Bob Best', email='bob@example.com')
+        # Members are on a plan by default: without one they can't enrol, and pay per session (see test_single_session_payment).
+        cls.standard = BillingPolicy.objects.create(organisation=cls.org, name='Standard', billing_cycle='monthly', amount=30)
+        cls.member = Member.objects.create(organisation=cls.org, name='Alice Able', email='alice@example.com',
+                                           billing_policy=cls.standard)
+        cls.other = Member.objects.create(organisation=cls.org, name='Bob Best', email='bob@example.com',
+                                          billing_policy=cls.standard)
         cls.juniors = Class.objects.create(
             organisation=cls.org, name='Juniors', description='Fun judo for 7 to 11 year olds.', is_active=True,
         )

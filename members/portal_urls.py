@@ -6,6 +6,7 @@ urlpatterns = [
     path('details/', portal_views.PortalMyDetailsView.as_view(), name='portal_my_details'),
     path('syllabus/', portal_views.PortalSyllabusView.as_view(), name='portal_syllabus'),
     path('classes/', portal_views.PortalClassesView.as_view(), name='portal_classes'),
+    path('plan/', portal_views.PortalPlansView.as_view(), name='portal_plans'),
     path('book/', portal_views.PortalBookingView.as_view(), name='portal_bookings'),
     path('book/action/', portal_views.PortalBookingActionView.as_view(), name='portal_booking_action'),
     path('code-of-conduct/', portal_views.PortalCodeOfConductView.as_view(), name='portal_code_of_conduct'),

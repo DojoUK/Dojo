@@ -50,7 +50,7 @@ def register_enrolments(assigned_class, session):
         cm.is_booked = False
     listed = {cm.member_id for cm in enrolments}
     booked = (
-        SessionBooking.objects.filter(session=session).exclude(member_id__in=listed).select_related('member')
+        SessionBooking.objects.filter(session=session, status=SessionBooking.Status.CONFIRMED).exclude(member_id__in=listed).select_related('member')
     )
     for booking in booked:
         row = ClassMember(assigned_class=assigned_class, member=booking.member, auto_enrol=False)

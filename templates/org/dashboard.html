@@ -41,6 +41,16 @@
                     Generate your first invoice
                 </a>
                 {% endif %}
+                {% if onboarding.booking_setup %}
+                <a href="{% url 'org_settings' org_slug=org.slug %}#features" class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-2 {% if onboarding.has_single_price %}text-muted{% endif %}">
+                    {% if onboarding.has_single_price %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-circle text-muted"></i>{% endif %}
+                    Set your single session price (required for class booking)
+                </a>
+                <a href="{% url 'org_settings' org_slug=org.slug %}#payments" class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-2 {% if onboarding.has_stripe %}text-muted{% endif %}">
+                    {% if onboarding.has_stripe %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-circle text-muted"></i>{% endif %}
+                    Connect Stripe so members can pay for single sessions
+                </a>
+                {% endif %}
             </div>
             <div class="modal-footer">
                 <form method="post" action="{% url 'org_onboarding_dismiss' org_slug=org.slug %}" class="d-inline">
@@ -57,6 +67,18 @@
         new bootstrap.Modal(document.getElementById('onboardingModal')).show();
     });
 </script>
+{% endif %}
+
+{% if single_session_setup %}
+<div class="alert alert-warning d-flex align-items-start gap-2 mb-4">
+    <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+    <div class="small">
+        <strong>Members without a plan can book single sessions for free.</strong>
+        {% if 'price' in single_session_setup %}Set a <a href="{% url 'org_settings' org_slug=org.slug %}#features">single session price</a>.{% endif %}
+        {% if 'stripe' in single_session_setup %}Connect Stripe under <a href="{% url 'org_settings' org_slug=org.slug %}#payments">Settings → Payments</a> so they can pay for it.{% endif %}
+        Until both are set, single sessions booked without a plan aren't charged.
+    </div>
+</div>
 {% endif %}
 
 <div class="row g-3 mb-4">

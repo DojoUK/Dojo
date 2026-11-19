@@ -19,6 +19,8 @@ def plan(org, name='Twice a week', limit=2, period='week', selectable=True, **kw
 
 class PlanTestBase(BookingTestBase):
     def setUp(self):
+        self.member.billing_policy = None
+        self.member.save()
         today = timezone.localdate()
         ahead = today + timedelta(days=14)
         self.monday = ahead - timedelta(days=ahead.weekday())
@@ -50,13 +52,11 @@ class WeeklyLimitTests(PlanTestBase):
         booking.cancel_session_booking(self.member, self.week[0])
         booking.book_session(self.member, self.week[1])
 
-    def test_no_plan_or_unlimited_plan_has_no_limit(self):
-        for policy in (None, plan(self.org, 'Unlimited', limit=None)):
-            self.put_on(policy)
-            SessionBooking.objects.all().delete()
-            for session in self.week:
-                booking.book_session(self.member, session)
-            self.assertEqual(SessionBooking.objects.count(), 3)
+    def test_unlimited_plan_has_no_limit(self):
+        self.put_on(plan(self.org, 'Unlimited', limit=None))
+        for session in self.week:
+            booking.book_session(self.member, session)
+        self.assertEqual(SessionBooking.objects.count(), 3)
 
 
 class MonthlyLimitTests(PlanTestBase):
@@ -114,13 +114,14 @@ class PortalPlanTests(PlanTestBase):
     def test_member_chooses_a_selectable_plan(self):
         chosen = plan(self.org, 'Gold')
         plan(self.org, 'Hidden', selectable=False)
-        page = self.client.get(self.portal('portal_bookings'))
+        page = self.client.get(self.portal('portal_plans'))
         self.assertContains(page, 'Gold')
         self.assertNotContains(page, 'Hidden')
-        self.act(action='choose_plan', policy_id=chosen.pk)
+        response = self.act(action='choose_plan', policy_id=chosen.pk)
+        self.assertRedirects(response, self.portal('portal_plans'))
         self.member.refresh_from_db()
         self.assertEqual(self.member.billing_policy, chosen)
-        page = self.client.get(self.portal('portal_bookings'))
+        page = self.client.get(self.portal('portal_plans'))
         self.assertContains(page, '0 of 2 used')
         self.assertContains(page, 'Your plan')
 
@@ -173,3 +174,54 @@ class StaffPolicyFormTests(PlanTestBase):
         self.assertFalse(BillingPolicy.objects.filter(name='Bad').exists())
         page = self.client.get(reverse('billing_policies', kwargs={'org_slug': self.org.slug}))
         self.assertEqual(page.status_code, 200)
+
+
+class CalendarColourTests(PlanTestBase):
+    """Days in the portal calendar: blue booked, green spaces, red full, grey plan limit."""
+
+    def status(self):
+        page = self.client.get(self.portal('portal_bookings'))
+        return page.context['calendar_status']
+
+    def test_open_day_is_green_and_a_booked_day_is_blue(self):
+        self.put_on(self.standard)
+        day = self.week[0].date.isoformat()
+        self.assertEqual(self.status()[day], 'open')
+        booking.book_session(self.member, self.week[0])
+        self.assertEqual(self.status()[day], 'booked')
+
+    def test_full_day_is_red_unless_the_member_is_booked_in(self):
+        self.put_on(self.standard)
+        self.juniors.max_capacity = 1
+        self.juniors.save()
+        booking.book_session(self.other, self.week[0])
+        day = self.week[0].date.isoformat()
+        self.assertEqual(self.status()[day], 'full')
+        SessionBooking.objects.all().delete()
+        booking.book_session(self.member, self.week[0])
+        self.assertEqual(self.status()[day], 'booked')
+
+    def test_day_with_one_full_and_one_open_class_is_green(self):
+        from classes.models import Class, Session
+        self.put_on(self.standard)
+        self.juniors.max_capacity = 1
+        self.juniors.save()
+        booking.book_session(self.other, self.week[0])
+        seniors = Class.objects.create(organisation=self.org, name='Seniors', is_active=True)
+        Session.objects.create(assigned_class=seniors, date=self.week[0].date)
+        self.assertEqual(self.status()[self.week[0].date.isoformat()], 'open')
+
+    def test_day_only_blocked_by_the_plan_limit_is_grey(self):
+        self.put_on(plan(self.org, limit=1, period='week'))
+        booking.book_session(self.member, self.week[0])
+        self.assertEqual(self.status()[self.week[1].date.isoformat()], 'limit')
+
+    def test_enrolled_class_days_are_blue(self):
+        self.put_on(self.standard)
+        booking.enrol(self.member, self.juniors)
+        self.assertEqual(self.status()[self.week[1].date.isoformat()], 'booked')
+
+    def test_the_plan_has_its_own_page_and_nav_link(self):
+        page = self.client.get(self.portal('portal_plans'))
+        self.assertContains(page, 'My plan')
+        self.assertContains(page, self.portal('portal_plans'))

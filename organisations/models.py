@@ -1,3 +1,5 @@
+from decimal import Decimal, InvalidOperation
+
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.text import slugify
@@ -34,12 +36,21 @@ class Organisation(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def theme(self):
+        from .branding import readable_text
         s = self.settings or {}
+        accent = s.get('accent_color', '#2563EB')
+        accent_hover = s.get('accent_hover', '#1d4ed8')
         return {
             'sidebar_color': s.get('sidebar_color', '#1E3A5F'),
             'sidebar_color_dark': s.get('sidebar_color_dark', '#152d4a'),
-            'accent_color': s.get('accent_color', '#2563EB'),
-            'accent_hover': s.get('accent_hover', '#1d4ed8'),
+            'accent_color': accent,
+            'accent_hover': accent_hover,
+            # Button text: black or white, whichever reads better on the accent colour.
+            'accent_text': readable_text(accent),
+            'accent_hover_text': readable_text(accent_hover),
+            # Second colour of a two-tone sidebar, chosen under Settings > Appearance.
+            # None means the sidebar shades into its own darker tone as before.
+            'sidebar_gradient_end': s.get('sidebar_color_end') if s.get('sidebar_gradient') else None,
         }
 
     @cached_property
@@ -144,6 +155,22 @@ class Organisation(models.Model):
     def has_bookable_classes(self):
         """Whether any class is switched on for booking in the member portal."""
         return self.classes.filter(is_active=True).exists()
+
+    MAX_SINGLE_SESSION_PRICE = Decimal('999.99')
+
+    @property
+    def single_session_price(self):
+        """What a member with no plan pays to book one session online (Decimal), or None if not set."""
+        try:
+            price = Decimal(str((self.settings or {}).get('single_session_price', '')))
+        except (InvalidOperation, ValueError):
+            return None
+        return price if Decimal('0') < price <= self.MAX_SINGLE_SESSION_PRICE else None
+
+    @property
+    def members_need_plan(self):
+        """Whether members must be on a plan (or pay per session) to book: true whenever billing is on."""
+        return self.has_feature('billing')
 
     DEFAULT_BOOKING_CUTOFF_HOURS = 2
     MAX_BOOKING_CUTOFF_HOURS = 168

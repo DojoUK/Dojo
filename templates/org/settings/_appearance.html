@@ -30,7 +30,7 @@
         <label class="form-label small fw-semibold">Custom colours</label>
         <div class="row g-3">
             <div class="col-6">
-                <label class="form-label small text-muted">Sidebar</label>
+                <label class="form-label small text-muted" id="sidebarColorLabel">{% if org.settings.sidebar_gradient %}Sidebar top{% else %}Sidebar{% endif %}</label>
                 <div class="d-flex align-items-center gap-2">
                     <input type="color" name="sidebar_color" id="sidebarColor"
                            value="{{ org.settings.sidebar_color|default:'#1E3A5F' }}"
@@ -52,6 +52,27 @@
                 </div>
             </div>
         </div>
+
+        {# Two-tone sidebar #}
+        <div class="form-check form-switch mt-3">
+            <input class="form-check-input" type="checkbox" name="sidebar_gradient" value="1" id="sidebarGradient"
+                   {% if org.settings.sidebar_gradient %}checked{% endif %}>
+            <label class="form-check-label small" for="sidebarGradient">Two-tone sidebar gradient</label>
+        </div>
+        <div class="row g-3 mt-0{% if not org.settings.sidebar_gradient %} d-none{% endif %}" id="sidebarEndSection">
+            <div class="col-6">
+                <label class="form-label small text-muted">Sidebar bottom</label>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="color" name="sidebar_color_end" id="sidebarColorEnd"
+                           value="{{ org.settings.sidebar_color_end|default:org.theme.sidebar_color_dark }}"
+                           class="form-control form-control-color" style="width:44px;height:38px;border-radius:7px;">
+                    <input type="text" id="sidebarColorEndHex"
+                           value="{{ org.settings.sidebar_color_end|default:org.theme.sidebar_color_dark }}"
+                           class="form-control form-control-sm font-monospace" style="max-width:90px;">
+                </div>
+            </div>
+        </div>
+        <div class="form-text">Off, the sidebar shades gently into a darker tone of its own colour. On, it blends from the top colour into the bottom colour you choose.</div>
     </div>
 
     {# Logo #}
@@ -82,10 +103,10 @@
 
     {# Live preview strip #}
     <div class="mb-4 p-3 rounded" id="previewStrip"
-         style="background:var(--dojo-sidebar);display:flex;align-items:center;gap:12px;">
+         style="background:linear-gradient(90deg, var(--dojo-sidebar) 0%, var(--dojo-sidebar-end, var(--dojo-sidebar-dark)) 100%);display:flex;align-items:center;gap:12px;">
         <span style="color:#fff;font-weight:600;font-size:0.9rem;">{{ org.name }}</span>
         <span style="background:rgba(255,255,255,.15);color:#fff;font-size:0.8rem;padding:4px 12px;border-radius:6px;">Dashboard</span>
-        <button type="button" style="background:var(--dojo-accent);color:#fff;border:none;border-radius:6px;padding:4px 14px;font-size:0.8rem;font-weight:500;margin-left:auto;">Save</button>
+        <button type="button" style="background:var(--dojo-accent);color:var(--dojo-accent-text);border:none;border-radius:6px;padding:4px 14px;font-size:0.8rem;font-weight:500;margin-left:auto;">Save</button>
     </div>
 
     <button type="submit" class="btn btn-dark btn-sm">Save theme</button>

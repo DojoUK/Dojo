@@ -55,13 +55,45 @@ function syncColor(picker, hex) {
 }
 syncColor(document.getElementById('sidebarColor'), document.getElementById('sidebarColorHex'));
 syncColor(document.getElementById('accentColor'), document.getElementById('accentColorHex'));
+syncColor(document.getElementById('sidebarColorEnd'), document.getElementById('sidebarColorEndHex'));
+
+// Two-tone sidebar switch
+const gradientToggle = document.getElementById('sidebarGradient');
+gradientToggle.addEventListener('change', () => {
+    document.getElementById('sidebarEndSection').classList.toggle('d-none', !gradientToggle.checked);
+    document.getElementById('sidebarColorLabel').textContent = gradientToggle.checked ? 'Sidebar top' : 'Sidebar';
+    applyPreview();
+});
+
+// The same ~20% darker shade the server saves as the sidebar's own dark tone.
+function darken(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    const ch = shift => Math.floor(((n >> shift) & 255) * 0.8).toString(16).padStart(2, '0');
+    return '#' + ch(16) + ch(8) + ch(0);
+}
+
+// Black or white, whichever reads better on the colour (WCAG contrast), as the server does.
+function readableText(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    const lin = c => (c /= 255) <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    const L = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+    return (L + 0.05) / 0.05 > 1.05 / (L + 0.05) ? '#000000' : '#ffffff';
+}
 
 // Live preview
 function applyPreview() {
+    const root = document.documentElement.style;
     const sidebar = document.getElementById('sidebarColor').value;
     const accent = document.getElementById('accentColor').value;
-    document.documentElement.style.setProperty('--dojo-sidebar', sidebar);
-    document.documentElement.style.setProperty('--dojo-accent', accent);
+    root.setProperty('--dojo-sidebar', sidebar);
+    root.setProperty('--dojo-sidebar-dark', darken(sidebar));
+    root.setProperty('--dojo-sidebar-end', gradientToggle.checked
+        ? document.getElementById('sidebarColorEnd').value
+        : darken(sidebar));
+    root.setProperty('--dojo-accent', accent);
+    root.setProperty('--dojo-accent-hover', darken(accent));
+    root.setProperty('--dojo-accent-text', readableText(accent));
+    root.setProperty('--dojo-accent-hover-text', readableText(darken(accent)));
 }
 
 // Preset swatches

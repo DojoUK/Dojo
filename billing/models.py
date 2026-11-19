@@ -45,6 +45,15 @@ class BillingPolicy(models.Model):
     plan_description = models.TextField(
         blank=True, help_text='Shown to members when they choose a plan (the description above is internal).',
     )
+    is_family_plan = models.BooleanField(
+        default=False,
+        help_text='One plan for a whole family (members linked in a family group). A flat price is charged '
+                  'once per family, per-session prices add up every child, and any session limit is shared.',
+    )
+    max_family_members = models.PositiveSmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(2)],
+        help_text='Family plans only: the most family members the plan can cover. Blank for no limit.',
+    )
     session_limit = models.PositiveSmallIntegerField(
         null=True, blank=True, validators=[MinValueValidator(1)],
         help_text='The most sessions a member on this policy can be booked into in each period. Blank means unlimited.',
