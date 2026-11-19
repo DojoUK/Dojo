@@ -1,158 +1,156 @@
-{% load static %}
-<!doctype html>
-<html lang="en">
+{% load static branding portal_tags %}<!doctype html>
+<html lang="en" data-bs-theme="light">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>{{ org.name }}{% block title_suffix %}{% endblock %}</title>
+    {% with t=org.theme %}
+    <meta name="theme-color" content="{{ t.sidebar_color }}">
+    <script>
+    // Dark mode is the member's own choice (the switch in the menu), kept in this browser.
+    // Set before the first paint so the page never flashes the wrong colours.
+    try { if (localStorage.getItem('portalTheme') === 'dark') document.documentElement.setAttribute('data-bs-theme', 'dark'); } catch (e) {}
+    </script>
     <link href="{% static 'vendor/bootstrap/bootstrap.min.css' %}" rel="stylesheet">
     <link href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/portal.css' %}" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="{% static 'img/favicon/favicon.ico' %}">
     <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/favicon/favicon-32x32.png' %}">
     <link rel="apple-touch-icon" href="{% static 'img/favicon/apple-touch-icon.png' %}">
     <style>
-        body { background: #f8f9fa; }
-        .portal-header { background: #212529; color: #fff; padding: 1.25rem 0; }
-        .portal-header .org-name { font-weight: 600; font-size: 1.1rem; }
-        .portal-header .member-name { font-size: 0.85rem; opacity: 0.6; }
-
-        /* Nav tabs — a horizontally-scrolling strip on narrow screens, doubling
-           as the way the portal is split into separate sections on mobile. */
-        .portal-nav { background: #fff; border-bottom: 1px solid #e5e7eb; }
-        .portal-nav .nav-scroll {
-            display: flex; gap: 2px; overflow-x: auto; -webkit-overflow-scrolling: touch;
-            max-width: 1200px; margin: 0 auto; padding: 0 1rem;
-        }
-        .portal-nav a {
-            display: flex; align-items: center; gap: 6px; padding: 12px 14px;
-            font-size: 0.82rem; font-weight: 600; color: #6b7280; text-decoration: none;
-            white-space: nowrap; border-bottom: 2px solid transparent; flex-shrink: 0;
-        }
-        .portal-nav a:hover { color: #212529; }
-        .portal-nav a.active { color: #212529; border-bottom-color: #212529; }
-
-        /* Mobile-first: one narrow, centred column — this is deliberate here,
-           it's what makes each page a focused single-topic section. */
-        .portal-container { max-width: 680px; margin: 0 auto; padding-bottom: 3rem; }
-
-        /* Desktop: stop consolidating everything into that same narrow centre
-           column — widen the canvas and let pages lay their cards out in a
-           grid across the extra space instead of one long stacked list. */
-        @media (min-width: 992px) {
-            .portal-container { max-width: 1200px; padding-left: 1.5rem; padding-right: 1.5rem; }
-            .portal-grid {
-                display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
-                gap: 1.25rem; align-items: start;
-            }
-            .portal-grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-            .portal-grid .span-2 { grid-column: 1 / -1; }
-        }
-        .portal-family { background: #f1f5f9; border-bottom: 1px solid #e5e7eb; }
-        .portal-family .nav-scroll {
-            display: flex; align-items: center; gap: 6px; overflow-x: auto; max-width: 1200px; margin: 0 auto; padding: 8px 1rem;
-        }
-        .portal-family-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #64748b; margin-right: 4px; white-space: nowrap; }
-        .portal-family a {
-            font-size: 0.82rem; font-weight: 600; color: #334155; text-decoration: none; white-space: nowrap;
-            padding: 4px 12px; border-radius: 999px; border: 1px solid #cbd5e1; background: #fff;
-        }
-        .portal-family a.current { background: #212529; border-color: #212529; color: #fff; }
-        @media print {
-            .portal-nav, .portal-header, button, form { display: none !important; }
+        /* The club's colours (Settings > Appearance): header = sidebar colour, menu row = button colour. */
+        :root {
+            --p-brand: {{ t.sidebar_color }};
+            --p-on-brand: {{ t.sidebar_color|readable_text }};
+            --p-accent: {{ t.accent_color }};
+            --p-accent-hover: {{ t.accent_hover }};
+            --p-on-accent: {{ t.accent_text }};
+            --p-on-accent-hover: {{ t.accent_hover_text }};
         }
     </style>
+    {% endwith %}
     {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body class="portal">
+{% portal_sections member active as sections %}
+{% portal_page_title as page_title %}
 
-{% load portal_tags %}
-<header class="portal-header">
-    <div class="container">
-        <div class="org-name">{{ org.name }}</div>
-        <div class="member-name">{{ member.name }}</div>
+<header class="p-hero">
+    <div class="p-wrap">
+        <div class="p-brand">
+            {% org_logo org org.theme.sidebar_color 32 140 %}
+            <span class="p-brand-name">{{ org.name }}</span>
+        </div>
+        {# The page title, with the family picker (if there's a family) on the right of the same line. #}
+        <div class="p-title-row">
+            <h1 class="p-title">{{ page_title }}</h1>
+            {% portal_family member as family %}
+            {% if family %}
+            <div class="p-family" role="navigation" aria-label="Family members">
+                <div class="p-segmented">
+                    {% for person in family %}
+                    <a href="{{ person.url }}" class="{% if person.current %}current{% endif %}"{% if person.current %} aria-current="page"{% endif %} title="{{ person.member.name }}"><span class="p-name-full">{{ person.member.name }}</span><span class="p-name-short" aria-hidden="true">{{ person.short_name }}</span></a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        <p class="p-subtitle">{{ member.name }}</p>
     </div>
 </header>
-{% portal_family member as family %}
-{% if family %}
-<div class="portal-family" role="navigation" aria-label="Family members">
-    <div class="nav-scroll">
-        <span class="portal-family-label"><i class="bi bi-people me-1"></i>Family</span>
-        {% for person in family %}
-        <a href="{{ person.url }}" class="{% if person.current %}current{% endif %}"{% if person.current %} aria-current="page"{% endif %}>{{ person.member.name }}</a>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
 
-<nav class="portal-nav">
-    <div class="nav-scroll">
-        <a href="{% url 'member_portal' token=member.token %}" class="{% if active == 'dashboard' %}active{% endif %}">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </a>
-        <a href="{% url 'portal_my_details' token=member.token %}" class="{% if active == 'details' %}active{% endif %}">
-            <i class="bi bi-person"></i> My details
-        </a>
-        {% if 'grades' in org.enabled_features %}
-        <a href="{% url 'portal_syllabus' token=member.token %}" class="{% if active == 'syllabus' %}active{% endif %}">
-            <i class="bi bi-award"></i> Syllabus
-        </a>
-        {% endif %}
-        <a href="{% url 'portal_classes' token=member.token %}" class="{% if active == 'classes' %}active{% endif %}">
-            <i class="bi bi-people"></i> Classes
-        </a>
-        {% if org.has_bookable_classes %}
-        <a href="{% url 'portal_bookings' token=member.token %}" class="{% if active == 'bookings' %}active{% endif %}">
-            <i class="bi bi-calendar-check"></i> Book
-        </a>
-        {% endif %}
-        {% if 'billing' in org.enabled_features %}
-        <a href="{% url 'portal_plans' token=member.token %}" class="{% if active == 'plans' %}active{% endif %}">
-            <i class="bi bi-stars"></i> Plan
-        </a>
-        <a href="{% url 'portal_payments' token=member.token %}" class="{% if active == 'payments' %}active{% endif %}">
-            <i class="bi bi-receipt"></i> Payments
-        </a>
-        {% endif %}
-        <a href="{% url 'portal_code_of_conduct' token=member.token %}" class="{% if active == 'conduct' %}active{% endif %}">
-            <i class="bi bi-shield-check"></i> Code of Conduct
-        </a>
+<nav class="p-bar" aria-label="Portal sections">
+    <div class="p-wrap p-bar-inner">
+        <span class="p-bar-title" aria-hidden="true">{{ page_title }}</span>
+        <div class="p-nav">
+            {% for s in sections.nav %}
+            <a href="{{ s.url }}" class="{% if s.active %}active{% endif %}"{% if s.active %} aria-current="page"{% endif %}>
+                <i class="bi bi-{{ s.icon }}"></i> {{ s.label }}
+            </a>
+            {% endfor %}
+        </div>
+        <button type="button" class="p-theme-btn" data-p-theme-toggle aria-pressed="false" title="Dark mode">
+            <i class="bi bi-moon-fill" aria-hidden="true"></i><i class="bi bi-sun-fill" aria-hidden="true"></i>
+            <span class="visually-hidden">Dark mode</span>
+        </button>
     </div>
 </nav>
 
-{% if messages %}
-<div class="portal-container pt-3 pb-0">
+<main id="p-main">
+<div class="portal-container">
     {% for message in messages %}
-    {% if message.level_tag == 'error' or message.level_tag == 'warning' %}
-    <div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:12px 16px;margin-bottom:12px;">
-        <span style="color:#991b1b;font-weight:600;font-size:14px;">{{ message }}</span>
-    </div>
+    {% if message.level_tag == 'error' %}
+    <div class="p-banner is-error" role="alert"><i class="bi bi-exclamation-circle-fill"></i><span>{{ message }}</span></div>
+    {% elif message.level_tag == 'warning' %}
+    <div class="p-banner is-warning" role="alert"><i class="bi bi-exclamation-triangle-fill"></i><span>{{ message }}</span></div>
     {% else %}
-    <div style="background:#d1fae5;border:1px solid #6ee7b7;border-radius:8px;padding:12px 16px;margin-bottom:12px;">
-        <span style="color:#065f46;font-weight:600;font-size:14px;">{{ message }}</span>
-    </div>
+    <div class="p-banner is-success" role="status"><i class="bi bi-check-circle-fill"></i><span>{{ message }}</span></div>
     {% endif %}
     {% endfor %}
-</div>
-{% endif %}
+    {% if request.GET.paid %}
+    <div class="p-banner is-success" role="status"><i class="bi bi-check-circle-fill"></i><span>Payment received — thank you!</span></div>
+    {% endif %}
+    {% if request.GET.subscribed %}
+    <div class="p-banner is-success" role="status"><i class="bi bi-check-circle-fill"></i><span>Autopay set up — you'll be charged £{{ member.monthly_fee|floatformat:2 }} each month.</span></div>
+    {% endif %}
 
-{% if request.GET.paid %}
-<div class="portal-container pt-3 pb-0">
-    <div style="background:#d1fae5;border:1px solid #6ee7b7;border-radius:8px;padding:12px 16px;">
-        <span style="color:#065f46;font-weight:600;font-size:14px;">Payment received — thank you!</span>
+    {% block content %}{% endblock %}
+</div>
+</main>
+
+{# Phones: the most used sections as tabs; the rest in the More sheet. #}
+<nav class="p-tabbar" aria-label="Portal sections">
+    {% for s in sections.tabs %}
+    <a href="{{ s.url }}" class="p-tab{% if s.active %} active{% endif %}"{% if s.active %} aria-current="page"{% endif %}>
+        <i class="bi bi-{{ s.icon }}"></i><span>{{ s.label }}</span>
+    </a>
+    {% endfor %}
+    <button type="button" class="p-tab{% if sections.more_active %} active{% endif %}" id="p-more"
+            aria-haspopup="dialog" aria-controls="p-sheet" aria-expanded="false">
+        <i class="bi bi-{% if sections.more_active %}grid-fill{% else %}grid{% endif %}"></i><span>More</span>
+    </button>
+</nav>
+
+<div class="p-scrim" id="p-scrim" aria-hidden="true"></div>
+<div class="p-sheet" id="p-sheet" role="dialog" aria-modal="true" aria-labelledby="p-sheet-title">
+    <div class="p-sheet-grab" aria-hidden="true"></div>
+    <div class="p-sheet-head">
+        <h2 id="p-sheet-title">{{ org.name }}</h2>
+        <button type="button" class="p-sheet-close" aria-label="Close"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="p-sheet-body">
+        <div class="card">
+            {% for s in sections.nav %}
+            <a href="{{ s.url }}" class="p-row has-icon{% if s.active %} active{% endif %}"{% if s.active %} aria-current="page"{% endif %}>
+                <span class="p-icon is-accent"><i class="bi bi-{{ s.icon }}"></i></span>
+                <span class="p-row-main"><span class="p-row-title">{{ s.label }}</span></span>
+                <i class="bi bi-chevron-right p-chevron"></i>
+            </a>
+            {% endfor %}
+        </div>
+        <div class="card">
+            <label class="p-row has-icon" for="p-dark-switch">
+                <span class="p-icon is-indigo"><i class="bi bi-moon-fill"></i></span>
+                <span class="p-row-main"><span class="p-row-title">Dark mode</span><span class="p-row-sub d-block">Black background with white text</span></span>
+                <span class="form-check form-switch m-0 p-0"><input class="form-check-input p-switch" type="checkbox" role="switch" id="p-dark-switch" data-p-theme-toggle></span>
+            </label>
+        </div>
+        <div class="card">
+            <a href="{% url 'portal_my_data' token=member.token %}" class="p-row has-icon">
+                <span class="p-icon is-grey"><i class="bi bi-file-earmark-text"></i></span>
+                <span class="p-row-main"><span class="p-row-title">My data</span></span>
+                <i class="bi bi-chevron-right p-chevron"></i>
+            </a>
+            {% if org.email %}
+            <a href="mailto:{{ org.email }}" class="p-row has-icon">
+                <span class="p-icon is-blue"><i class="bi bi-envelope-fill"></i></span>
+                <span class="p-row-main"><span class="p-row-title">Contact {{ org.name }}</span><span class="p-row-sub d-block">{{ org.email }}</span></span>
+            </a>
+            {% endif %}
+        </div>
     </div>
 </div>
-{% endif %}
-{% if request.GET.subscribed %}
-<div class="portal-container pt-3 pb-0">
-    <div style="background:#d1fae5;border:1px solid #6ee7b7;border-radius:8px;padding:12px 16px;">
-        <span style="color:#065f46;font-weight:600;font-size:14px;">Autopay set up — you'll be charged £{{ member.monthly_fee|floatformat:2 }} each month.</span>
-    </div>
-</div>
-{% endif %}
 
-<div class="portal-container pt-4">
-{% block content %}{% endblock %}
-</div>
-
+<script src="{% static 'js/portal.js' %}" defer></script>
 </body>
 </html>

@@ -30,9 +30,16 @@ def needs_plan(member):
 
 
 def single_session_payable(org):
-    """Whether a member with no plan can pay for one session online: a price is set and Stripe is connected."""
+    """Whether a member can pay for one session online: a price is set and Stripe is connected. Used by
+    members with no plan, and by members booking more sessions than their plan's limit."""
     from billing import payments
     return org.single_session_price is not None and payments.stripe_keys(org) is not None
+
+
+def extra_sessions_payable(member):
+    """Whether a member on a session-limited plan can book past the limit by paying the single-session price."""
+    policy = member.billing_policy
+    return bool(policy and policy.limits_sessions) and single_session_payable(member.organisation)
 
 
 def _drop_pending(booking):
@@ -133,7 +140,8 @@ class Quota:
         self.member = member
         self.today = today or timezone.localdate()
         self.policy = member.billing_policy
-        self.limit = (self.policy.session_limit or None) if self.policy else None
+        # Only a session-limited plan counts sessions; a class-limited one is checked by class_limit_message().
+        self.limit = self.policy.session_limit if self.policy and self.policy.limits_sessions else None
         self.period = self.policy.limit_period if self.policy else 'month'
         # A family plan's limit is shared: it counts everyone in the family who is on the same plan.
         self.sharers = [member]
@@ -148,7 +156,7 @@ class Quota:
         return self.limit is not None
 
     def bounds(self, day):
-        """First and last day of the week (Monday to Sunday) or month containing `day`."""
+        """First and last day of the week (Monday to Sunday) or calendar month containing `day`."""
         if self.period == 'week':
             start = day - timedelta(days=day.weekday())
             return start, start + timedelta(days=6)
@@ -156,8 +164,13 @@ class Quota:
         return start, (start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
 
     def label(self, day):
-        start, _ = self.bounds(day)
-        return f'the week starting {start.day} {start:%B}' if self.period == 'week' else f'{start:%B %Y}'
+        """'the week Monday 16 to Sunday 22 November', or 'November 2026'."""
+        start, end = self.bounds(day)
+        if self.period != 'week':
+            return f'{start:%B %Y}'
+        if start.month == end.month:
+            return f'the week Monday {start.day} to Sunday {end.day} {end:%B}'
+        return f'the week Monday {start.day} {start:%B} to Sunday {end.day} {end:%B}'
 
     def _member_ids(self, member, start, end):
         ids = set(
@@ -214,6 +227,31 @@ class Quota:
                     f'You can\'t {what}: your {self.policy.name} plan allows {self.policy.limit_text().lower()}{shared} '
                     f'and this would take you over that for {self.label(group[0].date)}.'
                 )
+
+
+def enrolled_class_count(member, excluding=None):
+    """How many classes the member is enrolled on (every register), not counting `excluding`."""
+    enrolled = ClassMember.objects.filter(member=member, auto_enrol=True)
+    if excluding is not None:
+        enrolled = enrolled.exclude(assigned_class=excluding)
+    return enrolled.count()
+
+
+def class_limit_message(member, cls):
+    """
+    Why the member's plan stops them enrolling in `cls`, or '' if it doesn't. A class-limited plan
+    caps how many classes they're enrolled on at once; single-session bookings don't count, and
+    leaving a class frees a place for another. On a family plan each member has their own allowance.
+    """
+    policy = member.billing_policy
+    if not policy or not policy.limits_classes:
+        return ''
+    enrolled = enrolled_class_count(member, excluding=cls)
+    if enrolled < policy.class_limit:
+        return ''
+    return (f'You can\'t enrol in {cls.name}: your {policy.name} plan allows {policy.limit_text().lower()} '
+            f'and you\'re already enrolled in {enrolled}. Leave a class to join another, '
+            f'or book single sessions of {cls.name}.')
 
 
 def session_headcount(session):
@@ -275,6 +313,9 @@ def enrol(member, cls):
             raise BookingError(f'{cls.name} is full, so it can\'t take new members right now.')
         upcoming = Session.objects.filter(assigned_class=cls, is_cancelled=False, date__gte=timezone.localdate())
         Quota(member).check(list(upcoming), f'enrol in {cls.name}')
+        too_many = class_limit_message(member, cls)
+        if too_many:
+            raise BookingError(too_many)
         if existing:
             existing.auto_enrol = True
             existing.save(update_fields=['auto_enrol'])
@@ -323,12 +364,14 @@ def book_session(member, session):
     """
     Book a member onto one session and return the SessionBooking.
 
-    A member on a plan is booked straight away and emailed a confirmation. A member of a club that
-    uses billing who has no plan has to pay for the session first (if the club has set a single-session
-    price and connected Stripe; otherwise they're booked straight away too): the booking is returned as
-    'pending', holding the place, with an unpaid invoice for the club's single-session price
-    attached. It is confirmed (and the confirmation emailed) only when Stripe's webhook reports
-    that invoice paid (see confirm_paid).
+    A member on a plan is booked straight away and emailed a confirmation. Two kinds of booking have to
+    be paid for first, at the club's single-session price, if the club has set that price and connected
+    Stripe: one by a member of a club that uses billing who has no plan, and one that would take a member
+    past their plan's session limit for that week or month (an extra session). Such a booking is returned
+    as 'pending', holding the place, with an unpaid invoice attached. It is confirmed (and the
+    confirmation emailed) only when Stripe's webhook reports that invoice paid (see confirm_paid).
+    Without the price and Stripe, a member with no plan is booked straight away, and one at their
+    plan's limit is refused.
     """
     from billing.models import Invoice
     cls = session.assigned_class
@@ -352,7 +395,13 @@ def book_session(member, session):
                                else 'You\'re already booked onto that session.')
         if session_is_full(session):
             raise BookingError('That session is full.')
-        Quota(member).check([session], 'book this session')
+        extra = False
+        try:
+            Quota(member).check([session], 'book this session')
+        except BookingError:
+            if not extra_sessions_payable(member):
+                raise
+            extra = pay_first = True   # past the plan's limit: an extra session, paid for now
         if not pay_first:
             booking = SessionBooking.objects.create(session=session, member=member)
         else:
@@ -360,7 +409,9 @@ def book_session(member, session):
             invoice = Invoice(
                 organisation=org, member=member, amount=org.single_session_price, period=f'{cls.name}, {day}',
                 due_date=timezone.localdate(),
-                notes='Single session booked online by the member. The booking is confirmed when this is paid.',
+                notes=('Extra session beyond the member\'s plan limit, booked online. The booking is confirmed when this is paid.'
+                       if extra else
+                       'Single session booked online by the member. The booking is confirmed when this is paid.'),
             )
             invoice.skip_autopay = True  # paid at checkout, never collected automatically
             invoice.save()

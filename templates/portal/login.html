@@ -1,57 +1,76 @@
-{% load static %}
-<!doctype html>
-<html lang="en">
+{% load static branding %}<!doctype html>
+<html lang="en" data-bs-theme="light">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>{{ org.name }} — Member sign in</title>
+    {% with t=org.theme %}
+    <meta name="theme-color" content="{{ t.sidebar_color }}">
+    <script>
+    // Dark mode is the member's own choice (the switch in the menu), kept in this browser.
+    // Set before the first paint so the page never flashes the wrong colours.
+    try { if (localStorage.getItem('portalTheme') === 'dark') document.documentElement.setAttribute('data-bs-theme', 'dark'); } catch (e) {}
+    </script>
     <link href="{% static 'vendor/bootstrap/bootstrap.min.css' %}" rel="stylesheet">
     <link href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/portal.css' %}" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="{% static 'img/favicon/favicon.ico' %}">
     <style>
-        body { background: #f8f9fa; }
-        .portal-header { background: #212529; color: #fff; padding: 1.25rem 0; }
-        .portal-header .org-name { font-weight: 600; font-size: 1.1rem; }
+        :root {
+            --p-brand: {{ t.sidebar_color }};
+            --p-on-brand: {{ t.sidebar_color|readable_text }};
+            --p-accent: {{ t.accent_color }};
+            --p-accent-hover: {{ t.accent_hover }};
+            --p-on-accent: {{ t.accent_text }};
+            --p-on-accent-hover: {{ t.accent_hover_text }};
+        }
+        .p-signin { max-width: 440px; }
     </style>
+    {% endwith %}
 </head>
-<body>
+<body class="portal">
 
-<header class="portal-header mb-4">
-    <div class="container">
-        <div class="org-name">{{ org.name }}</div>
+<header class="p-hero">
+    <div class="p-wrap p-signin">
+        <div class="p-brand">
+            {% org_logo org org.theme.sidebar_color 32 140 %}
+            <span class="p-brand-name">{{ org.name }}</span>
+        </div>
+        <h1 class="p-title">{% if submitted %}Check your email{% else %}Member sign in{% endif %}</h1>
     </div>
 </header>
 
-<div class="container pb-5" style="max-width: 440px;">
-    <div class="card border-0 shadow-sm">
+<div class="portal-container p-signin p-flush-bottom pb-5">
+    <div class="card">
         <div class="card-body p-4">
             {% if submitted %}
-            <i class="bi bi-envelope-check display-6 d-block mb-3 text-success"></i>
-            <h6 class="fw-semibold">Check your email</h6>
-            <p class="text-muted small mb-0">
-                If that email matches a member record with us, we've sent a sign-in link to it.
-                The link takes you straight to your member portal — no password needed.
-            </p>
+            <div class="p-empty pt-2 pb-0">
+                <i class="bi bi-envelope-check-fill p-done"></i>
+                <p class="mb-0">
+                    If that email matches a member record with us, we've sent a sign-in link to it.
+                    The link takes you straight to your member portal — no password needed.
+                </p>
+            </div>
             {% else %}
-            <h6 class="fw-semibold mb-1">Member sign in</h6>
-            <p class="text-muted small mb-3">
+            <p class="text-muted mb-3">
                 Enter the email address we have on file for you (or your guardian's, if you're a junior member)
                 and we'll send you a link to your member portal.
             </p>
             <form method="post">
                 {% csrf_token %}
                 <div class="mb-3">
-                    <label class="form-label small fw-semibold">Email address</label>
-                    <input type="email" name="email" class="form-control" required autofocus>
+                    <label class="form-label" for="signin-email">Email address</label>
+                    <input type="email" name="email" id="signin-email" class="form-control" required autofocus autocomplete="email">
                 </div>
                 <button type="submit" class="btn btn-dark w-100">Send me a link</button>
             </form>
             {% endif %}
         </div>
     </div>
-    <p class="text-center text-muted small mt-4">
+    <p class="p-caption text-center mt-4">
         Questions? Contact {{ org.name }}{% if org.email %} at <a href="mailto:{{ org.email }}">{{ org.email }}</a>{% endif %}.
     </p>
 </div>
+<script>document.addEventListener('touchstart', function () {}, { passive: true });</script>
 </body>
 </html>

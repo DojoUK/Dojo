@@ -107,6 +107,39 @@ class PortalLoginRequestView(View):
         return render(request, 'portal/login.html', {'org': org, 'submitted': True})
 
 
+def _up_next(member, limit=3):
+    """The next few sessions the member is down for, soonest first: single bookings (pending ones
+    flagged) and their enrolled classes' sessions, leaving out any they've said they can't make."""
+    from datetime import timedelta
+    from django.utils import timezone
+    from classes import booking
+    from classes.models import ClassMember, Session, SessionAbsence, SessionBooking
+
+    now = timezone.now()
+    today = timezone.localdate()
+    horizon = today + timedelta(days=21)
+    rows = []
+    for b in (SessionBooking.objects.filter(member=member, session__date__gte=today, session__date__lte=horizon,
+                                            session__is_cancelled=False)
+              .select_related('session__assigned_class')):
+        rows.append({'session': b.session, 'kind': 'booking', 'pending': b.is_pending})
+    booked = {row['session'].pk for row in rows}
+    enrolled = ClassMember.objects.filter(member=member, auto_enrol=True).values_list('assigned_class_id', flat=True)
+    absent = set(SessionAbsence.objects.filter(member=member, session__date__gte=today).values_list('session_id', flat=True))
+    for s in (Session.objects.filter(assigned_class_id__in=list(enrolled), is_cancelled=False,
+                                     date__gte=today, date__lte=horizon)
+              .exclude(pk__in=absent | booked).select_related('assigned_class')):
+        rows.append({'session': s, 'kind': 'enrolled', 'pending': False})
+    for row in rows:
+        row['start'] = booking.session_start(row['session'])
+        row['time'] = booking.session_time_text(row['session'])
+    # Keep a session that's started in the last 90 minutes (it's on now), and today's untimed ones.
+    rows = [row for row in rows
+            if row['start'] >= now - timedelta(minutes=90) or (row['session'].date == today and not row['time'])]
+    rows.sort(key=lambda row: (row['start'], row['session'].assigned_class.name))
+    return rows[:limit]
+
+
 class PortalView(View):
     """The portal's Dashboard — what needs the member's attention (outstanding
     invoices, autopay status, credit/arrears) plus quick links into the other
@@ -142,6 +175,7 @@ class PortalView(View):
             'credit_total': sum((inv.available_credit for inv in invoices), Decimal('0')),
             'leaving_request': leaving_request,
             'session_counts': member.session_counts(),
+            'up_next': _up_next(member),
             **_payment_options(request, member),
         })
 
@@ -241,16 +275,26 @@ def _plan_context(member, quota, today):
     if org.has_feature('billing'):
         plans = list(BillingPolicy.objects.filter(organisation=org, is_active=True, member_selectable=True)
                      .order_by('name'))
+    policy = member.billing_policy
+    class_limited = bool(policy and policy.limits_classes)
+    classes_used = booking.enrolled_class_count(member) if class_limited else None
     return {
         'plan': {
-            'policy': member.billing_policy, 'limited': quota.limited, 'limit': quota.limit,
+            'policy': policy, 'limited': quota.limited, 'limit': quota.limit,
             'used': quota.used(), 'period': quota.period, 'period_label': quota.label(today),
             'remaining': max(0, quota.limit - quota.used()) if quota.limited else None,
+            # Class-limited plans: how many classes they're enrolled on, out of how many allowed.
+            'class_limited': class_limited, 'class_limit': policy.class_limit if class_limited else None,
+            'classes_used': classes_used,
+            'classes_left': max(0, policy.class_limit - classes_used) if class_limited else None,
         },
         'plans': plans,
         'needs_plan': needs_plan,
         'single_price': org.single_session_price if needs_plan else None,
         'single_payable': needs_plan and booking.single_session_payable(org),
+        # Past a session limit: extra sessions can still be booked, paid for at the single-session price.
+        'extra_payable': booking.extra_sessions_payable(member),
+        'extra_price': org.single_session_price,
     }
 
 
@@ -317,14 +361,20 @@ class PortalBookingView(View):
         bookable = [cls for cls in classes if not cls.ineligible_reason(member)]
 
         # Whole-class enrolment cards.
+        policy = member.billing_policy
+        classes_full = bool(policy and policy.limits_classes and len(auto_ids) >= policy.class_limit)
         cards = []
         for cls in classes:
             limit_msg = ''
             if cls.pk not in auto_ids and not needs_plan:
-                try:
-                    quota.check(list(cls.sessions.filter(is_cancelled=False, date__gte=today)), f'enrol in {cls.name}')
-                except booking.BookingError as e:
-                    limit_msg = str(e)
+                if classes_full:
+                    limit_msg = (f'Your {policy.name} plan allows {policy.limit_text().lower()}, and you\'re '
+                                 f'enrolled in {len(auto_ids)}. Leave a class to join this one, or book its sessions one at a time.')
+                else:
+                    try:
+                        quota.check(list(cls.sessions.filter(is_cancelled=False, date__gte=today)), f'enrol in {cls.name}')
+                    except booking.BookingError as e:
+                        limit_msg = str(e)
             cards.append({'cls': cls, 'auto': cls.pk in auto_ids, 'full': cls.is_full,
                           'spots_left': cls.spots_left, 'limit_msg': limit_msg,
                           'needs_plan': needs_plan and cls.pk not in auto_ids})
@@ -440,6 +490,15 @@ class PortalBookingActionView(View):
                 else:
                     messages.success(request, f'{member.name} is now on the {policy.name} plan '
                                               f'({policy.limit_text().lower()}).')
+                # Moving onto a class-limited plan doesn't take anyone off a class, but they can't join
+                # another until they're under the limit.
+                if policy.limits_classes:
+                    for m in changed:
+                        enrolled = booking.enrolled_class_count(m)
+                        if enrolled > policy.class_limit:
+                            messages.warning(request, f'{m.name} is enrolled in {enrolled} classes, more than '
+                                                      f'{policy.name} allows. They stay on them, but can\'t join '
+                                                      f'another until they\'ve left enough to be under {policy.class_limit}.')
             elif action in ('book', 'cancel_booking', 'skip_session', 'rejoin_session'):
                 session = get_object_or_404(
                     Session.objects.select_related('assigned_class__organisation'),
