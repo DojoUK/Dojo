@@ -748,10 +748,20 @@ class BillingPolicyListView(BillingManagerMixin, View):
 
 
 def _plan_fields(post):
-    """The booking-plan part of a policy form: (values, error). A blank limit means unlimited."""
+    """
+    The booking-plan part of a policy form: (values, error). A blank limit means unlimited.
+
+    The plan limits either sessions or classes: one number (session_limit) and what it counts
+    (limit_unit): 'week' or 'month' for sessions in that period, or 'classes' for classes
+    enrolled on at once. Older forms send limit_period instead of limit_unit.
+    """
+    unit = post.get('limit_unit') or post.get('limit_period', BillingPolicy.LimitPeriod.MONTH)
+    by_class = unit == 'classes'
     raw = post.get('session_limit', '').strip()
     limit = None
     if raw:
+        if by_class and (not raw.isdigit() or not 1 <= int(raw) <= 99):
+            return None, 'The class limit must be a whole number from 1 to 99, or blank for unlimited.'
         if not raw.isdigit() or not 1 <= int(raw) <= 999:
             return None, 'The session limit must be a whole number from 1 to 999, or blank for unlimited.'
         limit = int(raw)
@@ -761,11 +771,13 @@ def _plan_fields(post):
         if not max_raw.isdigit() or not 2 <= int(max_raw) <= 20:
             return None, 'The most family members a family plan can cover must be a whole number from 2 to 20, or blank for no limit.'
         max_family = int(max_raw)
-    period = post.get('limit_period', BillingPolicy.LimitPeriod.MONTH)
+    period = BillingPolicy.LimitPeriod.MONTH if by_class else unit
     if period not in BillingPolicy.LimitPeriod.values:
         period = BillingPolicy.LimitPeriod.MONTH
     return {
-        'session_limit': limit, 'limit_period': period,
+        'limit_type': BillingPolicy.LimitType.CLASSES if by_class else BillingPolicy.LimitType.SESSIONS,
+        'session_limit': None if by_class else limit, 'class_limit': limit if by_class else None,
+        'limit_period': period,
         'member_selectable': post.get('member_selectable') == '1',
         'is_family_plan': post.get('is_family_plan') == '1',
         'max_family_members': max_family if post.get('is_family_plan') == '1' else None,

@@ -4,13 +4,10 @@
 
 {% block content %}
 
-<div class="mb-3">
-    <h5 class="mb-1">{{ member.name }}'s plan</h5>
-    <p class="text-muted small mb-0">
-        Your plan sets what you're billed and how many sessions you can book.
-        {% if family_size > 1 %}Each family member has their own plan unless you choose a family plan, which covers everyone in the family.{% endif %}
-    </p>
-</div>
+<p class="p-lead">
+    Your plan sets what you're billed and how many sessions you can book.
+    {% if family_size > 1 %}Each family member has their own plan unless you choose a family plan, which covers everyone in the family.{% endif %}
+</p>
 
 
 <div class="card border-0 shadow-sm mb-4">
@@ -27,6 +24,11 @@
                 <div class="fw-semibold">{{ plan.used }} of {{ plan.limit }} used</div>
                 <div class="small text-muted">in {{ plan.period_label }}</div>
             </div>
+            {% elif plan.class_limited %}
+            <div class="text-end">
+                <div class="fw-semibold">{{ plan.classes_used }} of {{ plan.class_limit }} class{{ plan.class_limit|pluralize:"es" }}</div>
+                <div class="small text-muted">enrolled on now</div>
+            </div>
             {% endif %}
         </div>
         {% if plan.limited %}
@@ -34,6 +36,14 @@
         <p class="small text-muted mb-0">
             {% if plan.remaining %}{{ plan.remaining }} session{{ plan.remaining|pluralize }} left. {% else %}You've reached your limit for {{ plan.period_label }}. {% endif %}
             Sessions you're enrolled on count towards it, and cancelling one frees it up.
+            {% if plan.period == 'week' %}Weeks run Monday to Sunday.{% else %}Months run from the 1st to the last day.{% endif %}
+            {% if extra_payable %}Past your limit you can still book extra sessions at £{{ extra_price|floatformat:2 }} each, paid when you book.{% endif %}
+        </p>
+        {% elif plan.class_limited %}
+        <div class="progress mb-2" style="height:8px;"><div class="progress-bar" style="width:{% widthratio plan.classes_used plan.class_limit 100 %}%;"></div></div>
+        <p class="small text-muted mb-0">
+            {% if plan.classes_left %}You can enrol in {{ plan.classes_left }} more class{{ plan.classes_left|pluralize:"es" }}. {% else %}You're enrolled in as many classes as your plan allows. {% endif %}
+            Leaving a class frees a place for another. Booking single sessions doesn't count.
         </p>
         {% endif %}
         {% else %}

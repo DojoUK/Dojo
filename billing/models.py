@@ -38,6 +38,11 @@ class BillingPolicy(models.Model):
         WEEK = 'week', 'a week'
         MONTH = 'month', 'a month'
 
+    # A plan limits either sessions (so many a week or month) or classes (enrolled on at once).
+    class LimitType(models.TextChoices):
+        SESSIONS = 'sessions', 'Sessions'
+        CLASSES = 'classes', 'Classes'
+
     member_selectable = models.BooleanField(
         default=False,
         help_text='Members can pick this as their plan from the Book page of the member portal.',
@@ -59,10 +64,29 @@ class BillingPolicy(models.Model):
         help_text='The most sessions a member on this policy can be booked into in each period. Blank means unlimited.',
     )
     limit_period = models.CharField(max_length=10, choices=LimitPeriod.choices, default=LimitPeriod.MONTH)
+    limit_type = models.CharField(
+        max_length=10, choices=LimitType.choices, default=LimitType.SESSIONS,
+        help_text='Limit sessions (session_limit, each week or month) or classes (class_limit, enrolled on at once).',
+    )
+    class_limit = models.PositiveSmallIntegerField(
+        null=True, blank=True, validators=[MinValueValidator(1)],
+        help_text='The most classes a member on this policy can be enrolled on at once. Single-session '
+                  'bookings don\'t count. Blank means unlimited.',
+    )
+
+    @property
+    def limits_classes(self):
+        return self.limit_type == self.LimitType.CLASSES and bool(self.class_limit)
+
+    @property
+    def limits_sessions(self):
+        return self.limit_type != self.LimitType.CLASSES and bool(self.session_limit)
 
     def limit_text(self):
-        """'Unlimited sessions' or e.g. '2 sessions a week'."""
-        if not self.session_limit:
+        """'Unlimited sessions', or e.g. '2 sessions a week' or 'Up to 2 classes at a time'."""
+        if self.limits_classes:
+            return f"Up to {self.class_limit} class{'es' if self.class_limit != 1 else ''} at a time"
+        if not self.limits_sessions:
             return 'Unlimited sessions'
         return f"{self.session_limit} session{'s' if self.session_limit != 1 else ''} {self.get_limit_period_display()}"
 

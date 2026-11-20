@@ -127,18 +127,19 @@
                                     <div class="small fw-semibold mb-2">Booking plan <span class="text-muted fw-normal">(member portal)</span></div>
                                     <div class="row g-2 mb-2">
                                         <div class="col">
-                                            <label class="form-label small">Session limit</label>
-                                            <input type="number" name="session_limit" class="form-control" min="1" max="999" placeholder="Unlimited" value="{{ policy.session_limit|default_if_none:'' }}">
+                                            <label class="form-label small" for="plan{{ policy.pk }}Limit">Limit</label>
+                                            <input type="number" name="session_limit" id="plan{{ policy.pk }}Limit" class="form-control" min="1" max="999" placeholder="Unlimited" value="{% if policy.limit_type == 'classes' %}{{ policy.class_limit|default_if_none:'' }}{% else %}{{ policy.session_limit|default_if_none:'' }}{% endif %}">
                                         </div>
                                         <div class="col">
-                                            <label class="form-label small">Per</label>
-                                            <select name="limit_period" class="form-select">
-                                                <option value="week" {% if policy.limit_period == 'week' %}selected{% endif %}>Week</option>
-                                                <option value="month" {% if policy.limit_period != 'week' %}selected{% endif %}>Month</option>
+                                            <label class="form-label small" for="plan{{ policy.pk }}LimitUnit">Of</label>
+                                            <select name="limit_unit" id="plan{{ policy.pk }}LimitUnit" class="form-select">
+                                                <option value="week" {% if policy.limit_type != 'classes' and policy.limit_period == 'week' %}selected{% endif %}>Sessions a week (Mon–Sun)</option>
+                                                <option value="month" {% if policy.limit_type != 'classes' and policy.limit_period != 'week' %}selected{% endif %}>Sessions a month</option>
+                                                <option value="classes" {% if policy.limit_type == 'classes' %}selected{% endif %}>Classes at a time</option>
                                             </select>
                                         </div>
                                     </div>
-                                    <div class="form-text mb-2">The most sessions a member on this policy can be booked into. Leave blank for unlimited. Staff can still add members to any class.</div>
+                                    <div class="form-text mb-2">Either the most sessions a member on this policy can be booked into each week (Monday to Sunday) or calendar month, or the most classes they can be enrolled on at once (single-session bookings don't count, and leaving a class frees a place). Past a session limit, members can still book extra sessions at the single session price, paid when they book, once that price is set and card payments are connected. Leave blank for unlimited. Staff can still add members to any class.</div>
                                     <div class="form-check mb-2">
                                         <input class="form-check-input" type="checkbox" name="member_selectable" value="1" id="plan{{ policy.pk }}Selectable" {% if policy.member_selectable %}checked{% endif %}>
                                         <label class="form-check-label small" for="plan{{ policy.pk }}Selectable">Members can choose this plan on the Book page</label>
@@ -151,7 +152,7 @@
                                             <input type="number" name="max_family_members" id="plan{{ policy.pk }}MaxFamily" value="{{ policy.max_family_members|default_if_none:'' }}" min="2" max="20" class="form-control form-control-sm" style="width:80px;" placeholder="any">
                                             <span class="small text-muted">family members</span>
                                         </div>
-                                        <div class="form-text">A flat price is charged once per family, per-session prices add up all the children on one invoice, and any session limit is shared between them.</div>
+                                        <div class="form-text">A flat price is charged once per family, per-session prices add up all the children on one invoice, and any session limit is shared between them (a class limit applies to each of them).</div>
                                     </div>
                                     <label class="form-label small">Description shown to members</label>
                                     <textarea name="plan_description" class="form-control" rows="2" placeholder="e.g. Train as often as you like">{{ policy.plan_description }}</textarea>
@@ -297,18 +298,19 @@
                                 <div class="small fw-semibold mb-2">Booking plan <span class="text-muted fw-normal">(member portal)</span></div>
                                 <div class="row g-2 mb-2">
                                     <div class="col">
-                                        <label class="form-label small">Session limit</label>
-                                        <input type="number" name="session_limit" class="form-control" min="1" max="999" placeholder="Unlimited">
+                                        <label class="form-label small" for="planNewLimit">Limit</label>
+                                        <input type="number" name="session_limit" id="planNewLimit" class="form-control" min="1" max="999" placeholder="Unlimited">
                                     </div>
                                     <div class="col">
-                                        <label class="form-label small">Per</label>
-                                        <select name="limit_period" class="form-select">
-                                            <option value="week" >Week</option>
-                                            <option value="month" selected>Month</option>
+                                        <label class="form-label small" for="planNewLimitUnit">Of</label>
+                                        <select name="limit_unit" id="planNewLimitUnit" class="form-select">
+                                            <option value="week">Sessions a week (Mon–Sun)</option>
+                                            <option value="month" selected>Sessions a month</option>
+                                            <option value="classes">Classes at a time</option>
                                         </select>
                                     </div>
                                 </div>
-                                <div class="form-text mb-2">The most sessions a member on this policy can be booked into. Leave blank for unlimited. Staff can still add members to any class.</div>
+                                <div class="form-text mb-2">Either the most sessions a member on this policy can be booked into each week (Monday to Sunday) or calendar month, or the most classes they can be enrolled on at once (single-session bookings don't count, and leaving a class frees a place). Past a session limit, members can still book extra sessions at the single session price, paid when they book, once that price is set and card payments are connected. Leave blank for unlimited. Staff can still add members to any class.</div>
                                 <div class="form-check mb-2">
                                     <input class="form-check-input" type="checkbox" name="member_selectable" value="1" id="planNewSelectable" >
                                     <label class="form-check-label small" for="planNewSelectable">Members can choose this plan on the Book page</label>
@@ -321,7 +323,7 @@
                                         <input type="number" name="max_family_members" id="planNewMaxFamily" min="2" max="20" class="form-control form-control-sm" style="width:80px;" placeholder="any">
                                         <span class="small text-muted">family members</span>
                                     </div>
-                                    <div class="form-text">A flat price is charged once per family, per-session prices add up all the children on one invoice, and any session limit is shared between them.</div>
+                                    <div class="form-text">A flat price is charged once per family, per-session prices add up all the children on one invoice, and any session limit is shared between them (a class limit applies to each of them).</div>
                                 </div>
                                 <label class="form-label small">Description shown to members</label>
                                 <textarea name="plan_description" class="form-control" rows="2" placeholder="e.g. Train as often as you like"></textarea>
