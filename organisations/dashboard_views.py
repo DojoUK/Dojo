@@ -31,6 +31,7 @@ class DashboardView(OrgMixin, TemplateView):
         single_session_setup = dashboard.single_session_setup(self.org) if board.is_admin else []
         context.update({
             'widgets': widgets,
+            'dash_columns': dashboard.COLUMNS,
             'today': board.today,
             'is_admin': board.is_admin,
             'can_customise': board.is_admin,
@@ -109,7 +110,7 @@ class DashboardWidgetView(OrgAdminMixin, View):
 
         w, h = widget.clamp(number('w', widget.size[0]), number('h', widget.size[1]))
         item = {'key': key, 'w': w, 'h': h,
-                'x': max(0, min(number('x', 0), dashboard.MAX_COLUMNS - w)),
+                'x': max(0, min(number('x', 0), dashboard.COLUMNS - w)),
                 'y': max(0, min(number('y', 0), dashboard.MAX_ROWS))}
         return render(request, 'org/widgets/_frame.html', {
             **dashboard.render_data(widget, board),

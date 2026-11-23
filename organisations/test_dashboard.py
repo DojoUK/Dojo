@@ -57,27 +57,34 @@ class LayoutTests(DashboardTestBase):
         layout = dashboard.layout_for(self.board())
         self.assertEqual(self.keys(layout), list(dashboard.DEFAULT_WIDGETS))
         tiles = [item for item in layout if item['y'] == 0]
-        self.assertEqual([(t['x'], t['w'], t['h']) for t in tiles], [(0, 5, 3), (5, 5, 3), (10, 5, 3), (15, 5, 3)])
-        self.assertEqual(layout[4], {'key': 'needs_attention', 'x': 0, 'y': 3, 'w': 20, 'h': 5})
+        self.assertEqual([(t['x'], t['w'], t['h']) for t in tiles], [(0, 6, 3), (6, 6, 3), (12, 6, 3), (18, 6, 3)])
+        self.assertEqual(layout[4], {'key': 'needs_attention', 'x': 0, 'y': 3, 'w': 24, 'h': 5})
+        self.assertEqual(layout[5:], [
+            {'key': 'upcoming_sessions', 'x': 0, 'y': 8, 'w': 16, 'h': 8},
+            {'key': 'quick_actions', 'x': 16, 'y': 8, 'w': 8, 'h': 8},
+        ])
+        # Every row of the default layout fills the 24 columns.
+        for y in {item['y'] for item in layout}:
+            self.assertEqual(sum(i['w'] for i in layout if i['y'] == y), dashboard.COLUMNS)
 
     def test_default_layout_closes_gaps_for_switched_off_features(self):
         self.switch_off('billing', 'inventory')
         layout = dashboard.layout_for(self.board())
         self.assertNotIn('revenue_month', self.keys(layout))
         at_risk = next(item for item in layout if item['key'] == 'at_risk')
-        self.assertEqual((at_risk['x'], at_risk['y']), (10, 0))
+        self.assertEqual((at_risk['x'], at_risk['y']), (12, 0))
 
     def test_coach_sees_their_widgets_moved_up(self):
-        self.org.settings['dashboard'] = {'widgets': [
-            {'key': 'needs_attention', 'x': 0, 'y': 0, 'w': 20, 'h': 4},
-            {'key': 'upcoming_sessions', 'x': 0, 'y': 4, 'w': 14, 'h': 8},
-            {'key': 'quick_actions', 'x': 14, 'y': 4, 'w': 6, 'h': 8},
+        self.org.settings['dashboard'] = {'version': 2, 'widgets': [
+            {'key': 'needs_attention', 'x': 0, 'y': 0, 'w': 24, 'h': 4},
+            {'key': 'upcoming_sessions', 'x': 0, 'y': 4, 'w': 16, 'h': 8},
+            {'key': 'quick_actions', 'x': 16, 'y': 4, 'w': 8, 'h': 8},
         ]}
         self.org.save()
         layout = dashboard.layout_for(self.board(self.coach, self.coach_om))
         self.assertEqual(layout, [
-            {'key': 'upcoming_sessions', 'x': 0, 'y': 0, 'w': 14, 'h': 8},
-            {'key': 'quick_actions', 'x': 14, 'y': 0, 'w': 6, 'h': 8},
+            {'key': 'upcoming_sessions', 'x': 0, 'y': 0, 'w': 16, 'h': 8},
+            {'key': 'quick_actions', 'x': 16, 'y': 0, 'w': 8, 'h': 8},
         ])
         # Admins see the layout exactly as it was saved.
         self.assertEqual(dashboard.layout_for(self.board())[1]['y'], 4)
@@ -101,8 +108,8 @@ class LayoutTests(DashboardTestBase):
             'rubbish',
         ], self.board())
         self.assertEqual(layout, [
-            {'key': 'active_members', 'x': 0, 'y': 0, 'w': 4, 'h': 6},
-            {'key': 'upcoming_sessions', 'x': dashboard.MAX_COLUMNS - 14, 'y': 0, 'w': 14, 'h': 8},
+            {'key': 'active_members', 'x': 0, 'y': 0, 'w': 3, 'h': 6},
+            {'key': 'upcoming_sessions', 'x': dashboard.COLUMNS - 14, 'y': 0, 'w': 14, 'h': 8},
         ])
 
     def test_overlapping_widgets_are_pushed_down(self):
@@ -117,6 +124,46 @@ class LayoutTests(DashboardTestBase):
             for b in layout:
                 if a is not b:
                     self.assertFalse(dashboard.overlaps(a, b))
+
+    def test_old_fixed_cell_layouts_are_stretched_onto_the_columns(self):
+        # Saved before the grid stretched: 50px cells, 20 across on a laptop.
+        self.org.settings['dashboard'] = {'version': 1, 'widgets': [
+            {'key': 'active_members', 'x': 0, 'y': 0, 'w': 5, 'h': 3},
+            {'key': 'sessions_week', 'x': 5, 'y': 0, 'w': 5, 'h': 3},
+            {'key': 'needs_attention', 'x': 0, 'y': 3, 'w': 20, 'h': 5},
+            {'key': 'upcoming_sessions', 'x': 0, 'y': 8, 'w': 14, 'h': 8},
+            {'key': 'quick_actions', 'x': 14, 'y': 8, 'w': 6, 'h': 8},
+        ]}
+        self.org.save()
+        layout = {i['key']: (i['x'], i['y'], i['w'], i['h']) for i in dashboard.layout_for(self.board())}
+        self.assertEqual(layout, {
+            'active_members': (0, 0, 6, 3), 'sessions_week': (6, 0, 6, 3),
+            'needs_attention': (0, 3, 24, 5),
+            'upcoming_sessions': (0, 8, 17, 8), 'quick_actions': (17, 8, 7, 8),
+        })
+
+    def test_old_layouts_wider_than_a_laptop_keep_their_proportions(self):
+        self.org.settings['dashboard'] = {'widgets': [      # no version: the first format
+            {'key': 'attendance_trend', 'x': 0, 'y': 0, 'w': 16, 'h': 7},
+            {'key': 'quick_actions', 'x': 16, 'y': 0, 'w': 16, 'h': 7},
+        ]}
+        self.org.save()
+        layout = dashboard.layout_for(self.board())
+        self.assertEqual([(i['x'], i['w']) for i in layout], [(0, 12), (12, 12)])
+
+    def test_saving_writes_the_current_version(self):
+        self.save([{'key': 'quick_actions', 'x': 0, 'y': 0, 'w': 8, 'h': 8}])
+        self.org.refresh_from_db()
+        self.assertEqual(self.org.settings['dashboard']['version'], dashboard.LAYOUT_VERSION)
+        self.assertEqual(dashboard.layout_for(self.board()), [{'key': 'quick_actions', 'x': 0, 'y': 0, 'w': 8, 'h': 8}])
+
+    def test_every_widget_fits_the_grid_and_says_how_narrow_it_can_go(self):
+        for widget in dashboard.WIDGETS:
+            with self.subTest(widget=widget.key):
+                self.assertLessEqual(widget.min_size[0], widget.size[0])
+                self.assertLessEqual(widget.size[0], min(widget.max_size[0], dashboard.COLUMNS))
+                self.assertGreaterEqual(widget.min_px, 150)
+                self.assertEqual(widget.catalogue_entry()['minPx'], widget.min_px)
 
     def test_first_fit_and_compact(self):
         placed = [{'x': 0, 'y': 0, 'w': 5, 'h': 3}, {'x': 5, 'y': 0, 'w': 5, 'h': 3}]
@@ -275,7 +322,7 @@ class WidgetTests(DashboardTestBase):
         page = self.client.get(self.url('org_dashboard'))
         # The default layout less the admin widgets, moved up into the space they leave.
         self.assertEqual([(w['key'], w['x'], w['y']) for w in page.context['widgets']], [
-            ('active_members', 0, 0), ('sessions_week', 5, 0), ('quick_actions', 14, 0), ('upcoming_sessions', 0, 3),
+            ('active_members', 0, 0), ('sessions_week', 6, 0), ('quick_actions', 16, 0), ('upcoming_sessions', 0, 3),
         ])
         self.assertEqual(page.context['sessions_this_week'], 1)   # not the Juniors session
         self.assertContains(page, '(your classes)')
@@ -286,6 +333,7 @@ class WidgetTests(DashboardTestBase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data-key="attendance_trend"')
         self.assertContains(response, 'data-x="3" data-y="12" data-w="6" data-h="24"')   # clamped to its limits
+        self.assertContains(response, 'data-min-px="320"')
         self.assertContains(response, 'grid-area: 13 / 4 / span 24 / span 6')
         self.assertContains(response, 'data-chart=')
 

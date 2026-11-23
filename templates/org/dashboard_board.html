@@ -95,7 +95,7 @@
 </script>
 {% endif %}
 
-<div class="dash-grid" id="dashGrid">
+<div class="dash-grid" id="dashGrid" data-columns="{{ dash_columns }}">
     {% for item in widgets %}
     {% include 'org/widgets/_frame.html' %}
     {% endfor %}
