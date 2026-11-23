@@ -1,0 +1,142 @@
+{% extends 'org/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Welcome back, {{ request.user.get_full_name|default:request.user.username }}{% endblock %}
+
+{% block extra_head %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<script src="{% static 'vendor/chartjs/chart.umd.min.js' %}" defer></script>
+<script src="{% static 'js/dashboard.js' %}" defer></script>
+{% endblock %}
+
+{% block page_actions %}
+<div class="d-flex gap-2 align-items-center" id="dashViewBar">
+    {% if onboarding %}
+    <button type="button" class="btn btn-sm btn-dark" data-bs-toggle="modal" data-bs-target="#onboardingModal">
+        <i class="bi bi-rocket-takeoff me-1"></i>Getting started
+    </button>
+    {% endif %}
+    {% if can_customise %}
+    <button type="button" class="btn btn-sm btn-outline-secondary d-none d-md-inline-block" id="dashCustomise">
+        <i class="bi bi-grid-3x3-gap me-1"></i>Customise
+    </button>
+    {% endif %}
+</div>
+{% if can_customise %}
+<div class="d-none gap-2 align-items-center" id="dashEditBar">
+    <span class="small text-muted d-none d-xl-inline">Drag to move · drag the corner to resize</span>
+    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="offcanvas" data-bs-target="#dashCatalogue" aria-controls="dashCatalogue">
+        <i class="bi bi-plus-lg me-1"></i>Add widget
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="dashTidy" title="Move every widget up to close the gaps"><i class="bi bi-align-top me-1"></i>Tidy up</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#dashResetModal">Reset</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="dashCancel">Cancel</button>
+    <button type="button" class="btn btn-sm btn-dark" id="dashSave"><i class="bi bi-check2 me-1"></i>Save layout</button>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block main_content %}
+{% if onboarding %}
+<div class="modal fade" id="onboardingModal" tabindex="-1" aria-labelledby="onboardingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="onboardingModalLabel"><i class="bi bi-rocket-takeoff me-2 text-muted"></i>Getting started</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{% url 'member_add' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-2 {% if onboarding.has_member %}text-muted{% endif %}">
+                    {% if onboarding.has_member %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-circle text-muted"></i>{% endif %}
+                    Add your first member
+                </a>
+                <a href="{% url 'class_add' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-2 {% if onboarding.has_class %}text-muted{% endif %}">
+                    {% if onboarding.has_class %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-circle text-muted"></i>{% endif %}
+                    Create your first class
+                </a>
+                <a href="{% url 'class_list' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-2 {% if onboarding.has_coach %}text-muted{% endif %}">
+                    {% if onboarding.has_coach %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-circle text-muted"></i>{% endif %}
+                    Assign a coach to a class
+                </a>
+                {% if 'billing' in org.enabled_features %}
+                <a href="{% url 'invoice_create' org_slug=org.slug %}" class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-2 {% if onboarding.has_invoice %}text-muted{% endif %}">
+                    {% if onboarding.has_invoice %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-circle text-muted"></i>{% endif %}
+                    Generate your first invoice
+                </a>
+                {% endif %}
+                {% if onboarding.booking_setup %}
+                <a href="{% url 'org_settings' org_slug=org.slug %}#features" class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-2 {% if onboarding.has_single_price %}text-muted{% endif %}">
+                    {% if onboarding.has_single_price %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-circle text-muted"></i>{% endif %}
+                    Set your single session price (required for class booking)
+                </a>
+                <a href="{% url 'org_settings' org_slug=org.slug %}#payments" class="list-group-item list-group-item-action py-3 d-flex align-items-center gap-2 {% if onboarding.has_stripe %}text-muted{% endif %}">
+                    {% if onboarding.has_stripe %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-circle text-muted"></i>{% endif %}
+                    Connect Stripe so members can pay for single sessions
+                </a>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <form method="post" action="{% url 'org_onboarding_dismiss' org_slug=org.slug %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">Don't remind me again</button>
+                </form>
+                <button type="button" class="btn btn-sm btn-dark" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        new bootstrap.Modal(document.getElementById('onboardingModal')).show();
+    });
+</script>
+{% endif %}
+
+<div class="dash-grid" id="dashGrid">
+    {% for item in widgets %}
+    {% include 'org/widgets/_frame.html' %}
+    {% endfor %}
+</div>
+<div class="dash-empty-board {% if widgets %}d-none{% endif %}" id="dashEmpty">
+    <i class="bi bi-grid-3x3-gap fs-2 d-block mb-2"></i>
+    {% if can_customise %}
+    Your dashboard is empty. Choose <strong>Customise</strong>, then <strong>Add widget</strong> to add reports and insights.
+    {% else %}
+    Your club's dashboard has nothing for you to see yet.
+    {% endif %}
+</div>
+
+{% if can_customise %}
+{% csrf_token %}
+{{ dash_config|json_script:"dash-config" }}
+
+<div class="offcanvas offcanvas-end" tabindex="-1" id="dashCatalogue" aria-labelledby="dashCatalogueLabel">
+    <div class="offcanvas-header border-bottom">
+        <h5 class="offcanvas-title" id="dashCatalogueLabel">Add widget</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body p-0" id="dashCatalogueBody"></div>
+</div>
+
+<div class="modal fade" id="dashResetModal" tabindex="-1" aria-labelledby="dashResetLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="dashResetLabel">Reset the dashboard?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                This puts back the standard widgets in their standard places, for everyone at {{ org.name }}. Your current layout can't be got back afterwards.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Keep my layout</button>
+                <button type="button" class="btn btn-sm btn-danger" id="dashReset">Reset to default</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

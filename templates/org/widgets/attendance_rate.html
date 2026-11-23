@@ -1,0 +1,6 @@
+{% extends 'org/widgets/_stat.html' %}
+{% block colours %}#4f46e5,#4338ca{% endblock %}
+{% block link %}<a href="{% url 'attendance_analytics' org_slug=org.slug %}" class="stretched-link" aria-label="Open attendance analytics"></a>{% endblock %}
+{% block label %}Attendance rate{% endblock %}{% block icon %}bi-graph-up-arrow{% endblock %}
+{% block value %}{% if rate_now is None %}–{% else %}{{ rate_now }}%{% endif %}{% endblock %}
+{% block note %}{% if rate_change is None %}Last 4 weeks{% elif rate_change > 0 %}<i class="bi bi-arrow-up"></i> {{ rate_change }} points on the 4 weeks before{% elif rate_change < 0 %}<i class="bi bi-arrow-down"></i> {{ rate_change|stringformat:"d"|cut:"-" }} points on the 4 weeks before{% else %}Same as the 4 weeks before{% endif %}{% endblock %}

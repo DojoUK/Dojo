@@ -1,0 +1,16 @@
+{% extends 'org/widgets/_card.html' %}
+{% block icon %}bi-lightning{% endblock %}{% block title %}Quick actions{% endblock %}
+{% block body %}
+<div class="list-group list-group-flush">
+    {% if is_admin %}
+    <a href="{% url 'member_add' org_slug=org.slug %}" class="list-group-item list-group-item-action py-2"><i class="bi bi-person-plus me-2 text-muted"></i>Add member</a>
+    <a href="{% url 'class_add' org_slug=org.slug %}" class="list-group-item list-group-item-action py-2"><i class="bi bi-plus-circle me-2 text-muted"></i>Add class</a>
+    <a href="{% url 'member_list' org_slug=org.slug %}" class="list-group-item list-group-item-action py-2"><i class="bi bi-people me-2 text-muted"></i>View all members</a>
+    <a href="{% url 'attendance_analytics' org_slug=org.slug %}" class="list-group-item list-group-item-action py-2"><i class="bi bi-bar-chart me-2 text-muted"></i>Attendance analytics</a>
+    <a href="{% url 'org_settings' org_slug=org.slug %}" class="list-group-item list-group-item-action py-2"><i class="bi bi-gear me-2 text-muted"></i>Organisation settings</a>
+    <a href="{% url 'org_audit_log' org_slug=org.slug %}" class="list-group-item list-group-item-action py-2"><i class="bi bi-journal-check me-2 text-muted"></i>Audit log</a>
+    {% else %}
+    <a href="{% url 'coach_class_list' org_slug=org.slug %}" class="list-group-item list-group-item-action py-2"><i class="bi bi-calendar-week me-2 text-muted"></i>My classes</a>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,10 @@
+{# A key number tile. Widgets extend this and fill in the blocks. #}
+<div class="dash-stat" style="background:linear-gradient(135deg,{% block colours %}#2563EB,#1d4ed8{% endblock %});">
+    {% block link %}{% endblock %}
+    <div class="dash-stat-head">
+        <span>{% block label %}{% endblock %}</span>
+        <i class="bi {% block icon %}{% endblock %}" aria-hidden="true"></i>
+    </div>
+    <div class="dash-stat-value">{% block value %}{% endblock %}</div>
+    <div class="dash-stat-note">{% block note %}{% endblock %}</div>
+</div>

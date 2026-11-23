@@ -4,10 +4,12 @@ from mailer import views as mailer_views
 
 from dojo.csv_import import ImportView
 
-from . import views
+from . import dashboard_views, views
 
 urlpatterns = [
-    path('', views.DashboardView.as_view(), name='org_dashboard'),
+    path('', dashboard_views.DashboardView.as_view(), name='org_dashboard'),
+    path('dashboard/layout/', dashboard_views.DashboardLayoutView.as_view(), name='org_dashboard_layout'),
+    path('dashboard/widgets/<slug:key>/', dashboard_views.DashboardWidgetView.as_view(), name='org_dashboard_widget'),
     path('keep-alive/', views.KeepAliveView.as_view(), name='org_keep_alive'),
     path('members/', include('members.urls')),
     path('classes/', include('classes.urls')),

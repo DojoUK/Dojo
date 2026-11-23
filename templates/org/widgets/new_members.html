@@ -1,0 +1,6 @@
+{% extends 'org/widgets/_stat.html' %}
+{% block colours %}#db2777,#be185d{% endblock %}
+{% block link %}<a href="{% url 'member_list' org_slug=org.slug %}" class="stretched-link" aria-label="View members"></a>{% endblock %}
+{% block label %}New members{% endblock %}{% block icon %}bi-person-plus{% endblock %}
+{% block value %}{{ joined_this_month }}{% endblock %}
+{% block note %}This month · {{ joined_last_month }} last month{% endblock %}

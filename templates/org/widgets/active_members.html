@@ -1,0 +1,5 @@
+{% extends 'org/widgets/_stat.html' %}
+{% block link %}{% if is_admin %}<a href="{% url 'member_list' org_slug=org.slug %}" class="stretched-link" aria-label="View members"></a>{% endif %}{% endblock %}
+{% block label %}Active members{% endblock %}{% block icon %}bi-people{% endblock %}
+{% block value %}{{ member_count }}{% endblock %}
+{% block note %}{% if new_members_month %}+{{ new_members_month }} this month{% else %}Total active{% endif %}{% endblock %}

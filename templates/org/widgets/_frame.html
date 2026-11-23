@@ -1,0 +1,16 @@
+{# One widget on the grid. `item` is a layout entry with its widget and grid area. #}
+<section class="dash-item" data-key="{{ item.key }}" data-title="{{ item.widget.title }}"
+         data-x="{{ item.x }}" data-y="{{ item.y }}" data-w="{{ item.w }}" data-h="{{ item.h }}"
+         data-min-w="{{ item.widget.min_size.0 }}" data-min-h="{{ item.widget.min_size.1 }}"
+         data-max-w="{{ item.widget.max_size.0 }}" data-max-h="{{ item.widget.max_size.1 }}"
+         style="grid-area: {{ item.area }}; --h: {{ item.h }};" aria-label="{{ item.widget.title }}">
+    <div class="dash-body">{% include item.widget.template %}</div>
+    {% if can_customise %}
+    <div class="dash-chrome">
+        <span class="dash-chrome-title"><i class="bi bi-arrows-move me-1" aria-hidden="true"></i>{{ item.widget.title }}</span>
+        <span class="dash-size">{{ item.w }} × {{ item.h }}</span>
+        <button type="button" class="dash-remove" title="Remove {{ item.widget.title }}" aria-label="Remove {{ item.widget.title }}"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="dash-resize" title="Drag to resize" aria-hidden="true"></div>
+    {% endif %}
+</section>

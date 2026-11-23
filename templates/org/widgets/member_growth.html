@@ -1,0 +1,4 @@
+{% extends 'org/widgets/_card.html' %}
+{% block icon %}bi-graph-up{% endblock %}{% block title %}New members by month{% endblock %}
+{% block subtitle %} <span class="text-muted fw-normal small">— {{ joined_year }} in the last year</span>{% endblock %}
+{% block body %}<div class="dash-chart"><canvas data-chart="{{ growth_chart }}" role="img" aria-label="Members joining each month for the last 12 months"></canvas></div>{% endblock %}

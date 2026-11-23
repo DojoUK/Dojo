@@ -1,0 +1,5 @@
+{% extends 'org/widgets/_card.html' %}
+{% block icon %}bi-cash-stack{% endblock %}{% block title %}Revenue by month{% endblock %}
+{% block subtitle %} <span class="text-muted fw-normal small">— £{{ revenue_year|floatformat:0 }} in the last year</span>{% endblock %}
+{% block action %}<a href="{% url 'org_finance' org_slug=org.slug %}" class="small text-nowrap">Finance</a>{% endblock %}
+{% block body %}<div class="dash-chart"><canvas data-chart="{{ revenue_chart }}" role="img" aria-label="Payments taken each month for the last 12 months"></canvas></div>{% endblock %}
