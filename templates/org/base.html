@@ -221,8 +221,13 @@
     <div class="sidebar-section-label">Club</div>
     <ul class="sidebar-nav">
         <li>
-            <a href="{% url 'member_list' org_slug=org.slug %}" class="{% if 'member' in url_name and 'application' not in url_name %}active{% endif %}">
+            <a href="{% url 'member_list' org_slug=org.slug %}" class="{% if 'member' in url_name and 'application' not in url_name and url_name != 'member_not_seen' %}active{% endif %}">
                 <i class="bi bi-people"></i> Members
+            </a>
+        </li>
+        <li>
+            <a href="{% url 'member_not_seen' org_slug=org.slug %}" class="{% if url_name == 'member_not_seen' %}active{% endif %}">
+                <i class="bi bi-person-exclamation"></i> Not seen lately
             </a>
         </li>
         {% if 'applications' in org.enabled_features %}
@@ -423,10 +428,30 @@
     {% endif %}{% endif %}
 
     {% endif %}
+
+    {# The club on the Dojo network, for all staff. #}
+    <div class="sidebar-section-label">Dojo network</div>
+    <ul class="sidebar-nav">
+        <li>
+            <a href="{% url 'org_reviews' org_slug=org.slug %}" class="{% if url_name == 'org_reviews' %}active{% endif %}">
+                <i class="bi bi-star"></i> Reviews
+            </a>
+        </li>
+    </ul>
+
+    {# Everyone's own settings, admin or coach. #}
+    <div class="sidebar-section-label">My settings</div>
+    <ul class="sidebar-nav">
+        <li>
+            <a href="{% url 'account_settings' org_slug=org.slug %}" class="{% if url_name == 'account_settings' or url_name == 'account_password_change' %}active{% endif %}">
+                <i class="bi bi-person-gear"></i> My settings
+            </a>
+        </li>
+    </ul>
     </div><!-- end dojo-sidebar-nav-scroll -->
 
     <div class="sidebar-footer">
-        <a href="{% url 'account_settings' org_slug=org.slug %}" class="user-name" title="My account">
+        <a href="{% url 'account_settings' org_slug=org.slug %}" class="user-name" title="My settings">
             <i class="bi bi-person-circle me-1"></i>{{ request.user.get_full_name|default:request.user.username }}
         </a>
         <form method="post" action="{% url 'logout' %}" id="logout-form">

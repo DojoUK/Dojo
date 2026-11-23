@@ -1,0 +1,62 @@
+{% extends 'network/base.html' %}
+{% block title %}My details · Dojo{% endblock %}
+{% block page_title %}My details{% endblock %}
+{% block bar_title %}My details{% endblock %}
+{% block page_subtitle %}<p class="p-subtitle">{{ account.email }}</p>{% endblock %}
+{% block content %}
+<p class="p-lead">Fill these in once. When you join a club, its form starts with the details that club asks for, so you don't need to type them again.</p>
+{% for error in errors %}
+<div class="p-banner is-error" role="alert"><i class="bi bi-exclamation-circle-fill"></i><span>{{ error }}</span></div>
+{% endfor %}
+<form method="post">
+    {% csrf_token %}
+    <div class="portal-grid p-dash">
+        <section class="p-group">
+            <div class="p-section"><h2>Name</h2></div>
+            <div class="card"><div class="card-body">
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <label class="form-label" for="d-first">First name</label>
+                        <input type="text" name="first_name" id="d-first" value="{{ name.first_name }}" class="form-control" autocomplete="given-name" maxlength="150" required>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label" for="d-surname">Surname</label>
+                        <input type="text" name="surname" id="d-surname" value="{{ name.surname }}" class="form-control" autocomplete="family-name" maxlength="150">
+                    </div>
+                </div>
+                <datalist id="pronoun-options">{% for p in pronoun_suggestions %}<option value="{{ p }}">{% endfor %}</datalist>
+                <div class="form-text">You sign in with {{ account.email }}. That can't be changed here yet.</div>
+            </div></div>
+        </section>
+        {% for group in groups %}
+        <section class="p-group">
+            <div class="p-section"><h2>{{ group.title }}</h2></div>
+            <div class="card"><div class="card-body">
+                {% if group.note %}<p class="p-caption mb-3">{{ group.note }}</p>{% endif %}
+                <div class="row g-3">
+                    {% for f in group.fields %}
+                    <div class="{% if f.wide %}col-12{% else %}col-sm-6{% endif %}">
+                        <label class="form-label" for="d-{{ f.name }}">{{ f.label }}</label>
+                        {% if f.name == 'medical_info' %}
+                        <textarea name="{{ f.name }}" id="d-{{ f.name }}" rows="3" class="form-control">{{ f.value }}</textarea>
+                        {% else %}
+                        <input type="{{ f.type }}" name="{{ f.name }}" id="d-{{ f.name }}" value="{{ f.value }}" class="form-control" autocomplete="{{ f.autocomplete }}"{% if f.placeholder %} placeholder="{{ f.placeholder }}"{% endif %}{% if f.list %} list="{{ f.list }}"{% endif %}>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div></div>
+        </section>
+        {% endfor %}
+    </div>
+
+    <div class="card mt-4"><div class="card-body d-flex flex-wrap align-items-center gap-3">
+        {% if own_clubs %}
+        <span class="p-caption flex-grow-1">Saving also updates your details at {{ own_clubs|join:", " }}. Each club gets only the details it records.</span>
+        {% else %}
+        <span class="p-caption flex-grow-1">Saved details are used when you apply to join a club.</span>
+        {% endif %}
+        <button type="submit" class="btn btn-dark">Save my details</button>
+    </div></div>
+</form>
+{% endblock %}

@@ -198,8 +198,9 @@ class JoinPageTests(TestCase):
 
     def test_join_page_shows_errors_and_keeps_input(self):
         url = reverse('member_signup', kwargs={'org_slug': self.org.slug})
-        response = self.client.post(url, {'email': 'jo@example.com'})
-        self.assertContains(response, 'Full name is required.')
+        response = self.client.post(url, {'first_name': '', 'surname': 'Bloggs', 'email': 'jo@example.com'})
+        self.assertContains(response, 'First name is required.')
+        self.assertContains(response, 'Bloggs')
         self.assertContains(response, 'jo@example.com')
         self.assertFalse(MemberApplication.objects.exists())
 

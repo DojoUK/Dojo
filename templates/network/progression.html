@@ -1,0 +1,79 @@
+{% extends 'network/base.html' %}
+{% block title %}Progression · Dojo{% endblock %}
+{% block page_title %}Progression{% endblock %}
+{% block bar_title %}Progression{% endblock %}
+{% block page_subtitle %}<p class="p-subtitle">Your grades, wherever you earned them</p>{% endblock %}
+{% block content %}
+<style>
+.n-grade-dot { width: .9rem; height: .9rem; border-radius: 50%; border: 1px solid rgba(0,0,0,.15); flex: 0 0 auto; display: inline-block; }
+.n-change { font-size: .7rem; }
+</style>
+
+{% if welcome %}
+<div class="p-banner" role="status">
+    <i class="bi bi-award-fill"></i>
+    <span>Already training? Add the grades you hold, from any club, so the clubs you join can see where you're at.
+        <a href="{% url 'network_home' %}" class="fw-semibold">Skip for now</a></span>
+</div>
+{% else %}
+<p class="p-lead">Grades follow you from club to club. Ones a club on Dojo awarded are kept by that club; ones you add yourself are yours to change. Clubs you join can see all of them.</p>
+{% endif %}
+
+<div class="portal-grid p-dash">
+    <section class="p-group">
+        {% for person in people %}
+        {% if people|length > 1 %}<div class="p-section"><h2>{% if person.is_holder %}You{% else %}{{ person.name }}{% endif %}</h2></div>{% endif %}
+        {% for group in person.groups %}
+        <div class="p-section"><h2 class="{% if people|length > 1 %}h6 text-muted{% endif %}">{{ group.label }}</h2></div>
+        <div class="card mb-3">
+            {% for entry in group.entries %}
+            <div class="p-row flex-wrap">
+                <span class="n-grade-dot" {% if entry.colour %}style="background:{{ entry.colour }}"{% else %}style="background:transparent"{% endif %} aria-hidden="true"></span>
+                <div class="p-row-main">
+                    <div class="p-row-title">{{ entry.grade }}
+                        {% if entry.change == 'promotion' %}<span class="badge bg-success-subtle text-success n-change ms-1">Promoted</span>
+                        {% elif entry.change == 'demotion' %}<span class="badge bg-warning-subtle text-warning-emphasis n-change ms-1">Demoted</span>{% endif %}
+                    </div>
+                    <div class="p-row-sub">
+                        {{ entry.date|date:"j M Y"|default:"Date not given" }} ·
+                        {% if entry.source == 'club' %}{{ entry.awarded_by }}{% if entry.system %} ({{ entry.system }}){% endif %}
+                        {% else %}{% if entry.awarded_by %}{{ entry.awarded_by }}, {% endif %}added by you{% endif %}
+                    </div>
+                </div>
+                {% if entry.source == 'self' %}
+                <details class="w-100 mt-1">
+                    <summary class="p-caption" style="cursor:pointer;">Change or remove</summary>
+                    {% include 'network/_grade_form.html' with record=entry.record %}
+                    <form method="post" class="mt-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="pk" value="{{ entry.id }}">
+                        <button type="submit" name="action" value="delete" class="btn btn-outline-danger btn-sm" onclick="return confirm('Remove {{ entry.grade|escapejs }}?')">Remove</button>
+                    </form>
+                </details>
+                {% else %}
+                <span class="p-caption" title="Kept by {{ entry.awarded_by }}"><i class="bi bi-lock" aria-hidden="true"></i><span class="visually-hidden">Kept by the club</span></span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% empty %}
+        {% if person.is_holder %}
+        <div class="card mb-3"><div class="p-empty">
+            <i class="bi bi-award text-muted"></i>
+            <div class="p-row-title">No grades yet</div>
+            <p class="p-row-sub mb-0">Grades your clubs award show up here. Add any you already hold below.</p>
+        </div></div>
+        {% endif %}
+        {% endfor %}
+        {% endfor %}
+    </section>
+
+    <section class="p-group">
+        <div class="p-section"><h2>Add a grade you hold</h2></div>
+        <div class="card"><div class="card-body">
+            <p class="p-caption">For grades from clubs that aren't on Dojo, or from before you joined. Clubs on Dojo add the grades they award themselves.</p>
+            {% include 'network/_grade_form.html' with record=None %}
+        </div></div>
+    </section>
+</div>
+{% endblock %}

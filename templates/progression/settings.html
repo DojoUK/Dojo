@@ -31,6 +31,16 @@
             <h6 class="mb-0">{{ system.name }}</h6>
         </button>
 
+        <form method="post" action="{% url 'progression_system_discipline' org_slug=org.slug pk=system.pk %}" class="d-flex align-items-center gap-1">
+            {% csrf_token %}
+            <label class="small text-muted" for="disc-{{ system.pk }}">Martial art</label>
+            <select name="discipline" id="disc-{{ system.pk }}" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+                <option value="">Not set</option>
+                {% for key, label in discipline_choices %}<option value="{{ key }}" {% if system.discipline == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+            <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">Save</button></noscript>
+        </form>
+
         <form method="post" action="{% url 'progression_system_apply_default' org_slug=org.slug pk=system.pk %}">
             {% csrf_token %}
             <button type="submit" class="btn btn-sm btn-outline-secondary"
@@ -216,11 +226,18 @@
         <form method="post" action="{% url 'progression_system_add' org_slug=org.slug %}">
             {% csrf_token %}
             <div class="row g-2 align-items-end">
-                <div class="col-sm-8">
+                <div class="col-sm-5">
                     <label class="form-label small fw-semibold">System name <span class="text-danger">*</span></label>
                     <input type="text" name="name" class="form-control" placeholder="e.g. Mon Grades, Kyu Grades, RAD Grades…">
                 </div>
                 <div class="col-sm-4">
+                    <label class="form-label small fw-semibold" for="new-system-discipline">Martial art</label>
+                    <select name="discipline" id="new-system-discipline" class="form-select">
+                        <option value="">Choose…</option>
+                        {% for key, label in discipline_choices %}<option value="{{ key }}" {% if org.disciplines|length == 1 and key in org.disciplines %}selected{% endif %}>{{ label }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-sm-3">
                     <button type="submit" class="btn btn-dark w-100">Create system</button>
                 </div>
             </div>

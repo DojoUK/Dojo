@@ -80,9 +80,7 @@ def confirm_paid(invoice):
             .select_related('session__assigned_class', 'member__organisation'):
         booking.status = SessionBooking.Status.CONFIRMED
         booking.save(update_fields=['status'])
-        cls = booking.session.assigned_class
-        day = _date_text(booking.session.date)
-        _notify(booking.member, 'session_booked', {'class_name': cls.name, 'session_date': day}, (cls.name, day))
+        _notify(booking.member, 'session_booked', *session_email(booking.session))
         confirmed.append(booking)
     return confirmed
 
@@ -268,17 +266,19 @@ def session_is_full(session):
     return cls.has_capacity_limit and session_headcount(session) >= cls.max_capacity
 
 
-def _notify(member, key, values, box=None):
+def _notify(member, key, values, box=None, extra_blocks=None):
     """Email the member (or their guardian) a confirmation. A failed email never undoes the booking."""
     from members.emails import _recipient
     recipient = _recipient(member)
     if not recipient:
         return None
+    email_blocks = {'booking_box': blocks.booking_box(*box)} if box else {}
+    email_blocks.update(extra_blocks or {})
     try:
         compose.send(
             member.organisation, key, [recipient],
             {**compose.member_values(member), **values},
-            {'booking_box': blocks.booking_box(*box)} if box else None,
+            email_blocks or None,
         )
     except Exception:
         return None
@@ -287,6 +287,15 @@ def _notify(member, key, values, box=None):
 
 def _date_text(day):
     return f'{day:%A} {day.day} {day:%B %Y}'
+
+
+def session_email(session):
+    """(values, box) for emails about one session: its class, date and start time."""
+    cls = session.assigned_class
+    day = _date_text(session.date)
+    when = session_time_text(session)
+    return ({'class_name': cls.name, 'session_date': day, 'session_time': when},
+            (cls.name, f'{day}, {when}' if when else day))
 
 
 def _require_active(cls, member):
@@ -419,8 +428,7 @@ def book_session(member, session):
                 session=session, member=member, status=SessionBooking.Status.PENDING, invoice=invoice,
             )
     if not booking.is_pending:
-        day = _date_text(session.date)
-        _notify(member, 'session_booked', {'class_name': cls.name, 'session_date': day}, (cls.name, day))
+        _notify(member, 'session_booked', *session_email(session))
     return booking
 
 
@@ -459,8 +467,7 @@ def cancel_session_booking(member, session):
     paid_invoice = booking.invoice if booking.invoice and booking.invoice.status == 'paid' else None
     booking.delete()
     cls = session.assigned_class
-    day = _date_text(session.date)
-    _notify(member, 'session_booking_cancelled', {'class_name': cls.name, 'session_date': day}, (cls.name, day))
+    _notify(member, 'session_booking_cancelled', *session_email(session))
     return paid_invoice
 
 
@@ -480,8 +487,7 @@ def skip_session(member, session):
     if not created:
         raise BookingError('You\'ve already cancelled that session.')
     cls = session.assigned_class
-    day = _date_text(session.date)
-    _notify(member, 'session_booking_cancelled', {'class_name': cls.name, 'session_date': day}, (cls.name, day))
+    _notify(member, 'session_booking_cancelled', *session_email(session))
 
 
 def rejoin_session(member, session):
@@ -496,5 +502,4 @@ def rejoin_session(member, session):
     Quota(member).check([session], 'rejoin this session')
     SessionAbsence.objects.filter(session=session, member=member).delete()
     cls = session.assigned_class
-    day = _date_text(session.date)
-    _notify(member, 'session_booked', {'class_name': cls.name, 'session_date': day}, (cls.name, day))
+    _notify(member, 'session_booked', *session_email(session))

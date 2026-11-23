@@ -13,7 +13,7 @@
         <div class="text-center mb-5">
             {% load static %}
             <img src="{% static 'img/dojo-wordmark.png' %}" alt="Dojo" style="height:44px;filter:brightness(0) invert(1);opacity:0.9;margin-bottom:12px;">
-            <p style="color:rgba(255,255,255,.45);font-size:0.85rem;margin:0;">Let's set up your organisation</p>
+            <p style="color:rgba(255,255,255,.45);font-size:0.85rem;margin:0;">{% if adding_club %}Add a club to the Dojo network{% else %}Let's set up your organisation{% endif %}</p>
         </div>
 
         <div class="card" style="border:none!important;box-shadow:0 20px 60px rgba(0,0,0,.3)!important;">
@@ -49,22 +49,35 @@
                             <option value="{{ t.key }}" {% if club_template == t.key %}selected{% endif %}>{{ t.name }}</option>
                             {% endfor %}
                         </select>
-                        <div class="form-text" id="club-template-none">Start empty and add your own grades later, or pick a club type to pre-fill the grades for your sport (and switch on Grades). You can edit or add to them afterwards.</div>
+                        <div class="form-text" id="club-template-none">Pick your sport to start with its grades ready-made, or start empty and add your own later.</div>
                         {% for t in club_templates %}
                         <div class="border rounded p-3 mt-2 bg-light d-none" data-club-template="{{ t.key }}">
-                            <p class="small text-muted mb-2">{{ t.description }}</p>
-                            {% for system in t.systems %}
-                            <div class="small fw-semibold mb-1">{{ system.name }} <span class="text-muted fw-normal">({{ system.stages|length }} grade{{ system.stages|length|pluralize }})</span></div>
-                            <div class="d-flex flex-wrap gap-1 mb-2" style="max-height:140px;overflow-y:auto;">
-                                {% for stage in system.stages %}
-                                <span class="badge text-bg-light border fw-normal">{% if stage.colour %}<span style="display:inline-block;width:.7em;height:.7em;border-radius:50%;border:1px solid #adb5bd;background:{{ stage.colour }};margin-right:.35em;"></span>{% endif %}{{ stage.name }}</span>
+                            <div class="small fw-semibold mb-2">What you'll get</div>
+                            <ul class="list-unstyled small mb-0">
+                                {% for row in t.summary %}
+                                <li class="d-flex gap-2 {% if not forloop.last %}mb-2{% endif %}">
+                                    <i class="bi {% if row.included %}bi-check-circle-fill text-success{% else %}bi-dash-circle text-muted{% endif %} mt-1"></i>
+                                    <div><span class="fw-semibold">{{ row.title }}</span> <span class="text-muted">{{ row.text }}</span></div>
+                                </li>
                                 {% endfor %}
-                            </div>
-                            {% endfor %}
-                            {% if t.syllabus %}
-                            <div class="small fw-semibold mb-1">Syllabus checklists <span class="text-muted fw-normal">({{ t.syllabus|length }} section{{ t.syllabus|length|pluralize }})</span></div>
-                            <div class="small text-muted" style="max-height:90px;overflow-y:auto;">{{ t.syllabus|join:", " }}</div>
-                            {% endif %}
+                            </ul>
+                            <details class="small mt-2">
+                                <summary class="text-primary" style="cursor:pointer;">See every grade{% if t.syllabus %} and checklist{% endif %}</summary>
+                                <p class="text-muted mt-2 mb-2">{{ t.description }}</p>
+                                {% for system in t.systems %}
+                                <div class="fw-semibold mb-1">{{ system.name }} <span class="text-muted fw-normal">({{ system.stages|length }} grade{{ system.stages|length|pluralize }})</span></div>
+                                <div class="d-flex flex-wrap gap-1 mb-2" style="max-height:140px;overflow-y:auto;">
+                                    {% for stage in system.stages %}
+                                    <span class="badge text-bg-light border fw-normal">{% if stage.colour %}<span style="display:inline-block;width:.7em;height:.7em;border-radius:50%;border:1px solid #adb5bd;background:{{ stage.colour }};margin-right:.35em;"></span>{% endif %}{{ stage.name }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endfor %}
+                                {% if t.syllabus %}
+                                <div class="fw-semibold mb-1">Syllabus checklists</div>
+                                <div class="text-muted" style="max-height:90px;overflow-y:auto;">{{ t.syllabus|join:", " }}</div>
+                                {% endif %}
+                            </details>
+                            <div class="form-text mt-2">You can change or add to all of this afterwards.</div>
                         </div>
                         {% endfor %}
                     </div>
@@ -109,6 +122,16 @@
                     </div>
 
                         </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="mb-2">
+                        <span class="text-uppercase text-muted" style="font-size:0.7rem;letter-spacing:.05em;">Where do you train?</span>
+                    </div>
+                    <p class="text-muted small">Members use this to find your club in the Dojo club finder. You can change it any time under Settings → Location.</p>
+                    <div class="mb-3" style="max-width:640px;">
+                        {% include 'org/_location_fields.html' %}
                     </div>
 
                     <hr class="my-4">
@@ -191,6 +214,12 @@
     }
     select.addEventListener('change', sync);
     sync();
+    // Choosing a club type ticks its martial art in "Where do you train?".
+    var starterDisciplines = {{ starter_disciplines|default:'{}'|safe }};
+    select.addEventListener('change', function () {
+        var box = document.getElementById('disc-' + starterDisciplines[select.value]);
+        if (box) box.checked = true;
+    });
 })();
 </script>
 {% endblock %}

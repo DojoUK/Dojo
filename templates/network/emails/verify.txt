@@ -1,0 +1,9 @@
+Hi {{ account.name }},
+
+Please confirm this is your email address for your Dojo account:
+
+{{ link }}
+
+Once it's confirmed, any club memberships under this address appear in your account. The link works for {{ days }} days.
+
+If you didn't create a Dojo account, you can ignore this email.

@@ -22,6 +22,7 @@ urlpatterns = [
     path('<int:pk>/notes/add/', views.AddMemberNoteView.as_view(), name='member_note_add'),
     path('<int:pk>/notes/<int:note_pk>/delete/', views.DeleteMemberNoteView.as_view(), name='member_note_delete'),
     path('bulk/', views.MemberBulkActionView.as_view(), name='member_bulk_action'),
+    path('not-seen/', views.NotSeenLatelyView.as_view(), name='member_not_seen'),
     path('applications/', views.ApplicationListView.as_view(), name='application_list'),
     path('applications/<int:pk>/approve/', views.ApproveApplicationView.as_view(), name='application_approve'),
     path('applications/<int:pk>/reject/', views.RejectApplicationView.as_view(), name='application_reject'),

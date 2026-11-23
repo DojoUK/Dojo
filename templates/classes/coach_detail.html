@@ -137,7 +137,7 @@
                     <form method="post" action="{% url 'class_enrol' org_slug=org.slug pk=cls.pk %}" class="d-flex gap-2">
                         {% csrf_token %}
                         <select name="member_id" class="form-select form-select-sm" aria-label="Member to enrol">
-                            {% for m in available_members %}<option value="{{ m.pk }}">{{ m.name }}</option>{% endfor %}
+                            {% for m in available_members %}<option value="{{ m.pk }}">{{ m.register_name }}</option>{% endfor %}
                         </select>
                         <button type="submit" class="btn btn-sm btn-dark text-nowrap">Enrol</button>
                     </form>
@@ -150,7 +150,7 @@
                     {% for enrolment in enrolled %}
                     <li class="list-group-item py-2 px-3 small d-flex justify-content-between align-items-center gap-2 flex-wrap">
                         <span class="d-flex align-items-center gap-2 flex-wrap">
-                            {{ enrolment.member.name }}
+                            {{ enrolment.member.register_name }}
                             {% include 'classes/_register_flags.html' with member=enrolment.member %}
                         </span>
                         {% if 'grades' in org.enabled_features %}

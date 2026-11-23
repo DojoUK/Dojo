@@ -15,12 +15,17 @@ from django.shortcuts import get_object_or_404
 from dojo.mixins import require_features
 from organisations.models import Organisation
 
+from .forms import extract_custom_field_values
 from .models import MemberApplication
 
 # Each text field on the application, and the optional field switch that
 # covers it (None: always collected).
 TEXT_FIELDS = {
     'email': None,
+    'first_name': None,
+    'surname': None,
+    'preferred_name': None,
+    'pronouns': None,
     'phone': 'phone',
     'address_line1': 'address',
     'address_line2': 'address',
@@ -31,6 +36,10 @@ TEXT_FIELDS = {
     'guardian_email': 'guardians',
     'guardian_phone': 'guardians',
     'medical_info': 'medical_info',
+    'emergency_contact_name': None,
+    'emergency_contact_phone': None,
+    'emergency_contact_2_name': 'emergency_contact_2',
+    'emergency_contact_2_phone': 'emergency_contact_2',
     'notes': None,
 }
 EMAIL_FIELDS = ('email', 'guardian_email')
@@ -43,6 +52,12 @@ def signup_org(org_slug):
     org = get_object_or_404(Organisation, slug=org_slug)
     require_features(org, 'applications')
     return org
+
+
+def application_custom_fields(org):
+    """The club's custom fields it asks on the join form."""
+    from .models import CustomField
+    return CustomField.objects.filter(organisation=org, on_application=True)
 
 
 def active_waivers(org):
@@ -89,13 +104,17 @@ def origin_allowed(origin, org_slug):
     return False
 
 
-def create_application(org, data):
+def create_application(org, data, require_agreement=False):
     """
     Validate submitted fields and create a MemberApplication.
 
     `data` is any mapping of field name to value (request.POST or parsed
     JSON). Fields the club has switched off are ignored. Returns
     (application, errors); exactly one of them is empty.
+
+    With `require_agreement` (Dojo's own join form), each required document must be ticked as
+    agreed (agree_<pk>) and the signer must type their name, as well as drawing a signature. The
+    signup API keeps its older contract: a signature agrees to all of the club's documents.
     """
     def value(key):
         v = data.get(key, '')
@@ -104,17 +123,38 @@ def create_application(org, data):
     collected = collected_fields(org)
     errors = []
 
-    name = value('name')
-    if not name:
-        errors.append('Full name is required.')
+    # First name and surname; the signup API may still send one full name, which is split.
+    first_name, surname = value('first_name'), value('surname')
+    if not first_name and not surname and value('name'):
+        from .names import split_name
+        first_name, surname = split_name(value('name'))
+    from .names import join_name
+    name = join_name(first_name, surname)
+    if not first_name:
+        # The signup API's older contract sends one full name.
+        errors.append('First name is required.' if 'first_name' in data else 'Full name is required.')
 
     signature_data = value('signature_data')
-    if active_waivers(org).filter(is_required=True).exists() and not signature_data:
+    waivers = list(active_waivers(org))
+    signer_name = value('signer_name')[:255]
+    if require_agreement:
+        agreed = [w.pk for w in waivers if data.get(f'agree_{w.pk}')]
+        for waiver in waivers:
+            if waiver.is_required and waiver.pk not in agreed:
+                errors.append(f'Tick to agree to {waiver.name}.')
+        if agreed and not signer_name:
+            errors.append('Type your full name to sign.')
+        needs_signature = bool(agreed)
+    else:
+        agreed = [w.pk for w in waivers] if signature_data else []
+        needs_signature = any(w.is_required for w in waivers)
+    if needs_signature and not signature_data:
         errors.append('Please sign the document before submitting.')
     if len(signature_data) > MAX_SIGNATURE_LENGTH:
         errors.append('Signature is too large.')
 
     fields = {key: value(key) if collected[key] else '' for key in TEXT_FIELDS}
+    fields.update(first_name=first_name, surname=surname)
     for key, current in (('name', name), *fields.items()):
         field = MemberApplication._meta.get_field(key)
         if field.max_length and len(current) > field.max_length:
@@ -134,6 +174,15 @@ def create_application(org, data):
         except ValueError:
             errors.append('Enter the date of birth as YYYY-MM-DD.')
 
+    promo = None
+    if value('promo_code'):
+        from billing import promos
+        promo = promos.find(org, value('promo_code')) if org.has_feature('billing') else None
+        if promo is None:
+            errors.append(f'We don\'t recognise the promo code {promos.normalise(value("promo_code"))}.')
+        elif promos.problem(promo):
+            errors.append(promos.problem(promo))
+
     if errors:
         return None, errors
 
@@ -141,7 +190,11 @@ def create_application(org, data):
         organisation=org,
         name=name,
         date_of_birth=dob,
-        signature_data=signature_data,
+        signature_data=signature_data if agreed else '',
+        signer_name=(signer_name or name) if agreed else '',
+        agreed_waivers=agreed,
+        promo=promo,
+        custom_field_values=extract_custom_field_values(org, data, application_custom_fields(org)),
         **fields,
     )
     return application, []

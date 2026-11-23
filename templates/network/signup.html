@@ -1,0 +1,39 @@
+{% extends 'network/base.html' %}
+{% block title %}Create a Dojo account{% endblock %}
+{% block page_title %}Create an account{% endblock %}
+{% block bar_title %}Create an account{% endblock %}
+{% block wrap_class %}n-auth n-auth-wide{% endblock %}
+{% block container_class %}n-auth n-auth-wide{% endblock %}
+{% block content %}
+<style>.n-auth.n-auth-wide { max-width: 720px; } fieldset legend { float: none; }</style>
+<p class="p-lead">One account for every club on Dojo: find clubs near you, save your favourites, apply to join, and manage your bookings at each club.</p>
+<div class="card">
+    <div class="card-body p-4">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+            {% if form.errors %}<div class="p-banner is-error" role="alert"><i class="bi bi-exclamation-circle-fill"></i><span>Check the details marked below.</span></div>{% endif %}
+            <p class="p-caption">Everything marked <span class="text-danger">*</span> is needed. The rest is optional. It's all kept in My details, where you can change it any time, and each club you join only gets the details it asks for.</p>
+            <datalist id="pronoun-options">{% for p in pronoun_suggestions %}<option value="{{ p }}">{% endfor %}</datalist>
+            {% for group in form.groups %}
+            <fieldset class="{% if not forloop.first %}mt-4 pt-3 border-top{% endif %}">
+                <legend class="h6 mb-1">{{ group.title }}</legend>
+                {% if group.note %}<p class="p-caption mb-2">{{ group.note }}</p>{% endif %}
+                <div class="row g-3">
+                    {% for item in group.fields %}{% with field=item.field %}
+                    <div class="{% if item.wide %}col-12{% else %}col-sm-6{% endif %}">
+                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% else %} <span class="text-muted small">(optional)</span>{% endif %}</label>
+                        {{ field }}
+                        {% for error in field.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        {% if field.name == 'password' and not field.errors %}<div class="form-text">At least 8 characters, and not too common.</div>{% endif %}
+                    </div>
+                    {% endwith %}{% endfor %}
+                </div>
+            </fieldset>
+            {% endfor %}
+            <button type="submit" class="btn btn-dark w-100 mt-4">Create account</button>
+        </form>
+    </div>
+</div>
+<p class="p-caption text-center mt-3">Already have an account? <a href="{% url 'network_login' %}{% if next %}?next={{ next|urlencode }}{% endif %}">Sign in</a></p>
+{% endblock %}

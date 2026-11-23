@@ -95,6 +95,16 @@ class BillingPolicy(models.Model):
             return f"{self.name} (£{self.per_session_rate}/session / {self.get_billing_cycle_display()})"
         return f"{self.name} (£{self.amount} flat / {self.get_billing_cycle_display()})"
 
+    def price_summary(self):
+        """For members: '£40 a month', '£5 a session', or just the price for custom billing."""
+        if self.pricing_model == self.PricingModel.PER_SESSION:
+            return f"£{self.per_session_rate} a session" if self.per_session_rate is not None else ''
+        if self.amount is None:
+            return ''
+        per = {self.BillingCycle.MONTHLY: ' a month', self.BillingCycle.TERMLY: ' a term',
+               self.BillingCycle.ANNUAL: ' a year'}.get(self.billing_cycle, '')
+        return f"£{self.amount}{per}"
+
     def display_amount(self):
         if self.pricing_model == self.PricingModel.PER_SESSION:
             return f"£{self.per_session_rate}/session"
@@ -129,7 +139,29 @@ class PolicyDiscount(models.Model):
     name = models.CharField(max_length=255)
     discount_type = models.CharField(max_length=20, choices=DiscountType.choices)
     value = models.DecimalField(max_digits=8, decimal_places=2, validators=[MinValueValidator(0)])
-    auto_apply = models.BooleanField(default=False, help_text='Automatically apply to all new members on this policy')
+    # Applied at billing to everyone billed on the plan (billing/calculator.py), unless staff exempt a member
+    # on their page, which records an inactive MemberDiscount.
+    auto_apply = models.BooleanField(default=False, help_text='Applied to everyone billed on this plan, unless exempted')
+    # Promo codes and intro offers (billing/promos.py): a code people type on the join form or their
+    # portal's Plans page to get this discount, with optional limits.
+    code = models.CharField(max_length=30, blank=True, help_text='Stored in capitals; unique within the club')
+    new_members_only = models.BooleanField(default=False, help_text='Only for members who have never been invoiced')
+    valid_until = models.DateField(null=True, blank=True, help_text='Last day the code can be used')
+    max_uses = models.PositiveIntegerField(null=True, blank=True)
+    duration_months = models.PositiveSmallIntegerField(null=True, blank=True,
+                                                       help_text='How long it lasts once applied; blank for as long as they\'re on the plan')
+    show_publicly = models.BooleanField(default=False, help_text='Show as an intro offer on Find clubs and the join page')
+
+    @property
+    def uses(self):
+        return self.member_discounts.count()
+
+    def offer_text(self):
+        """For intro offers: e.g. '50% off Adult unlimited for 1 month'."""
+        off = f'{self.value.normalize():f}% off' if self.discount_type == self.DiscountType.PERCENTAGE else f'£{self.value} off'
+        months = self.duration_months
+        length = f' for {months} month{"s" if months != 1 else ""}' if months else ''
+        return f'{off} {self.policy.name}{length}'
 
     def __str__(self):
         if self.discount_type == self.DiscountType.PERCENTAGE:
@@ -151,6 +183,8 @@ class MemberDiscount(models.Model):
     discount = models.ForeignKey(PolicyDiscount, on_delete=models.CASCADE, related_name='member_discounts')
     is_active = models.BooleanField(default=True)
     applied_at = models.DateTimeField(auto_now_add=True)
+    # A discount that lasts a set time (PolicyDiscount.duration_months) stops applying after this day.
+    expires_on = models.DateField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.member} — {self.discount}"

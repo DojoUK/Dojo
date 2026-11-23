@@ -1,0 +1,107 @@
+{% load static %}<!doctype html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>{% block title %}Dojo{% endblock %}</title>
+    <meta name="theme-color" content="#1E3A5F">
+    <script>
+    // Dark mode is the member's own choice, kept in this browser (shared with club portals).
+    try { if (localStorage.getItem('portalTheme') === 'dark') document.documentElement.setAttribute('data-bs-theme', 'dark'); } catch (e) {}
+    </script>
+    <link href="{% static 'vendor/bootstrap/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/portal.css' %}" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="{% static 'img/favicon/favicon.ico' %}">
+    <link rel="apple-touch-icon" href="{% static 'img/favicon/apple-touch-icon.png' %}">
+    <style>
+        /* Dojo's own colours: the network pages belong to no single club. */
+        :root {
+            --p-brand: #1E3A5F; --p-on-brand: #ffffff;
+            --p-accent: #2563EB; --p-accent-hover: #1d4ed8; --p-on-accent: #ffffff; --p-on-accent-hover: #ffffff;
+        }
+        .n-wordmark { height: 22px; filter: brightness(0) invert(1); opacity: .95; }
+        .n-auth { max-width: 440px; }
+        .p-bar .n-user { color: var(--p-on-accent); opacity: .85; font-size: .875rem; white-space: nowrap; }
+        .p-bar .n-user button { color: inherit; }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="portal">
+{% url 'network_finder' as finder_url %}{% url 'network_home' as home_url %}
+<header class="p-hero">
+    <div class="p-wrap {% block wrap_class %}{% endblock %}">
+        <a class="p-brand text-reset text-decoration-none" href="{{ finder_url }}" aria-label="Dojo club finder">
+            <img src="{% static 'img/dojo-wordmark.png' %}" alt="Dojo" class="n-wordmark">
+        </a>
+        <div class="p-title-row"><h1 class="p-title">{% block page_title %}{% endblock %}</h1></div>
+        {% block page_subtitle %}{% endblock %}
+    </div>
+</header>
+
+<nav class="p-bar" aria-label="Dojo">
+    <div class="p-wrap p-bar-inner">
+        <span class="p-bar-title" aria-hidden="true">{% block bar_title %}{% endblock %}</span>
+        <div class="p-nav">
+            <a href="{{ finder_url }}" class="{% if active == 'finder' %}active{% endif %}"{% if active == 'finder' %} aria-current="page"{% endif %}><i class="bi bi-{% if active == 'finder' %}geo-alt-fill{% else %}geo-alt{% endif %}"></i> Find clubs</a>
+            {% if user.is_authenticated %}
+            <a href="{{ home_url }}" class="{% if active == 'home' %}active{% endif %}"{% if active == 'home' %} aria-current="page"{% endif %}><i class="bi bi-{% if active == 'home' %}grid-fill{% else %}grid{% endif %}"></i> My clubs</a>
+            <a href="{% url 'network_progression' %}" class="{% if active == 'progression' %}active{% endif %}"{% if active == 'progression' %} aria-current="page"{% endif %}><i class="bi bi-{% if active == 'progression' %}award-fill{% else %}award{% endif %}"></i> Progression</a>
+            <a href="{% url 'network_details' %}" class="{% if active == 'details' %}active{% endif %}"{% if active == 'details' %} aria-current="page"{% endif %}><i class="bi bi-{% if active == 'details' %}person-fill{% else %}person{% endif %}"></i> My details</a>
+            {% else %}
+            <a href="{% url 'network_login' %}" class="{% if active == 'login' %}active{% endif %}"><i class="bi bi-box-arrow-in-right"></i> Sign in</a>
+            <a href="{% url 'network_signup' %}" class="{% if active == 'signup' %}active{% endif %}"><i class="bi bi-person-plus"></i> Create an account</a>
+            {% endif %}
+        </div>
+        {% if user.is_authenticated %}
+        <form method="post" action="{% url 'network_logout' %}" class="n-user d-none d-md-flex align-items-center gap-2">
+            {% csrf_token %}
+            <span>{{ user.member_account.name|default:user.email }}</span>
+            <button type="submit" class="btn btn-link btn-sm p-0 text-decoration-none">Sign out</button>
+        </form>
+        {% endif %}
+        <button type="button" class="p-theme-btn" data-p-theme-toggle aria-pressed="false" title="Dark mode">
+            <i class="bi bi-moon-fill" aria-hidden="true"></i><i class="bi bi-sun-fill" aria-hidden="true"></i>
+            <span class="visually-hidden">Dark mode</span>
+        </button>
+    </div>
+</nav>
+
+<main id="p-main">
+<div class="portal-container {% block container_class %}{% endblock %}">
+    {% for message in messages %}
+    {% if message.level_tag == 'error' %}
+    <div class="p-banner is-error" role="alert"><i class="bi bi-exclamation-circle-fill"></i><span>{{ message }}</span></div>
+    {% elif message.level_tag == 'warning' %}
+    <div class="p-banner is-warning" role="alert"><i class="bi bi-exclamation-triangle-fill"></i><span>{{ message }}</span></div>
+    {% elif message.level_tag == 'info' %}
+    <div class="p-banner is-info" role="status"><i class="bi bi-info-circle-fill"></i><span>{{ message }}</span></div>
+    {% else %}
+    <div class="p-banner is-success" role="status"><i class="bi bi-check-circle-fill"></i><span>{{ message }}</span></div>
+    {% endif %}
+    {% endfor %}
+    {% block content %}{% endblock %}
+</div>
+</main>
+
+{# Phones: the menu row is a tab bar. #}
+<nav class="p-tabbar" aria-label="Dojo">
+    <a href="{{ finder_url }}" class="p-tab{% if active == 'finder' %} active{% endif %}"><i class="bi bi-{% if active == 'finder' %}geo-alt-fill{% else %}geo-alt{% endif %}"></i><span>Find clubs</span></a>
+    {% if user.is_authenticated %}
+    <a href="{{ home_url }}" class="p-tab{% if active == 'home' %} active{% endif %}"><i class="bi bi-{% if active == 'home' %}grid-fill{% else %}grid{% endif %}"></i><span>My clubs</span></a>
+    <a href="{% url 'network_progression' %}" class="p-tab{% if active == 'progression' %} active{% endif %}"><i class="bi bi-{% if active == 'progression' %}award-fill{% else %}award{% endif %}"></i><span>Progression</span></a>
+    <a href="{% url 'network_details' %}" class="p-tab{% if active == 'details' %} active{% endif %}"><i class="bi bi-{% if active == 'details' %}person-fill{% else %}person{% endif %}"></i><span>My details</span></a>
+    <form method="post" action="{% url 'network_logout' %}" class="d-contents" style="display:contents;">
+        {% csrf_token %}
+        <button type="submit" class="p-tab"><i class="bi bi-box-arrow-right"></i><span>Sign out</span></button>
+    </form>
+    {% else %}
+    <a href="{% url 'network_login' %}" class="p-tab{% if active == 'login' %} active{% endif %}"><i class="bi bi-box-arrow-in-right"></i><span>Sign in</span></a>
+    <a href="{% url 'network_signup' %}" class="p-tab{% if active == 'signup' %} active{% endif %}"><i class="bi bi-person-plus"></i><span>Join Dojo</span></a>
+    {% endif %}
+</nav>
+
+<script src="{% static 'js/portal.js' %}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

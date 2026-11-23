@@ -1,0 +1,30 @@
+{% extends 'network/base.html' %}
+{% block title %}Sign in to Dojo{% endblock %}
+{% block page_title %}Sign in{% endblock %}
+{% block bar_title %}Sign in{% endblock %}
+{% block wrap_class %}n-auth{% endblock %}
+{% block container_class %}n-auth{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-body p-4">
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next }}">
+            {% if form.non_field_errors %}
+            <div class="p-banner is-error mb-3" role="alert"><i class="bi bi-exclamation-circle-fill"></i><span>That email and password don't match a Dojo account.</span></div>
+            {% endif %}
+            <div class="mb-3">
+                <label class="form-label" for="id_username">Email</label>
+                <input type="email" name="username" id="id_username" class="form-control" value="{{ form.username.value|default:'' }}" autocomplete="email" autofocus required>
+            </div>
+            <div class="mb-2">
+                <label class="form-label" for="id_password">Password</label>
+                <input type="password" name="password" id="id_password" class="form-control" autocomplete="current-password" required>
+            </div>
+            <p class="small mb-3"><a href="{% url 'network_password_reset' %}">Forgotten your password?</a></p>
+            <button type="submit" class="btn btn-dark w-100">Sign in</button>
+        </form>
+    </div>
+</div>
+<p class="p-caption text-center mt-3">New to Dojo? <a href="{% url 'network_signup' %}{% if next %}?next={{ next|urlencode }}{% endif %}">Create an account</a></p>
+{% endblock %}

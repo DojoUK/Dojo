@@ -98,7 +98,7 @@
                 <tr>
                     <td class="ps-3 small">
                         <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <span class="fw-semibold">{{ candidate.member.name }}</span>
+                            <span class="fw-semibold">{{ candidate.member.register_name }}</span>
                             {% if candidate.member.medical_info and 'medical_info' in org.enabled_fields %}
                             <button type="button" class="badge bg-warning text-dark border-0 d-flex align-items-center gap-1"
                                     style="font-size:0.65rem;cursor:pointer;" data-bs-toggle="collapse"
@@ -119,14 +119,14 @@
                     </td>
                     <td class="small text-muted" data-label="Current grade">{{ candidate.current.stage.name|default:"—" }}</td>
                     <td data-label="Result">
-                        <select name="result_{{ candidate.pk }}" class="form-select form-select-sm" style="min-width:110px;" aria-label="Result for {{ candidate.member.name }}">
+                        <select name="result_{{ candidate.pk }}" class="form-select form-select-sm" style="min-width:110px;" aria-label="Result for {{ candidate.member.register_name }}">
                             {% for value, label in results %}
                             <option value="{{ value }}" {% if candidate.result == value %}selected{% endif %}>{{ label }}</option>
                             {% endfor %}
                         </select>
                     </td>
                     <td data-label="Grading for">
-                        <select name="stage_{{ candidate.pk }}" class="form-select form-select-sm" style="min-width:130px;" aria-label="Grade {{ candidate.member.name }} is going for">
+                        <select name="stage_{{ candidate.pk }}" class="form-select form-select-sm" style="min-width:130px;" aria-label="Grade {{ candidate.member.register_name }} is going for">
                             <option value="">—</option>
                             {% for stage in stages %}
                             <option value="{{ stage.pk }}" {% if candidate.target_stage_id == stage.pk %}selected{% endif %}>{{ stage.name }}</option>
@@ -134,11 +134,11 @@
                         </select>
                     </td>
                     <td data-label="Notes">
-                        <input type="text" name="notes_{{ candidate.pk }}" value="{{ candidate.notes }}" class="form-control form-control-sm" placeholder="Examiner's notes" aria-label="Notes for {{ candidate.member.name }}">
+                        <input type="text" name="notes_{{ candidate.pk }}" value="{{ candidate.notes }}" class="form-control form-control-sm" placeholder="Examiner's notes" aria-label="Notes for {{ candidate.member.register_name }}">
                     </td>
                     <td class="text-end pe-3 remove-cell">
                         {% if not candidate.progression_id %}
-                        <button type="submit" form="remove-{{ candidate.pk }}" class="btn btn-sm btn-outline-secondary" title="Remove {{ candidate.member.name }}"
+                        <button type="submit" form="remove-{{ candidate.pk }}" class="btn btn-sm btn-outline-secondary" title="Remove {{ candidate.member.register_name }}"
                                 onclick="return confirm('Remove {{ candidate.member.name|escapejs }} from this grading?')">
                             <i class="bi bi-x-lg"></i>
                         </button>
@@ -183,7 +183,7 @@
                     <td class="ps-3">
                         <input class="form-check-input" type="checkbox" name="member_ids" value="{{ row.member.pk }}" id="add-{{ row.member.pk }}">
                     </td>
-                    <td class="small"><label for="add-{{ row.member.pk }}" class="mb-0">{{ row.member.name }}</label></td>
+                    <td class="small"><label for="add-{{ row.member.pk }}" class="mb-0">{{ row.member.register_name }}</label></td>
                     <td class="small text-muted">{{ row.current.stage.name|default:"Not graded" }}</td>
                     <td class="small">{{ row.attended_since }}</td>
                 </tr>

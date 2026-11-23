@@ -1,0 +1,29 @@
+<form method="post" class="mt-2">
+    {% csrf_token %}
+    {% if record %}<input type="hidden" name="pk" value="{{ record.pk }}">{% endif %}
+    {% if welcome %}<input type="hidden" name="welcome" value="1">{% endif %}
+    {% with prefix=record.pk|default:'new' %}
+    <div class="row g-2">
+        <div class="col-sm-6">
+            <label class="form-label small fw-semibold" for="g-disc-{{ prefix }}">Martial art</label>
+            <select name="discipline" id="g-disc-{{ prefix }}" class="form-select" required>
+                <option value="">Choose…</option>
+                {% for key, label in discipline_choices %}<option value="{{ key }}" {% if record.discipline == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="col-sm-6">
+            <label class="form-label small fw-semibold" for="g-grade-{{ prefix }}">Grade</label>
+            <input type="text" name="grade" id="g-grade-{{ prefix }}" class="form-control" maxlength="255" value="{{ record.grade|default:'' }}" placeholder="e.g. Blue belt, 2 stripes" required>
+        </div>
+        <div class="col-sm-6">
+            <label class="form-label small fw-semibold" for="g-date-{{ prefix }}">Date awarded</label>
+            <input type="date" name="achieved_date" id="g-date-{{ prefix }}" class="form-control" value="{{ record.achieved_date|date:'Y-m-d' }}">
+        </div>
+        <div class="col-sm-6">
+            <label class="form-label small fw-semibold" for="g-by-{{ prefix }}">Awarded by</label>
+            <input type="text" name="awarded_by" id="g-by-{{ prefix }}" class="form-control" maxlength="255" value="{{ record.awarded_by|default:'' }}" placeholder="Club or association">
+        </div>
+    </div>
+    <button type="submit" class="btn btn-dark btn-sm mt-2">{% if record %}Save changes{% else %}Add grade{% endif %}</button>
+    {% endwith %}
+</form>

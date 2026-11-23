@@ -1,0 +1,10 @@
+{% extends 'network/base.html' %}
+{% block title %}Link expired{% endblock %}
+{% block page_title %}That link didn't work{% endblock %}
+{% block wrap_class %}n-auth{% endblock %}
+{% block container_class %}n-auth{% endblock %}
+{% block content %}
+<div class="card"><div class="p-empty"><i class="bi bi-link-45deg text-muted"></i>
+<p class="mb-3">The link may have expired or been used for an old email address. Sign in and we'll send you a new one.</p>
+<a href="{% url 'network_home' %}" class="btn btn-dark">Go to my account</a></div></div>
+{% endblock %}

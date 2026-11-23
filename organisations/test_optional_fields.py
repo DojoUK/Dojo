@@ -8,6 +8,7 @@ from classes.models import Class, ClassMember, Session
 from members.models import Guardian, Member, MemberApplication
 from organisations.models import Organisation, OrganisationMember
 from organisations.optional_fields import OPTIONAL_FIELDS_BY_KEY, effective_fields
+from organisations.test_location import SETUP_LOCATION
 
 ALL_ON = {key: True for key in OPTIONAL_FIELDS_BY_KEY}
 
@@ -265,7 +266,7 @@ class FieldSettingsTests(FieldTestBase):
 
 class SetupWizardFieldsTests(TestCase):
     def test_setup_stores_chosen_fields_and_labels(self):
-        self.client.post(reverse('setup'), {
+        self.client.post(reverse('setup'), {**SETUP_LOCATION, 
             'org_name': 'New Club', 'username': 'boss',
             'password': 'a-long-password', 'password_confirm': 'a-long-password',
             'optional_fields': ['phone', 'licence'], 'licence_label': 'BJA licence',

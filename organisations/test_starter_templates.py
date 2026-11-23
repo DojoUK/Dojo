@@ -7,6 +7,7 @@ from django.urls import reverse
 from organisations import starter
 from organisations.models import Organisation
 from progression.models import ProgressionStage, ProgressionSystem, SyllabusItem, SyllabusSection
+from organisations.test_location import SETUP_LOCATION
 
 
 class BjjTemplateTests(TestCase):
@@ -195,7 +196,7 @@ class KarateAndTaekwondoTemplateTests(TestCase):
 
 class SetupWizardTemplateTests(TestCase):
     def post(self, **extra):
-        return self.client.post(reverse('setup'), {
+        return self.client.post(reverse('setup'), {**SETUP_LOCATION, 
             'org_name': 'Jits Club', 'username': 'boss', 'password': 'We@vers3!x', 'password_confirm': 'We@vers3!x',
             **extra,
         })
@@ -212,3 +213,24 @@ class SetupWizardTemplateTests(TestCase):
 
     def test_setup_page_offers_the_template(self):
         self.assertContains(self.client.get(reverse('setup')), 'Brazilian Jiu-Jitsu')
+
+
+class TemplateSummaryTests(TestCase):
+    def summary(self, key):
+        return {row['key']: row for row in next(t for t in starter.available() if t['key'] == key)['summary']}
+
+    def test_judo_summary_counts_what_it_adds(self):
+        rows = self.summary('judo-bja')
+        self.assertEqual([r['included'] for r in rows.values()], [True, True, False])
+        self.assertIn('4 grading schemes with 45 grades', rows['progression']['text'])
+        self.assertIn('24 checklists with 324 techniques, each linked to the 24 grades', rows['syllabus']['text'])
+
+    def test_bjj_has_no_syllabus(self):
+        rows = self.summary('bjj')
+        self.assertIn('2 grading schemes with 96 grades: BJJ Kids Belts, BJJ Adult Belts', rows['progression']['text'])
+        self.assertFalse(rows['syllabus']['included'])
+
+    def test_setup_shows_the_summary_first_and_the_full_list_folded(self):
+        page = self.client.get(reverse('setup')).content.decode()
+        self.assertIn("What you'll get", page)
+        self.assertIn('<details', page)

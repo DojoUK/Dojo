@@ -1,6 +1,7 @@
 from django.urls import include, path
 
 from mailer import views as mailer_views
+from network import views as network_views
 
 from dojo.csv_import import ImportView
 
@@ -36,6 +37,11 @@ urlpatterns = [
     path('calendar/', views.CalendarView.as_view(), name='org_calendar'),
     path('calendar/events/', views.CalendarEventsView.as_view(), name='org_calendar_events'),
     path('finance/', views.FinancialReportView.as_view(), name='org_finance'),
+    path('reviews/', network_views.StaffReviewsView.as_view(), name='org_reviews'),
     path('account/', views.AccountView.as_view(), name='account_settings'),
+    # Older links to the separate pages open the matching My settings tab.
+    path('account/appearance/', views.AccountSectionRedirect.as_view(section='calendar'), name='account_appearance'),
+    path('account/security/', views.AccountSectionRedirect.as_view(section='security'), name='account_security'),
+    path('account/holidays/', views.AccountSectionRedirect.as_view(section='holidays'), name='account_holidays'),
     path('account/password/', views.AccountPasswordChangeView.as_view(), name='account_password_change'),
 ]

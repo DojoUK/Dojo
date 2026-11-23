@@ -18,6 +18,7 @@ from mailer.models import EmailSettings
 from members.emails import send_welcome_email
 from members.models import Member
 from organisations.models import Organisation, OrganisationMember
+from organisations.test_location import SETUP_LOCATION
 
 CLUB_BACKEND = 'mailer.backends.ClubBackend'
 LOCMEM = 'django.core.mail.backends.locmem.EmailBackend'
@@ -288,7 +289,7 @@ class DkimTests(MailerTestCase):
 
 class SetupWizardTests(TestCase):
     def post(self, **extra):
-        return self.client.post(reverse('setup'), {
+        return self.client.post(reverse('setup'), {**SETUP_LOCATION, 
             'org_name': 'New Club', 'username': 'founder', 'admin_email': 'f@example.com',
             'password': 'a-long-password', 'password_confirm': 'a-long-password', **extra,
         })

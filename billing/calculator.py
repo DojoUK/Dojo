@@ -4,6 +4,7 @@ Invoice amount calculator.
 Given a member and a billing context (policy + period), returns the gross amount,
 total discount, net amount, and a human-readable breakdown.
 """
+from datetime import date
 from decimal import Decimal
 
 
@@ -109,11 +110,31 @@ def calculate_invoice_amount(member, policy, term=None, year=None, month=None):
 
     # ── 2. Apply member-specific discounts ────────────────────────────────────
     from billing.models import MemberDiscount
+    from django.db.models import Q
+    # Discounts that last a set time stop once the period being billed starts after they end.
+    if term:
+        period_start = term.start_date
+    elif year and month:
+        period_start = date(year, month, 1)
+    else:
+        period_start = date.today()
     for md in MemberDiscount.objects.filter(
         member__in=people, is_active=True, discount__policy=policy
-    ).select_related('discount'):
+    ).filter(Q(expires_on__isnull=True) | Q(expires_on__gte=period_start)).select_related('discount'):
         amount_off = md.discount.amount_off(gross)
         discount_lines.append({'label': md.discount.name, 'amount': amount_off})
+
+    # ── 2b. Auto-apply discounts: everyone billed on the plan gets them, once per invoice, unless
+    # they already have it as a member discount above, or staff have exempted them (an inactive
+    # MemberDiscount). One that lasts a set time runs from when the member joined the club.
+    from billing.models import PolicyDiscount
+    from billing.promos import _add_months
+    has_row = set(MemberDiscount.objects.filter(member=member, discount__policy=policy).values_list('discount_id', flat=True))
+    for discount in PolicyDiscount.objects.filter(policy=policy, auto_apply=True).exclude(pk__in=has_row):
+        if discount.duration_months and member.joined_date \
+                and _add_months(member.joined_date, discount.duration_months) < period_start:
+            continue
+        discount_lines.append({'label': discount.name, 'amount': discount.amount_off(gross)})
 
     # ── 3. Apply family group discount ────────────────────────────────────────
     family_membership = member.family_memberships.select_related('family_group').first()

@@ -69,7 +69,7 @@ class AccountPageTests(StaffContactsTestBase):
         return self.client.post(self.url('account_settings', org), {'action': 'update_emergency_contacts', **data})
 
     def test_staff_edit_their_own_contacts(self):
-        self.assertContains(self.client.get(self.url('account_settings')), 'My emergency contacts')
+        self.assertContains(self.client.get(self.url('account_settings')), 'Emergency contacts')
         self.save(emergency_contact_name='Mum', emergency_contact_phone='07700 900111',
                   emergency_contact_2_name='Dad', emergency_contact_2_phone='07700 900222')
         self.coach.refresh_from_db()
@@ -80,7 +80,7 @@ class AccountPageTests(StaffContactsTestBase):
 
     def test_switched_off_contacts_are_hidden_and_kept(self):
         self.switch_off('staff_emergency_contact', 'staff_emergency_contact_2')
-        self.assertNotContains(self.client.get(self.url('account_settings')), 'My emergency contacts')
+        self.assertNotContains(self.client.get(self.url('account_settings')), 'Emergency contacts')
         self.save(emergency_contact_name='Changed', emergency_contact_2_name='Changed')
         self.coach.refresh_from_db()
         self.assertEqual(self.coach.emergency_contact_name, 'First Contact')

@@ -1,0 +1,10 @@
+{% extends 'network/base.html' %}
+{% block title %}Email confirmed{% endblock %}
+{% block page_title %}Email confirmed{% endblock %}
+{% block wrap_class %}n-auth{% endblock %}
+{% block container_class %}n-auth{% endblock %}
+{% block content %}
+<div class="card"><div class="p-empty"><i class="bi bi-envelope-check-fill p-done"></i>
+<p class="mb-3">Thanks, {{ account.email }} is confirmed. Sign in to see your clubs.</p>
+<a href="{% url 'network_login' %}" class="btn btn-dark">Sign in</a></div></div>
+{% endblock %}

@@ -1,0 +1,288 @@
+{% extends 'network/base.html' %}
+{% block title %}Find a martial arts club · Dojo{% endblock %}
+{% block page_title %}Find a club{% endblock %}
+{% block bar_title %}Find a club{% endblock %}
+{% block page_subtitle %}<p class="p-subtitle">Martial arts clubs on Dojo near you</p>{% endblock %}
+{% block extra_head %}
+<style>
+.n-search { display: flex; gap: .5rem; flex-wrap: wrap; }
+.n-search .form-control { flex: 1 1 14rem; min-width: 0; }
+.n-chips { display: flex; gap: .375rem; overflow-x: auto; scrollbar-width: none; padding: 2px 0; }
+.n-chips::-webkit-scrollbar { display: none; }
+@media (min-width: 768px) { .n-chips { flex-wrap: wrap; overflow: visible; } }   /* room to show them all */
+.n-chip {
+    flex: 0 0 auto; border: 0; border-radius: 999px; padding: .375rem .875rem; font-size: .875rem; font-weight: 500;
+    background: var(--p-fill); color: var(--p-label); transition: background-color .15s ease, transform .1s ease-out;
+}
+.n-chip:active { transform: scale(.96); transition-duration: 0s; }
+.n-chip[aria-pressed="true"] { background: var(--p-accent); color: var(--p-on-accent); font-weight: 600; }
+.n-results { display: grid; gap: 1.25rem; }
+#n-map { height: 18rem; border-radius: var(--p-radius); box-shadow: var(--p-shadow); background: var(--p-fill); }
+@media (min-width: 992px) {
+    .n-results { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); align-items: start; }
+    .n-results.no-map { grid-template-columns: minmax(0, 1fr); }
+    #n-map { position: sticky; top: 4.5rem; height: calc(100vh - 6.5rem); min-height: 24rem; order: 2; }
+}
+.n-club { display: flex; gap: .875rem; align-items: flex-start; padding: .9rem 1.25rem; position: relative; }
+.n-club + .n-club::before { content: ""; position: absolute; top: 0; left: 1.25rem; right: 0; border-top: 1px solid var(--p-separator); }
+.n-club.is-hover { background: var(--p-fill); }
+.n-club-logo { width: 2.75rem; height: 2.75rem; border-radius: 10px; object-fit: contain; background: var(--p-fill); flex: 0 0 auto; }
+.n-club-main { flex: 1 1 auto; min-width: 0; }
+.n-club-name { font-weight: 600; letter-spacing: -0.01em; color: var(--p-label) !important; }
+.n-club-meta { color: var(--p-label-2); font-size: .875rem; }
+.n-club-tags { display: flex; flex-wrap: wrap; gap: .25rem; margin-top: .375rem; }
+.n-club-tags span { font-size: .75rem; font-weight: 600; padding: .15em .6em; border-radius: 999px; background: var(--p-tint-fill); color: var(--p-tint); }
+.n-miles { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+.n-heart { border: 0; background: none; padding: .25rem; font-size: 1.25rem; color: var(--p-label-3); line-height: 1; transition: transform .1s ease-out; }
+.n-heart:active { transform: scale(.85); transition-duration: 0s; }
+.n-heart[aria-pressed="true"] { color: #ff2d55; }
+.n-status { font-size: .75rem; font-weight: 600; color: var(--p-green); }
+</style>
+{% endblock %}
+{% block content %}
+<div class="card mb-3">
+    <div class="card-body">
+        <form class="n-search" id="n-search-form" role="search">
+            {% if maps_key %}
+            <input type="search" class="form-control" id="n-where" placeholder="Postcode or town" aria-label="Postcode or town" autocomplete="postal-code">
+            <button type="submit" class="btn btn-dark">Search</button>
+            {% endif %}
+            <button type="button" class="btn btn-outline-secondary" id="n-locate"><i class="bi bi-cursor-fill me-1"></i>Use my location</button>
+            <select class="form-select" id="n-radius" aria-label="How far away" style="flex:0 0 auto;width:auto;">
+                {% for r in radius_choices %}<option value="{{ r }}" {% if r == default_radius %}selected{% endif %}>Within {{ r }} miles</option>{% endfor %}
+            </select>
+            <select class="form-select" id="n-sort" aria-label="Sort clubs by" style="flex:0 0 auto;width:auto;">
+                {% for key, label in sort_choices %}<option value="{{ key }}" {% if key == default_sort %}selected{% endif %}>Sort: {{ label }}</option>{% endfor %}
+            </select>
+        </form>
+        {% if discipline_choices|length > 1 %}
+        <div class="n-chips mt-3" id="n-disciplines" role="group" aria-label="Martial art">
+            <button type="button" class="n-chip" data-discipline="" aria-pressed="true">All</button>
+            {% for key, label in discipline_choices %}<button type="button" class="n-chip" data-discipline="{{ key }}" aria-pressed="false">{{ label }}</button>{% endfor %}
+        </div>
+        {% endif %}
+        <p class="p-caption mb-0 mt-2" id="n-where-status" aria-live="polite">{% if maps_key %}Search by postcode or town, or use your location.{% else %}Use your location to see clubs nearest you.{% endif %}</p>
+    </div>
+</div>
+
+<div class="n-results{% if not maps_key %} no-map{% endif %}">
+    {% if maps_key %}<div id="n-map" role="region" aria-label="Map of clubs"></div>{% endif %}
+    <div>
+        <div class="p-section"><h2 id="n-count">Clubs</h2></div>
+        <div class="card" id="n-list" aria-live="polite"></div>
+    </div>
+</div>
+
+{{ maps_key|json_script:"n-maps-key" }}
+<script>
+(function () {
+    var signedIn = {{ user.is_authenticated|yesno:"true,false" }};
+    var loginUrl = '{% url "network_login" %}?next={{ request.path|urlencode }}';
+    var csrf = '{{ csrf_token }}';
+    var key = JSON.parse(document.getElementById('n-maps-key').textContent);
+    var state = {lat: null, lng: null, label: '', radius: document.getElementById('n-radius').value, discipline: '',
+                 sort: document.getElementById('n-sort').value};
+    var list = document.getElementById('n-list'), count = document.getElementById('n-count');
+    var status = document.getElementById('n-where-status');
+    var map = null, markers = {}, here = null, info = null, geocoder = null, lastClubs = [];
+
+    function el(tag, cls, text) {
+        var e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (text !== undefined) e.textContent = text;
+        return e;
+    }
+
+    // "★ 4.5 (12 reviews)", or "No reviews yet".
+    function rating(club, cls) {
+        var r = el('div', cls);
+        if (club.rating === null) { r.textContent = 'No reviews yet'; r.classList.add('text-muted'); return r; }
+        var star = el('i', 'bi bi-star-fill'); star.setAttribute('aria-hidden', 'true'); star.style.color = '#f5a623';
+        r.appendChild(star);
+        r.appendChild(document.createTextNode(' ' + club.rating.toFixed(1) + ' (' + club.reviews + ' review' + (club.reviews === 1 ? '' : 's') + ')'));
+        r.setAttribute('aria-label', 'Rated ' + club.rating.toFixed(1) + ' out of 5 from ' + club.reviews + ' review' + (club.reviews === 1 ? '' : 's'));
+        return r;
+    }
+
+    function search() {
+        var q = new URLSearchParams({radius: state.radius, discipline: state.discipline, sort: state.sort});
+        if (state.lat !== null) { q.set('lat', state.lat); q.set('lng', state.lng); }
+        list.setAttribute('aria-busy', 'true');
+        fetch('{% url "network_search" %}?' + q.toString(), {headers: {'Accept': 'application/json'}})
+            .then(function (r) { return r.json(); })
+            .then(function (data) { lastClubs = data.clubs; render(data); })
+            .finally(function () { list.removeAttribute('aria-busy'); });
+    }
+
+    function render(data) {
+        list.textContent = '';
+        var clubs = data.clubs;
+        count.textContent = data.searched
+            ? clubs.length + ' club' + (clubs.length === 1 ? '' : 's') + ' within ' + data.radius + ' miles'
+            : clubs.length + ' club' + (clubs.length === 1 ? '' : 's') + ' on Dojo';
+        if (!clubs.length) {
+            var empty = el('div', 'p-empty');
+            empty.appendChild(el('i', 'bi bi-geo text-muted'));
+            empty.appendChild(el('p', 'p-row-sub mb-0', data.searched
+                ? 'No clubs within ' + data.radius + ' miles' + (state.discipline ? ' teach that yet' : '') + '. Try a wider distance.'
+                : 'No clubs match that yet.'));
+            list.appendChild(empty);
+        }
+        clubs.forEach(function (club) {
+            var row = el('div', 'n-club');
+            row.dataset.slug = club.slug;
+            if (club.logo) { var img = el('img', 'n-club-logo'); img.src = club.logo; img.alt = ''; row.appendChild(img); }
+            var main = el('div', 'n-club-main');
+            var name = el('a', 'n-club-name', club.name); name.href = club.url;
+            main.appendChild(name);
+            main.appendChild(rating(club, 'n-club-meta'));
+            if (club.offer) {
+                var offer = el('div', 'n-club-meta text-success');
+                var gift = el('i', 'bi bi-gift-fill me-1'); gift.setAttribute('aria-hidden', 'true');
+                offer.appendChild(gift);
+                offer.appendChild(document.createTextNode('Intro offer: ' + club.offer));
+                main.appendChild(offer);
+            }
+            if (club.status) main.appendChild(el('div', 'n-status', club.status === 'member' ? 'You’re a member' : 'Application sent'));
+            main.appendChild(el('div', 'n-club-meta', club.address));
+            var tags = el('div', 'n-club-tags');
+            club.disciplines.forEach(function (d) { tags.appendChild(el('span', '', d)); });
+            main.appendChild(tags);
+            row.appendChild(main);
+            var end = el('div', 'd-flex flex-column align-items-end gap-1');
+            if (club.miles !== null) end.appendChild(el('span', 'n-miles', club.miles + ' mi'));
+            var heart = el('button', 'n-heart');
+            heart.type = 'button';
+            heart.setAttribute('aria-pressed', club.favourite ? 'true' : 'false');
+            heart.setAttribute('aria-label', (club.favourite ? 'Remove ' : 'Save ') + club.name + (club.favourite ? ' from' : ' to') + ' favourites');
+            heart.appendChild(el('i', 'bi bi-heart' + (club.favourite ? '-fill' : '')));
+            heart.addEventListener('click', function () { toggleFavourite(club, heart); });
+            end.appendChild(heart);
+            row.appendChild(end);
+            row.addEventListener('mouseenter', function () { highlight(club.slug, true); });
+            row.addEventListener('mouseleave', function () { highlight(club.slug, false); });
+            list.appendChild(row);
+        });
+        drawMap(clubs);
+    }
+
+    function toggleFavourite(club, heart) {
+        if (!signedIn) { window.location = loginUrl; return; }
+        fetch(club.url + 'favourite/', {method: 'POST', headers: {'X-CSRFToken': csrf, 'Accept': 'application/json'}})
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                club.favourite = data.favourite;
+                heart.setAttribute('aria-pressed', data.favourite ? 'true' : 'false');
+                heart.firstChild.className = 'bi bi-heart' + (data.favourite ? '-fill' : '');
+                status.textContent = club.name + (data.favourite ? ' saved to your favourites.' : ' removed from your favourites.');
+            });
+    }
+
+    function highlight(slug, on) {
+        var marker = markers[slug];
+        if (marker) marker.setAnimation(on ? google.maps.Animation.BOUNCE : null);
+    }
+
+    function drawMap(clubs) {
+        if (!map) return;
+        Object.keys(markers).forEach(function (s) { markers[s].setMap(null); });
+        markers = {};
+        var bounds = new google.maps.LatLngBounds();
+        clubs.forEach(function (club) {
+            var position = {lat: club.lat, lng: club.lng};
+            var marker = new google.maps.Marker({map: map, position: position, title: club.name});
+            marker.addListener('click', function () {
+                var box = el('div');
+                var a = el('a', 'fw-semibold', club.name); a.href = club.url;
+                box.appendChild(a);
+                box.appendChild(rating(club, 'small'));
+                if (club.miles !== null) box.appendChild(el('div', 'small', club.miles + ' miles away'));
+                box.appendChild(el('div', 'small text-muted', club.disciplines.join(' · ')));
+                info.setContent(box);
+                info.open({map: map, anchor: marker});
+                var row = list.querySelector('[data-slug="' + club.slug + '"]');
+                if (row) {
+                    row.scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'nearest'});
+                    row.classList.add('is-hover');
+                    setTimeout(function () { row.classList.remove('is-hover'); }, 1200);
+                }
+            });
+            markers[club.slug] = marker;
+            bounds.extend(position);
+        });
+        if (here) { here.setMap(null); here = null; }
+        if (state.lat !== null) {
+            here = new google.maps.Marker({
+                map: map, position: {lat: state.lat, lng: state.lng}, title: state.label || 'You',
+                icon: {path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#2563EB', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 3},
+                zIndex: 999,
+            });
+            bounds.extend(here.getPosition());
+        }
+        if (!bounds.isEmpty()) {
+            map.fitBounds(bounds, 48);
+            google.maps.event.addListenerOnce(map, 'idle', function () { if (map.getZoom() > 14) map.setZoom(14); });
+        }
+    }
+
+    function setPoint(lat, lng, label) {
+        state.lat = lat; state.lng = lng; state.label = label;
+        status.textContent = 'Showing clubs near ' + label + '.';
+        search();
+    }
+
+    document.getElementById('n-search-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var where = document.getElementById('n-where');
+        if (!where || !where.value.trim() || !geocoder) return;
+        status.textContent = 'Finding ' + where.value.trim() + '…';
+        geocoder.geocode({address: where.value.trim(), region: 'gb'}, function (results, result) {
+            if (result === 'OK' && results[0]) {
+                var p = results[0].geometry.location;
+                setPoint(p.lat(), p.lng(), results[0].formatted_address);
+            } else {
+                status.textContent = 'We couldn’t find "' + where.value.trim() + '". Try a postcode.';
+            }
+        });
+    });
+    document.getElementById('n-locate').addEventListener('click', function () {
+        if (!navigator.geolocation) { status.textContent = 'Your browser can’t share your location.'; return; }
+        status.textContent = 'Finding your location…';
+        navigator.geolocation.getCurrentPosition(function (pos) {
+            setPoint(pos.coords.latitude, pos.coords.longitude, 'your location');
+        }, function () {
+            status.textContent = 'We couldn’t get your location. Check your browser lets this site use it' + (key ? ', or search by postcode.' : '.');
+        }, {enableHighAccuracy: false, timeout: 10000, maximumAge: 300000});
+    });
+    document.getElementById('n-radius').addEventListener('change', function (e) { state.radius = e.target.value; search(); });
+    document.getElementById('n-sort').addEventListener('change', function (e) {
+        state.sort = e.target.value;
+        if (state.sort === 'distance' && state.lat === null) status.textContent = 'Search a postcode or town, or use your location, to sort by distance.';
+        search();
+    });
+    document.querySelectorAll('#n-disciplines .n-chip').forEach(function (chip) {
+        chip.addEventListener('click', function () {
+            document.querySelectorAll('#n-disciplines .n-chip').forEach(function (c) { c.setAttribute('aria-pressed', c === chip ? 'true' : 'false'); });
+            state.discipline = chip.dataset.discipline;
+            search();
+        });
+    });
+
+    window.dojoFinderMap = function () {
+        map = new google.maps.Map(document.getElementById('n-map'), {
+            center: {lat: 54.2, lng: -2.5}, zoom: 5, streetViewControl: false, mapTypeControl: false, fullscreenControl: false,
+        });
+        info = new google.maps.InfoWindow();
+        geocoder = new google.maps.Geocoder();
+        drawMap(lastClubs);
+    };
+    if (key) {
+        var s = document.createElement('script');
+        s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(key) + '&callback=dojoFinderMap&loading=async';
+        s.async = true;
+        document.head.appendChild(s);
+    }
+    search();
+})();
+</script>
+{% endblock %}

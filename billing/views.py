@@ -872,12 +872,31 @@ class PolicyDiscountCreateView(BillingManagerMixin, View):
             messages.error(request, f'Invalid discount value: {"; ".join(e.messages) if hasattr(e, "messages") else "not a valid number"}')
             return redirect('billing_policies', org_slug=self.org.slug)
 
+        from . import promos
+        code = promos.normalise(request.POST.get('code', ''))
+        if code and PolicyDiscount.objects.filter(policy__organisation=self.org, code=code).exists():
+            messages.error(request, f'Another discount already uses the code {code}.')
+            return redirect('billing_policies', org_slug=self.org.slug)
+
+        def number(name):
+            raw = request.POST.get(name, '').strip()
+            return int(raw) if raw.isdigit() and int(raw) > 0 else None
+        try:
+            valid_until = date.fromisoformat(request.POST['valid_until']) if request.POST.get('valid_until') else None
+        except ValueError:
+            valid_until = None
         PolicyDiscount.objects.create(
             policy=policy,
             name=name,
             discount_type=discount_type,
             value=value_val,
             auto_apply=auto_apply,
+            code=code,
+            new_members_only=bool(code) and request.POST.get('new_members_only') == '1',
+            valid_until=valid_until if code else None,
+            max_uses=number('max_uses') if code else None,
+            duration_months=min(number('duration_months') or 0, 120) or None,
+            show_publicly=bool(code) and request.POST.get('show_publicly') == '1',
         )
         messages.success(request, f'Discount "{name}" added to {policy.name}.')
         return redirect('billing_policies', org_slug=self.org.slug)
@@ -938,8 +957,24 @@ class MemberDiscountAddView(BillingManagerMixin, View):
         member = get_object_or_404(MemberModel, pk=member_pk, organisation=self.org)
         discount_id = request.POST.get('discount_id')
         discount = get_object_or_404(PolicyDiscount, pk=discount_id, policy__organisation=self.org)
-        MemberDiscount.objects.get_or_create(member=member, discount=discount)
+        from .promos import _add_months
+        expires = _add_months(date.today(), discount.duration_months) if discount.duration_months else None
+        md, created = MemberDiscount.objects.get_or_create(member=member, discount=discount, defaults={'expires_on': expires})
+        if not created and not md.is_active:
+            md.is_active = True
+            md.save(update_fields=['is_active'])
         messages.success(request, f'Discount "{discount.name}" applied to {member.name}.')
+        return redirect_to_member(self.org.slug, member_pk, 'billing')
+
+
+class MemberDiscountExemptView(BillingManagerMixin, View):
+    """Stop an auto-apply discount applying to one member (an inactive MemberDiscount records it)."""
+    def post(self, request, org_slug, member_pk, discount_pk):
+        from members.models import Member as MemberModel
+        member = get_object_or_404(MemberModel, pk=member_pk, organisation=self.org)
+        discount = get_object_or_404(PolicyDiscount, pk=discount_pk, policy__organisation=self.org, auto_apply=True)
+        MemberDiscount.objects.update_or_create(member=member, discount=discount, defaults={'is_active': False})
+        messages.success(request, f'"{discount.name}" won\'t be applied to {member.name}.')
         return redirect_to_member(self.org.slug, member_pk, 'billing')
 
 
@@ -948,8 +983,15 @@ class MemberDiscountRemoveView(BillingManagerMixin, View):
         md = get_object_or_404(MemberDiscount, pk=pk, member__organisation=self.org)
         member_pk = md.member_id
         name = md.discount.name
+        exempt, auto = not md.is_active, md.discount.auto_apply
         md.delete()
-        messages.success(request, f'Discount "{name}" removed.')
+        if exempt:
+            messages.success(request, f'"{name}" applies to them again.')
+        elif auto:
+            messages.success(request, f'Discount "{name}" removed. It\'s an auto-apply discount, so it still applies while '
+                                      f'they\'re on the plan; use "Don\'t apply" to exempt them.')
+        else:
+            messages.success(request, f'Discount "{name}" removed.')
         return redirect_to_member(self.org.slug, member_pk, 'billing')
 
 

@@ -21,6 +21,12 @@
     <div class="col-lg-8">
         <form method="post" novalidate>
             {% csrf_token %}
+            {% if form.account_managed %}
+            <div class="alert alert-info d-flex gap-2 align-items-start small">
+                <i class="bi bi-person-check-fill mt-1"></i>
+                <div>{{ member.name }} keeps their name, preferred name, pronouns, email, date of birth, phone, address, emergency contacts and medical information up to date in their Dojo account, so those are shown here but can't be changed. Ask them to update My details if anything is wrong.</div>
+            </div>
+            {% endif %}
 
             <div class="card border-0 shadow-sm mb-3">
                 <div class="card-header bg-white border-bottom py-3">
@@ -28,11 +34,26 @@
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
-                        <div class="col-12">
-                            <label class="form-label fw-semibold small">Full name <span class="text-danger">*</span></label>
-                            {{ form.name }}
-                            {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>{% endif %}
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold small" for="{{ form.first_name.id_for_label }}">First name <span class="text-danger">*</span></label>
+                            {{ form.first_name }}
+                            {% if form.first_name.errors %}<div class="text-danger small mt-1">{{ form.first_name.errors.0 }}</div>{% endif %}
                         </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold small" for="{{ form.surname.id_for_label }}">Surname</label>
+                            {{ form.surname }}
+                            {% if form.surname.errors %}<div class="text-danger small mt-1">{{ form.surname.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold small" for="{{ form.preferred_name.id_for_label }}">Preferred name</label>
+                            {{ form.preferred_name }}
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold small" for="{{ form.pronouns.id_for_label }}">Pronouns</label>
+                            {{ form.pronouns }}
+                            <datalist id="pronounOptions"><option value="she/her"><option value="he/him"><option value="they/them"><option value="she/they"><option value="he/they"></datalist>
+                        </div>
+                        <div class="col-12"><div class="form-text mt-0">On classes and registers they show as {% if member %}<strong>{{ member.register_name }}</strong>: {% endif %}[preferred name, or first name] [surname] (pronouns).</div></div>
                         {% if 'date_of_birth' in form.fields %}
                         <div class="col-sm-6">
                             <label class="form-label fw-semibold small">Date of birth</label>
@@ -101,6 +122,13 @@
                             {% if form.address_line2.errors %}<div class="text-danger small mt-1">{{ form.address_line2.errors.0 }}</div>{% endif %}
                         </div>
                         {% endif %}
+                        {% for field in form %}{% if field.name == 'city' or field.name == 'county' or field.name == 'postcode' %}
+                        <div class="col-sm-4">
+                            <label class="form-label fw-semibold small" for="{{ field.id_for_label }}">{% if field.name == 'city' %}Town or city{% else %}{{ field.label }}{% endif %}</label>
+                            {{ field }}
+                            {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors.0 }}</div>{% endif %}
+                        </div>
+                        {% endif %}{% endfor %}
                         {% if 'medical_info' in form.fields %}
                         <div class="col-12">
                             <label class="form-label fw-semibold small">
@@ -160,6 +188,7 @@
                     {{ guardian_formset.management_form }}
                     {% for gform in guardian_formset %}
                     <div class="guardian-form {% if not forloop.first %}border-top pt-3 mt-3{% endif %}">
+                        {% if gform.account_managed %}<p class="small text-muted mb-2"><i class="bi bi-person-check me-1"></i>Their name, email and phone come from their Dojo account.</p>{% endif %}
                         <div class="row g-3">
                             <div class="col-sm-6">
                                 <label class="form-label fw-semibold small">Name</label>

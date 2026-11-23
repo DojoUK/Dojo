@@ -49,7 +49,7 @@
                 <div class="collapse" id="add-member-panel">
                     <div class="card-body border-bottom bg-light d-flex gap-2">
                         <select name="member_id" form="add-member-form" class="form-select form-select-sm" aria-label="Member to enrol">
-                            {% for m in available_members %}<option value="{{ m.pk }}">{{ m.name }}</option>{% endfor %}
+                            {% for m in available_members %}<option value="{{ m.pk }}">{{ m.register_name }}</option>{% endfor %}
                         </select>
                         <button type="submit" form="add-member-form" class="btn btn-sm btn-dark text-nowrap">Enrol</button>
                     </div>
@@ -74,7 +74,7 @@
                                 <td class="py-3">
                                     <div class="d-flex align-items-center gap-2 flex-wrap">
                                         <label class="form-check-label fw-semibold mb-0" for="m{{ cm.member.pk }}" style="cursor:pointer;">
-                                            {{ cm.member.name }}
+                                            {{ cm.member.register_name }}
                                         </label>
                                         {% if cm.is_former_member %}
                                         <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle" style="font-size:0.65rem;"
@@ -251,7 +251,7 @@
                     <div class="card-body border-bottom bg-light d-flex gap-2">
                         <select name="member_id" form="add-helper-form" class="form-select form-select-sm" aria-label="Member to add as a helper">
                             {% for m in available_helpers %}
-                            <option value="{{ m.pk }}">{{ m.name }}</option>
+                            <option value="{{ m.pk }}">{{ m.register_name }}</option>
                             {% endfor %}
                         </select>
                         <button type="submit" form="add-helper-form" class="btn btn-sm btn-dark text-nowrap">Add</button>
@@ -276,7 +276,7 @@
                                 <td class="py-3">
                                     <div class="d-flex align-items-center gap-2 flex-wrap">
                                         <label class="form-check-label fw-semibold mb-0" for="helper{{ helper.member.pk }}" style="cursor:pointer;">
-                                            {{ helper.member.name }}
+                                            {{ helper.member.register_name }}
                                         </label>
                                         {% include 'classes/_contacts_button.html' with contacts=helper.member.contacts prefix='hemg' pk=helper.member.pk %}
                                     </div>

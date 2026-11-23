@@ -38,6 +38,14 @@
                         <label class="form-label fw-semibold small">Options <span class="text-muted fw-normal">(one per line)</span></label>
                         <textarea name="options" class="form-control form-control-sm" rows="3" placeholder="Option 1&#10;Option 2"></textarea>
                     </div>
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="on_application" id="on-application">
+                            <label class="form-check-label small" for="on-application">
+                                Ask on the join form: people applying to join answer it, and the answer comes in with their application
+                            </label>
+                        </div>
+                    </div>
                     <div class="col-12" id="registers-row" style="display:none;">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="show_on_registers" id="show-on-registers">
@@ -65,6 +73,7 @@
                     <th class="ps-3 small fw-semibold">Field name</th>
                     <th class="small fw-semibold">Type</th>
                     <th class="small fw-semibold">Options</th>
+                    <th class="small fw-semibold">On join form</th>
                     <th class="small fw-semibold">On registers</th>
                     <th></th>
                 </tr>
@@ -76,6 +85,20 @@
                     <td class="small text-muted">{{ field.get_field_type_display }}</td>
                     <td class="small text-muted">
                         {% if field.options %}{{ field.options|join:", "|truncatechars:60 }}{% else %}—{% endif %}
+                    </td>
+                    <td class="small">
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="on_application">
+                            <input type="hidden" name="field_pk" value="{{ field.pk }}">
+                            <input type="hidden" name="value" value="{% if field.on_application %}0{% else %}1{% endif %}">
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" role="switch" id="app-{{ field.pk }}"
+                                       {% if field.on_application %}checked{% endif %} onchange="this.form.submit()"
+                                       aria-label="Ask {{ field.name }} on the join form">
+                            </div>
+                            <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">{% if field.on_application %}Stop asking{% else %}Ask{% endif %}</button></noscript>
+                        </form>
                     </td>
                     <td class="small">
                         {% if field.field_type == 'boolean' %}

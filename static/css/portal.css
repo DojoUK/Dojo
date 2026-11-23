@@ -111,6 +111,18 @@ body.portal {
 @media (min-width: 992px) { .p-wrap { padding-left: 1.5rem; padding-right: 1.5rem; } }
 .p-brand { display: flex; align-items: center; gap: .625rem; min-height: 2rem; }
 .p-brand-name { font-weight: 600; font-size: .9375rem; letter-spacing: -0.01em; opacity: .9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Top right of the header: back out to the Dojo network (My clubs / Find clubs). */
+.portal a.p-hero-link {
+    margin-left: auto; flex: 0 0 auto; display: inline-flex; align-items: center; gap: .375rem;
+    padding: .3125rem .8125rem; border-radius: 999px; font-size: .8125rem; font-weight: 600; letter-spacing: -0.005em;
+    color: var(--p-on-brand); text-decoration: none;
+    background: rgba(127, 127, 127, .28);
+    background: color-mix(in srgb, var(--p-on-brand) 16%, transparent);
+    transition: background-color .15s ease, transform .1s ease-out;
+}
+.portal a.p-hero-link:hover { background: color-mix(in srgb, var(--p-on-brand) 24%, transparent); text-decoration: none; }
+.portal a.p-hero-link:active { transform: scale(.96); transition-duration: 0s; }
+.portal a.p-hero-link:focus-visible { outline: 2px solid var(--p-on-brand); outline-offset: 2px; }
 /* The page title and, on the right of the same line, the family picker. */
 .p-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem 1rem; margin: 1.25rem 0 .25rem; }
 .p-title {
@@ -564,7 +576,7 @@ a.p-row .p-chevron { color: var(--p-label-3); font-size: .875rem; }
 }
 
 @media print {
-    .p-bar, .p-tabbar, .p-hero .p-family, .p-sheet, .p-scrim, button, form { display: none !important; }
+    .p-bar, .p-tabbar, .p-hero .p-family, .p-hero-link, .p-sheet, .p-scrim, button, form { display: none !important; }
     .p-hero { background: none !important; color: #000 !important; padding: 0 0 1rem; }
     body.portal { background: #fff; }
     .portal .card { box-shadow: none !important; border: 1px solid #ddd !important; }

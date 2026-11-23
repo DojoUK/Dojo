@@ -1,0 +1,88 @@
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="update_account">
+    <div class="row g-3 mb-3">
+        <div class="col-sm-6">
+            <label class="form-label small fw-semibold" for="acc-first">First name</label>
+            <input type="text" name="first_name" id="acc-first" value="{{ request.user.first_name }}" class="form-control" autocomplete="given-name">
+        </div>
+        <div class="col-sm-6">
+            <label class="form-label small fw-semibold" for="acc-last">Last name</label>
+            <input type="text" name="last_name" id="acc-last" value="{{ request.user.last_name }}" class="form-control" autocomplete="family-name">
+        </div>
+        <div class="col-sm-6">
+            <label class="form-label small fw-semibold" for="acc-email">Email</label>
+            <input type="email" name="email" id="acc-email" value="{{ request.user.email }}" class="form-control" required autocomplete="email">
+        </div>
+        <div class="col-sm-6">
+            <label class="form-label small fw-semibold" for="acc-username">Username</label>
+            <input type="text" id="acc-username" value="{{ request.user.username }}" class="form-control" disabled>
+            <div class="form-text">Ask an org admin if it needs changing.</div>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-dark btn-sm">Save details</button>
+</form>
+
+{% if org_membership %}{% if 'staff_emergency_contact' in org.enabled_fields or 'staff_emergency_contact_2' in org.enabled_fields %}
+<hr class="my-4">
+<h6 class="mb-1">Emergency contacts</h6>
+<p class="text-muted small">Who {{ org.name }} should contact if something happens to you at a session.</p>
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="update_emergency_contacts">
+    <div class="row g-3">
+        {% if 'staff_emergency_contact' in org.enabled_fields %}
+        <div class="col-sm-6">
+            <label class="form-label small fw-semibold" for="ec1-name">Contact name</label>
+            <input type="text" name="emergency_contact_name" id="ec1-name" value="{{ org_membership.emergency_contact_name }}" class="form-control">
+        </div>
+        <div class="col-sm-6">
+            <label class="form-label small fw-semibold" for="ec1-phone">Contact phone</label>
+            <input type="tel" name="emergency_contact_phone" id="ec1-phone" value="{{ org_membership.emergency_contact_phone }}" class="form-control">
+        </div>
+        {% endif %}
+        {% if 'staff_emergency_contact_2' in org.enabled_fields %}
+        <div class="col-sm-6">
+            <label class="form-label small fw-semibold" for="ec2-name">Second contact name</label>
+            <input type="text" name="emergency_contact_2_name" id="ec2-name" value="{{ org_membership.emergency_contact_2_name }}" class="form-control">
+        </div>
+        <div class="col-sm-6">
+            <label class="form-label small fw-semibold" for="ec2-phone">Second contact phone</label>
+            <input type="tel" name="emergency_contact_2_phone" id="ec2-phone" value="{{ org_membership.emergency_contact_2_phone }}" class="form-control">
+        </div>
+        {% endif %}
+    </div>
+    <button type="submit" class="btn btn-dark btn-sm mt-3">Save contacts</button>
+</form>
+{% endif %}{% endif %}
+
+{% if org_membership.role == 'org_admin' %}
+<hr class="my-4" id="emails">
+<h6 class="mb-1">Emails</h6>
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="update_emails">
+    <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" role="switch" name="weekly_summary" value="1" id="weekly-summary" {% if org_membership.weekly_summary %}checked{% endif %} onchange="this.form.submit()">
+        <label class="form-check-label small fw-semibold" for="weekly-summary">Weekly club summary</label>
+    </div>
+    <div class="form-text mt-0">Monday mornings: last week's sessions and attendance, members, money, and who to follow up, with the Not seen lately list attached.</div>
+    <noscript><button type="submit" class="btn btn-sm btn-outline-secondary mt-1">Save</button></noscript>
+</form>
+{% endif %}
+
+<hr class="my-4">
+<h6 class="mb-2">Your organisations</h6>
+<div class="list-group">
+    {% for m in memberships %}
+    <div class="list-group-item py-2 d-flex justify-content-between align-items-center">
+        <div>
+            <div class="fw-semibold small">{{ m.organisation.name }}</div>
+            <div class="text-muted small">{{ m.get_role_display }}</div>
+        </div>
+        {% if m.organisation == org %}<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Current</span>{% endif %}
+    </div>
+    {% empty %}
+    <div class="list-group-item py-2 text-muted small">You aren't on any club's staff list.</div>
+    {% endfor %}
+</div>

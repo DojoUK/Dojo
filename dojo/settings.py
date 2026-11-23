@@ -78,6 +78,7 @@ INSTALLED_APPS = [
     'accounts',
     'mailer',
     'jobs',
+    'network',
     'django_htmx',
     'auditlog',
 ]
@@ -199,3 +200,10 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'Dojo <noreply@example
 STRIPE_PUBLIC_KEY = os.environ.get('STRIPE_PUBLIC_KEY', '')
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
+
+# Dojo club network. A Google Maps key (Maps JavaScript and Geocoding APIs) shows the
+# club finder's map and turns addresses into map positions; without one the finder lists clubs
+# by distance from the member's device location and clubs type in their coordinates.
+GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', '')
+# Let anyone register a new club on this installation (otherwise only superusers can, at /setup/).
+DOJO_OPEN_CLUB_REGISTRATION = os.environ.get('DOJO_OPEN_CLUB_REGISTRATION', 'False') == 'True'

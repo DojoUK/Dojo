@@ -1,287 +1,40 @@
 {% extends 'org/base.html' %}
 
-{% block title %}My account{% endblock %}
-{% block page_title %}My account{% endblock %}
-{% block page_subtitle %}Manage your own name, email, and password{% endblock %}
+{% block title %}My settings{% endblock %}
+{% block page_title %}My settings{% endblock %}
 
 {% block main_content %}
-<div class="row g-4">
+<style>
+.settings-section-body { max-width: 780px; }
+.settings-tabs { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+.settings-tabs .nav-link { white-space: nowrap; color: var(--dojo-muted); }
+.settings-tabs .nav-link.active { color: var(--dojo-text); font-weight: 600; }
+</style>
 
-    <div class="col-12" style="max-width: 860px;">
-
-        {# Your details #}
-        <div class="card mb-4">
-            <div class="card-header bg-white border-bottom py-3">
-                <h6 class="mb-0">Your details</h6>
-            </div>
-            <div class="card-body">
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="update_account">
-                    <div class="row g-3 mb-3">
-                        <div class="col-sm-6">
-                            <label class="form-label small fw-semibold">First name</label>
-                            <input type="text" name="first_name" value="{{ request.user.first_name }}" class="form-control" autofocus>
-                        </div>
-                        <div class="col-sm-6">
-                            <label class="form-label small fw-semibold">Last name</label>
-                            <input type="text" name="last_name" value="{{ request.user.last_name }}" class="form-control">
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold">Email</label>
-                        <input type="email" name="email" value="{{ request.user.email }}" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-semibold">Username</label>
-                        <input type="text" value="{{ request.user.username }}" class="form-control" disabled>
-                        <div class="form-text">Your username can't be changed here — ask an org admin if you need it updated.</div>
-                    </div>
-                    <button type="submit" class="btn btn-dark btn-sm">Save changes</button>
-                </form>
+{# Laid out like Organisation settings: one section at a time, picked from tabs (AccountView.SECTIONS).
+   The URL's #section opens that tab, e.g. after saving. #}
+<ul class="nav nav-tabs settings-tabs dojo-tabs" role="tablist">
+    {% for key, label, icon, help in account_sections %}
+    <li class="nav-item" role="presentation">
+        <button class="nav-link{% if forloop.first %} active{% endif %}" id="tab-{{ key }}" data-bs-toggle="tab"
+                data-bs-target="#pane-{{ key }}" data-section="{{ key }}" type="button" role="tab"
+                aria-controls="pane-{{ key }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+            <i class="bi bi-{{ icon }} me-1"></i>{{ label }}
+        </button>
+    </li>
+    {% endfor %}
+</ul>
+<div class="tab-content card border-0 shadow-sm rounded-top-0">
+    {% for key, label, icon, help in account_sections %}
+    <div class="tab-pane fade{% if forloop.first %} show active{% endif %}" id="pane-{{ key }}" role="tabpanel" aria-labelledby="tab-{{ key }}" tabindex="0">
+        <div class="card-body p-4">
+            <div class="settings-section-body">
+                <h6 class="mb-1">{{ label }}</h6>
+                {% if help %}<p class="text-muted small">{{ help }}</p>{% endif %}
+                {% include "org/account/_"|add:key|add:".html" %}
             </div>
         </div>
-
-        {# Emergency contacts #}
-        {% if org_membership %}{% if 'staff_emergency_contact' in org.enabled_fields or 'staff_emergency_contact_2' in org.enabled_fields %}
-        <div class="card mb-4">
-            <div class="card-header bg-white border-bottom py-3">
-                <h6 class="mb-0">My emergency contacts</h6>
-            </div>
-            <div class="card-body">
-                <p class="text-muted small">Who the club should contact if something happens to you at a session.</p>
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="update_emergency_contacts">
-                    <div class="row g-3">
-                        {% if 'staff_emergency_contact' in org.enabled_fields %}
-                        <div class="col-sm-6">
-                            <label class="form-label small fw-semibold">Contact name</label>
-                            <input type="text" name="emergency_contact_name" value="{{ org_membership.emergency_contact_name }}" class="form-control">
-                        </div>
-                        <div class="col-sm-6">
-                            <label class="form-label small fw-semibold">Contact phone</label>
-                            <input type="tel" name="emergency_contact_phone" value="{{ org_membership.emergency_contact_phone }}" class="form-control">
-                        </div>
-                        {% endif %}
-                        {% if 'staff_emergency_contact_2' in org.enabled_fields %}
-                        <div class="col-sm-6">
-                            <label class="form-label small fw-semibold">Second contact name</label>
-                            <input type="text" name="emergency_contact_2_name" value="{{ org_membership.emergency_contact_2_name }}" class="form-control">
-                        </div>
-                        <div class="col-sm-6">
-                            <label class="form-label small fw-semibold">Second contact phone</label>
-                            <input type="tel" name="emergency_contact_2_phone" value="{{ org_membership.emergency_contact_2_phone }}" class="form-control">
-                        </div>
-                        {% endif %}
-                    </div>
-                    <button type="submit" class="btn btn-dark btn-sm mt-3">Save contacts</button>
-                </form>
-            </div>
-        </div>
-        {% endif %}{% endif %}
-
-        {# Appearance #}
-        {% if org_membership %}
-        <div class="card mb-4">
-            <div class="card-header bg-white border-bottom py-3">
-                <h6 class="mb-0">Appearance</h6>
-            </div>
-            <div class="card-body">
-                <p class="text-muted small">How Dojo looks for you. Nobody else's view changes.</p>
-                <form method="post" id="appearance-form">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="update_appearance">
-                    <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" role="switch" name="dark_mode" value="1" id="dark-mode-switch"
-                               {% if org_membership.dark_mode %}checked{% endif %}>
-                        <label class="form-check-label small" for="dark-mode-switch">Dark mode</label>
-                    </div>
-                    <fieldset>
-                        <legend class="form-label small fw-semibold mb-2" style="font-size:.875rem;">Colour theme</legend>
-                        <div class="d-flex flex-wrap gap-3">
-                            {% for value, label in accent_theme_choices %}
-                            <label class="d-flex flex-column align-items-center gap-1 small" style="cursor:pointer;">
-                                <input type="radio" class="form-check-input m-0" name="accent_theme" value="{{ value }}"
-                                       {% if org_membership.accent_theme == value %}checked{% endif %}>
-                                <span class="accent-swatch" data-swatch="{{ value|default:'club' }}" aria-hidden="true"></span>
-                                {{ label }}
-                            </label>
-                            {% endfor %}
-                        </div>
-                    </fieldset>
-                    <button type="submit" class="btn btn-dark btn-sm mt-3">Save appearance</button>
-                </form>
-                <style>
-                    .accent-swatch { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--dojo-border); display: inline-block; }
-                    .accent-swatch[data-swatch="club"]   { background: linear-gradient(135deg, {{ org.theme.sidebar_color }} 50%, {{ org.theme.accent_color }} 50%); }
-                    .accent-swatch[data-swatch="blue"]   { background: linear-gradient(135deg, #1E3A5F 50%, #2563EB 50%); }
-                    .accent-swatch[data-swatch="green"]  { background: linear-gradient(135deg, #14532d 50%, #16a34a 50%); }
-                    .accent-swatch[data-swatch="purple"] { background: linear-gradient(135deg, #3b0764 50%, #7c3aed 50%); }
-                    .accent-swatch[data-swatch="amber"]  { background: linear-gradient(135deg, #78350f 50%, #d97706 50%); }
-                    .accent-swatch[data-swatch="rose"]   { background: linear-gradient(135deg, #4c0519 50%, #e11d48 50%); }
-                    .accent-swatch[data-swatch="slate"]  { background: linear-gradient(135deg, #1e293b 50%, #475569 50%); }
-                </style>
-            </div>
-        </div>
-        {% endif %}
-
-        {# Calendar colour #}
-        {% if org_membership %}
-        <div class="card mb-4">
-            <div class="card-header bg-white border-bottom py-3">
-                <h6 class="mb-0">My calendar colour</h6>
-            </div>
-            <div class="card-body">
-                <p class="text-muted small">Sessions you lead show in this colour on the club calendar.</p>
-                <form method="post" class="d-flex flex-wrap gap-2 align-items-center">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="update_calendar_colour">
-                    <input type="color" name="calendar_colour" value="{{ org_membership.calendar_colour|default:'#212529' }}"
-                           class="form-control form-control-color" aria-label="Calendar colour">
-                    <button type="submit" class="btn btn-dark btn-sm">Save colour</button>
-                    {% if org_membership.calendar_colour %}
-                    <button type="submit" name="clear" value="1" class="btn btn-link btn-sm text-muted">Use the default</button>
-                    {% endif %}
-                </form>
-            </div>
-        </div>
-        {% endif %}
-
-        {# Password #}
-        <div class="card mb-4">
-            <div class="card-header bg-white border-bottom py-3">
-                <h6 class="mb-0">Password</h6>
-            </div>
-            <div class="card-body">
-                <p class="text-muted small mb-3">Change the password you use to sign in to Dojo.</p>
-                <a href="{% url 'account_password_change' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-key me-1"></i> Change password
-                </a>
-            </div>
-        </div>
-
-
-        {# Two-step sign-in #}
-        {% url 'account_settings' org_slug=org.slug as account_url %}
-        <div class="card mb-4" id="two-factor">
-            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">Two-step sign-in</h6>
-                {% if two_factor %}<span class="badge bg-success-subtle text-success">On</span>{% else %}<span class="badge bg-secondary-subtle text-secondary">Off</span>{% endif %}
-            </div>
-            <div class="card-body">
-                {% if two_factor %}
-                <p class="text-muted small mb-3">
-                    You sign in with your password and a code from your authenticator app.
-                    {{ two_factor.recovery_codes_left }} recovery code{{ two_factor.recovery_codes_left|pluralize }} left.
-                </p>
-                <div class="d-flex flex-wrap gap-2">
-                    <a href="{% url 'two_factor_recovery_codes' %}?next={{ account_url|urlencode }}%23two-factor" class="btn btn-outline-secondary btn-sm">
-                        <i class="bi bi-list-ol me-1"></i> New recovery codes
-                    </a>
-                    {% if not two_factor_required %}
-                    <a href="{% url 'two_factor_disable' %}?next={{ account_url|urlencode }}%23two-factor" class="btn btn-outline-danger btn-sm">Turn off</a>
-                    {% endif %}
-                </div>
-                {% if two_factor_required %}<div class="form-text mt-2">Your club requires it. New phone? Ask an admin to reset it, then set it up again.</div>{% endif %}
-                {% else %}
-                <p class="text-muted small mb-3">Protect your account with a code from your phone as well as your password.</p>
-                <a href="{% url 'two_factor_setup' %}?next={{ account_url|urlencode }}%23two-factor" class="btn btn-dark btn-sm">
-                    <i class="bi bi-shield-lock me-1"></i> Set up
-                </a>
-                {% endif %}
-            </div>
-        </div>
-
-        {# Organisations #}
-        <div class="card mb-4">
-            <div class="card-header bg-white border-bottom py-3">
-                <h6 class="mb-0">Your organisations</h6>
-            </div>
-            <div class="list-group list-group-flush">
-                {% for m in memberships %}
-                <div class="list-group-item py-3 d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="fw-semibold small">{{ m.organisation.name }}</div>
-                        <div class="text-muted small">{{ m.get_role_display }}</div>
-                    </div>
-                    {% if m.organisation == org %}
-                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Current</span>
-                    {% endif %}
-                </div>
-                {% empty %}
-                <div class="list-group-item py-3 text-muted small">No organisation memberships found.</div>
-                {% endfor %}
-            </div>
-        </div>
-
-        {# My holidays #}
-        {% if org_membership %}
-        <div class="card mb-4">
-            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">My holidays</h6>
-                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#add-my-holiday-form">
-                    <i class="bi bi-airplane me-1"></i> Add holiday
-                </button>
-            </div>
-
-            <div class="collapse" id="add-my-holiday-form">
-                <div class="card-body border-bottom bg-light">
-                    <p class="text-muted small mb-3">Days you're away won't show you as available on any class register or the calendar.</p>
-                    <form method="post" class="row g-2 align-items-end">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="add_holiday">
-                        <div class="col-sm-4">
-                            <label class="form-label small fw-semibold">Start date</label>
-                            <input type="date" name="start_date" class="form-control form-control-sm" required>
-                        </div>
-                        <div class="col-sm-4">
-                            <label class="form-label small fw-semibold">End date</label>
-                            <input type="date" name="end_date" class="form-control form-control-sm" required>
-                        </div>
-                        <div class="col-sm-4">
-                            <label class="form-label small fw-semibold">Note (optional)</label>
-                            <input type="text" name="note" class="form-control form-control-sm">
-                        </div>
-                        <div class="col-12">
-                            <button type="submit" class="btn btn-sm btn-dark">Save</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <div class="list-group list-group-flush">
-                {% for holiday in holidays %}
-                <div class="list-group-item py-3 d-flex justify-content-between align-items-center">
-                    <div>
-                        <div class="fw-semibold small">{{ holiday.start_date|date:"d M Y" }} – {{ holiday.end_date|date:"d M Y" }}</div>
-                        {% if holiday.note %}<div class="text-muted small">{{ holiday.note }}</div>{% endif %}
-                        {% if holiday.end_date < today %}
-                            <span class="badge bg-secondary-subtle text-secondary mt-1">Past</span>
-                        {% elif holiday.start_date <= today %}
-                            <span class="badge bg-success-subtle text-success mt-1">Current</span>
-                        {% else %}
-                            <span class="badge bg-info-subtle text-info mt-1">Upcoming</span>
-                        {% endif %}
-                    </div>
-                    <form method="post" class="d-inline">
-                        {% csrf_token %}
-                        <input type="hidden" name="action" value="remove_holiday">
-                        <input type="hidden" name="holiday_pk" value="{{ holiday.pk }}">
-                        <button type="submit" class="btn btn-sm btn-outline-danger"
-                                onclick="return confirm('Remove this holiday?')">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </form>
-                </div>
-                {% empty %}
-                <div class="list-group-item py-3 text-muted small">No holidays recorded yet.</div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
     </div>
-
+    {% endfor %}
 </div>
 {% endblock %}

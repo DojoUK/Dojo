@@ -13,6 +13,12 @@
 {% endblock %}
 
 {% block main_content %}
+{% if is_admin and not org.has_location %}
+<div class="alert alert-warning d-flex align-items-center justify-content-between gap-3 flex-wrap">
+    <span><i class="bi bi-geo-alt-fill me-1"></i> <strong>Add your club's location.</strong> Members find clubs on the Dojo network by where they train and the martial arts they teach.</span>
+    <a href="{% url 'org_settings' org_slug=org.slug %}#location" class="btn btn-sm btn-dark text-nowrap">Add location</a>
+</div>
+{% endif %}
 
 {% if onboarding %}
 <div class="modal fade" id="onboardingModal" tabindex="-1" aria-labelledby="onboardingModalLabel" aria-hidden="true">
@@ -136,7 +142,7 @@
         </a>
     </div>
     <div class="col-sm-6 col-lg-3">
-        <a href="{% url 'attendance_analytics' org_slug=org.slug %}" class="text-decoration-none">
+        <a href="{% if is_admin %}{% url 'member_not_seen' org_slug=org.slug %}?days=14{% else %}{% url 'attendance_analytics' org_slug=org.slug %}{% endif %}" class="text-decoration-none">
         <div class="card h-100" style="background:linear-gradient(135deg,{% if at_risk_count %}#d97706,#b45309{% else %}#7c3aed,#6d28d9{% endif %});border:none!important;">
             <div class="card-body py-4">
                 <div class="d-flex align-items-center justify-content-between mb-2">
@@ -144,7 +150,7 @@
                     <i class="bi bi-exclamation-triangle" style="color:rgba(255,255,255,.4);font-size:1.2rem;"></i>
                 </div>
                 <div class="fs-2 fw-bold text-white">{{ at_risk_count }}</div>
-                <div class="small mt-1" style="color:rgba(255,255,255,.7);">Absent 2+ weeks</div>
+                <div class="small mt-1" style="color:rgba(255,255,255,.7);">Absent 2+ weeks or coming less often</div>
             </div>
         </div>
         </a>

@@ -31,6 +31,8 @@ urlpatterns = [
     # Member discounts
     path('member/<int:member_pk>/discount/add/', views.MemberDiscountAddView.as_view(), name='member_discount_add'),
     path('member-discount/<int:pk>/remove/', views.MemberDiscountRemoveView.as_view(), name='member_discount_remove'),
+    path('member/<int:member_pk>/discount/<int:discount_pk>/exempt/', views.MemberDiscountExemptView.as_view(),
+         name='member_discount_exempt'),
 
     # Expenses
     path('expenses/', views.ExpenseListView.as_view(), name='expense_list'),

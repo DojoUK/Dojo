@@ -1,0 +1,98 @@
+{% extends 'org/base.html' %}
+{% block title %}Not seen lately{% endblock %}
+{% block page_title %}Not seen lately{% endblock %}
+{% block page_subtitle %}Members you might be about to lose, from their attendance{% endblock %}
+{% block page_actions %}
+<a href="{% url 'account_settings' org_slug=org.slug %}#profile" class="btn btn-outline-secondary btn-sm"><i class="bi bi-envelope me-1"></i> Get it weekly by email</a>
+<a href="?days={{ days }}&format=csv" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download me-1"></i> Download CSV</a>
+{% endblock %}
+
+{% block main_content %}
+<form method="get" class="d-flex align-items-center gap-2 mb-3">
+    <label class="small text-muted" for="ns-days">Not seen for</label>
+    <select name="days" id="ns-days" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+        {% for d in day_choices %}<option value="{{ d }}" {% if d == days %}selected{% endif %}>{{ d }} days or more</option>{% endfor %}
+    </select>
+    <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">Show</button></noscript>
+</form>
+
+{% if not total %}
+<div class="card border-0 shadow-sm"><div class="card-body text-center py-5">
+    <i class="bi bi-emoji-smile display-6 text-muted d-block mb-2"></i>
+    <p class="text-muted small mb-0">Everyone's been in recently. Nobody to follow up.</p>
+</div></div>
+{% else %}
+<form method="post" action="{% url 'member_bulk_action' org_slug=org.slug %}">
+    {% csrf_token %}
+    <input type="hidden" name="bulk_action" value="email">
+    {% for key, title, note, rows in sections %}
+    {% if rows %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3 d-flex align-items-center gap-2 flex-wrap">
+            <div class="me-auto">
+                <h6 class="mb-0">{{ title }} <span class="badge bg-secondary-subtle text-secondary ms-1">{{ rows|length }}</span></h6>
+                <p class="text-muted small mb-0 mt-1">{{ note }}</p>
+            </div>
+            <div class="form-check mb-0">
+                <input class="form-check-input ns-all" type="checkbox" id="all-{{ key }}" data-group="{{ key }}">
+                <label class="form-check-label small" for="all-{{ key }}">Select all</label>
+            </div>
+        </div>
+        <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3" style="width:32px;"><span class="visually-hidden">Select</span></th>
+                    <th class="small">Member</th>
+                    <th class="small">Last seen</th>
+                    {% if key == 'slowing' %}<th class="small">Last 4 weeks</th><th class="small">Usually</th>{% endif %}
+                    {% if key == 'never' %}<th class="small">Joined</th>{% endif %}
+                    <th class="small">Classes</th>
+                    <th class="small pe-3">Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}{% with m=row.member %}
+                <tr>
+                    <td class="ps-3"><input class="form-check-input ns-pick" type="checkbox" name="member_ids" value="{{ m.pk }}" data-group="{{ key }}" aria-label="Select {{ m.name }}"></td>
+                    <td class="small"><a href="{% url 'member_detail' org_slug=org.slug pk=m.pk %}" class="fw-semibold text-decoration-none">{{ m.register_name }}</a>
+                        {% if m.phone %}<div class="text-muted">{{ m.phone }}</div>{% endif %}</td>
+                    <td class="small">{% if row.last_seen %}{{ row.last_seen|date:"j M Y" }}<div class="text-muted">{{ row.days_since }} day{{ row.days_since|pluralize }} ago</div>{% else %}<span class="text-muted">Never</span>{% endif %}</td>
+                    {% if key == 'slowing' %}<td class="small">{{ row.recent }} session{{ row.recent|pluralize }}</td><td class="small text-muted">about {{ row.usual|floatformat:"-1" }} every 4 weeks</td>{% endif %}
+                    {% if key == 'never' %}<td class="small text-muted">{{ m.joined_date|date:"j M Y"|default:"Not recorded" }}</td>{% endif %}
+                    <td class="small text-muted">{{ m.class_names|join:", "|default:"No classes" }}</td>
+                    <td class="small pe-3">
+                        {% if m.leaving %}<span class="badge bg-warning-subtle text-warning-emphasis">Asked to leave</span>{% endif %}
+                        {% if m.overdue %}<span class="badge bg-danger-subtle text-danger">{{ m.overdue }} overdue invoice{{ m.overdue|pluralize }}</span>{% endif %}
+                        {% for plan in m.plans %}<span class="badge bg-light text-muted border">{{ plan.name }}</span>{% endfor %}
+                    </td>
+                </tr>
+                {% endwith %}{% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <button type="submit" class="btn btn-dark btn-sm" id="ns-email" disabled><i class="bi bi-envelope me-1"></i> Email selected</button>
+        <span class="small text-muted">Opens the member email form with the people you've ticked.</span>
+    </div>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+    const picks = () => Array.from(document.querySelectorAll('.ns-pick'));
+    const button = document.getElementById('ns-email');
+    const update = () => { if (button) button.disabled = !picks().some(p => p.checked); };
+    document.querySelectorAll('.ns-all').forEach(all => all.addEventListener('change', () => {
+        picks().filter(p => p.dataset.group === all.dataset.group).forEach(p => { p.checked = all.checked; });
+        update();
+    }));
+    picks().forEach(p => p.addEventListener('change', update));
+})();
+</script>
+{% endblock %}

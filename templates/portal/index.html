@@ -17,6 +17,10 @@
     {# 1. Anything that needs paying comes first. #}
     {% if 'billing' in org.enabled_features %}
     <section class="p-group">
+        <div class="p-section">
+            <h2>Payments</h2>
+            <a href="{% url 'portal_payments' token=member.token %}">History</a>
+        </div>
         {% if outstanding %}
         <div class="card">
             <div class="card-body pb-2">

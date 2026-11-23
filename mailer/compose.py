@@ -114,7 +114,9 @@ def club_values(org):
 def member_values(member, to_guardian=None):
     """greeting, first_name and member_name for `member`. By default the email goes to a guardian
     when the member has no address of their own."""
-    first_name = member.name.split(' ')[0]
+    # What they're called: their preferred name if they've given one, else their first name.
+    first_name = (getattr(member, 'preferred_name', '') or getattr(member, 'first_name', '')
+                  or (member.name.split(' ') or [''])[0])
     if to_guardian is None:
         to_guardian = member.guardians.exists() and not member.email
     return {
@@ -165,11 +167,14 @@ def render(org, key, values, blocks=None, *, subject=None, mode=None, body=None,
     return subject_text, document, text
 
 
-def send(org, key, to, values, blocks=None):
-    """Send one of `org`'s emails to `to` (a list of addresses) with its chosen service."""
+def send(org, key, to, values, blocks=None, attachments=None):
+    """Send one of `org`'s emails to `to` (a list of addresses) with its chosen service.
+    `attachments` is a list of (filename, content, mimetype)."""
     from . import connection_for
     subject, document, text = render(org, key, values, blocks)
     message = EmailMultiAlternatives(subject=subject, body=text, to=to, connection=connection_for(org))
     message.attach_alternative(document, 'text/html')
+    for attachment in attachments or ():
+        message.attach(*attachment)
     message.send()
     return message

@@ -35,6 +35,35 @@ class Organisation(models.Model):
     subscription_tier = models.CharField(max_length=50, default='free')
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # Where the club trains and what it teaches: shown in the Dojo club finder (organisations/location.py).
+    address_line1 = models.CharField(max_length=255, blank=True)
+    address_line2 = models.CharField(max_length=255, blank=True)
+    city = models.CharField(max_length=100, blank=True)
+    postcode = models.CharField(max_length=20, blank=True)
+    country = models.CharField(max_length=100, blank=True, default='United Kingdom')
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    disciplines = models.JSONField(
+        default=list, blank=True, help_text='Martial arts the club teaches, as keys from organisations/disciplines.py.',
+    )
+    listed_in_finder = models.BooleanField(
+        default=True, help_text='Show the club in the Dojo club finder (once it has a location).',
+    )
+
+    @property
+    def has_location(self):
+        return self.latitude is not None and self.longitude is not None and bool(self.address_line1)
+
+    @property
+    def address_text(self):
+        parts = (self.address_line1, self.address_line2, self.city, self.postcode)
+        return ', '.join(p for p in parts if p)
+
+    @property
+    def discipline_labels(self):
+        from .disciplines import labels
+        return labels(self.disciplines)
+
     def theme(self):
         from .branding import readable_text
         s = self.settings or {}
@@ -175,6 +204,24 @@ class Organisation(models.Model):
     DEFAULT_BOOKING_CUTOFF_HOURS = 2
     MAX_BOOKING_CUTOFF_HOURS = 168
 
+    # Session reminder emails (classes/reminders.py): how long before a session they go out (0 = off),
+    # and who gets them: people booked onto that session, or everyone expected there.
+    SESSION_REMINDER_HOURS_CHOICES = (0, 2, 4, 12, 24, 48)
+    DEFAULT_SESSION_REMINDER_HOURS = 24
+    SESSION_REMINDER_SCOPES = (('booked', 'People booked onto that session'),
+                               ('everyone', 'Everyone expected, including members enrolled on the whole class'))
+
+    @property
+    def session_reminder_hours(self):
+        value = (self.settings or {}).get('session_reminder_hours', self.DEFAULT_SESSION_REMINDER_HOURS)
+        return value if value in self.SESSION_REMINDER_HOURS_CHOICES and not isinstance(value, bool) \
+            else self.DEFAULT_SESSION_REMINDER_HOURS
+
+    @property
+    def session_reminder_scope(self):
+        value = (self.settings or {}).get('session_reminder_scope', 'booked')
+        return value if value in dict(self.SESSION_REMINDER_SCOPES) else 'booked'
+
     @property
     def booking_cutoff_hours(self):
         """How many hours before a session starts members can no longer book or cancel it themselves."""
@@ -211,6 +258,9 @@ class OrganisationMember(models.Model):
     emergency_contact_phone = models.CharField(max_length=30, blank=True)
     emergency_contact_2_name = models.CharField(max_length=255, blank=True)
     emergency_contact_2_phone = models.CharField(max_length=30, blank=True)
+    # The weekly club summary email (organisations/weekly_summary.py), for admins who switch it on.
+    weekly_summary = models.BooleanField('weekly club summary email', default=False)
+    weekly_summary_sent_on = models.DateField(null=True, blank=True)
     calendar_colour = models.CharField(
         max_length=7, blank=True,
         help_text="Hex colour used for this staff member's sessions on the org calendar, e.g. #2563EB.",

@@ -4,14 +4,33 @@ from django.db import models
 from django.utils import timezone
 from organisations.models import Organisation
 
+from .names import NameParts
+
 
 def generate_token():
     return secrets.token_urlsafe(32)
 
 
-class Member(models.Model):
+class Member(NameParts, models.Model):
     organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='club_members')
-    name = models.CharField(max_length=255)
+    # The member's own Dojo account (network.MemberAccount), which can span several clubs. Several
+    # members can share one, e.g. a parent's account for their children.
+    account = models.ForeignKey('network.MemberAccount', on_delete=models.SET_NULL, null=True, blank=True,
+                                related_name='memberships')
+
+    class AccountRole(models.TextChoices):
+        NONE = '', 'Not linked'
+        HOLDER = 'holder', 'Account holder'     # this record is the account holder themselves
+        DEPENDANT = 'dependant', 'Dependant'    # someone the account holder looks after, e.g. their child
+
+    # For an account holder's own record, the account owns the shared details (contact, address,
+    # emergency contacts, medical information) and keeps this copy up to date (network/details.py).
+    account_role = models.CharField(max_length=10, choices=AccountRole.choices, default='', blank=True)
+    name = models.CharField(max_length=255)   # the full name: first name and surname (members/names.py)
+    first_name = models.CharField(max_length=150, blank=True)
+    surname = models.CharField(max_length=150, blank=True)
+    preferred_name = models.CharField(max_length=150, blank=True, help_text='What they like to be called, if not their first name')
+    pronouns = models.CharField(max_length=30, blank=True, help_text='e.g. she/her, he/him, they/them')
     date_of_birth = models.DateField(null=True, blank=True)
     email = models.EmailField(blank=True)
     phone = models.CharField(max_length=20, blank=True)
@@ -21,7 +40,12 @@ class Member(models.Model):
     emergency_contact_2_phone = models.CharField(max_length=20, blank=True)
     address_line1 = models.CharField(max_length=255, blank=True)
     address_line2 = models.CharField(max_length=255, blank=True)
+    city = models.CharField('town or city', max_length=100, blank=True)
+    county = models.CharField(max_length=100, blank=True)
+    postcode = models.CharField(max_length=20, blank=True)
     is_active = models.BooleanField(default=True)
+    # Reminder emails before sessions (classes/reminders.py); the member can switch them off in their portal.
+    session_reminders = models.BooleanField('email reminders before sessions', default=True)
     token = models.CharField(max_length=64, unique=True, default=generate_token)
     token_created_at = models.DateTimeField(default=timezone.now, help_text='When the current portal token was issued — used to auto-rotate stale links')
     joined_date = models.DateField(null=True, blank=True)
@@ -39,12 +63,17 @@ class Member(models.Model):
     anonymised_at = models.DateTimeField(null=True, blank=True)
 
     @property
+    def is_account_holder(self):
+        return bool(self.account_id) and self.account_role == self.AccountRole.HOLDER
+
+    @property
     def has_active_subscription(self):
         return self.subscription_status == 'active'
 
     def anonymise(self):
         """Scrub personal data in place, keeping the row for financial/attendance FK integrity."""
-        self.name = f'Deleted Member #{self.pk}'
+        self.first_name, self.surname = 'Deleted', f'Member #{self.pk}'
+        self.preferred_name = self.pronouns = ''
         self.date_of_birth = None
         self.email = ''
         self.phone = ''
@@ -54,6 +83,9 @@ class Member(models.Model):
         self.emergency_contact_2_phone = ''
         self.address_line1 = ''
         self.address_line2 = ''
+        self.city = ''
+        self.county = ''
+        self.postcode = ''
         self.custom_field_values = {}
         self.stripe_customer_id = ''
         self.stripe_subscription_id = ''
@@ -67,6 +99,9 @@ class Member(models.Model):
         if not self.archived_at:
             self.archived_at = timezone.now()
         self.anonymised_at = timezone.now()
+        # The club's copy is gone; the member's Dojo account (and their other clubs) are untouched.
+        self.account = None
+        self.account_role = ''
         self.save()
         for guardian in self.guardians.all():
             guardian.delete()
@@ -93,6 +128,9 @@ class Guardian(models.Model):
     email = models.EmailField(blank=True)
     phone = models.CharField(max_length=20, blank=True)
     relationship = models.CharField(max_length=100, blank=True)
+    # A parent with a Dojo account: their name, email and phone here follow the account.
+    account = models.ForeignKey('network.MemberAccount', on_delete=models.SET_NULL, null=True, blank=True,
+                                related_name='guardian_of')
 
     def __str__(self):
         return f"{self.name} (guardian of {self.member})"
@@ -115,6 +153,9 @@ class CustomField(models.Model):
         help_text='Yes/no fields only: members ticked "yes" get a badge with the field name on class '
                   'pages and registers, e.g. "Photo consent".',
     )
+    # Asked on the club's join form too, so the answer comes in with the application. Off by
+    # default: some fields are only for staff, e.g. "Kit issued".
+    on_application = models.BooleanField('ask on the join form', default=False)
 
     def __str__(self):
         return f"{self.organisation} — {self.name}"
@@ -123,7 +164,13 @@ class CustomField(models.Model):
         ordering = ['organisation', 'order', 'name']
 
 
-class MemberApplication(models.Model):
+class MemberApplication(NameParts, models.Model):
+    # Set when someone applies from their Dojo account; the member made on approval is linked to it.
+    account = models.ForeignKey('network.MemberAccount', on_delete=models.SET_NULL, null=True, blank=True,
+                                related_name='applications')
+    # Applying for themselves (rather than, say, their child): the member made on approval is the account holder's own record.
+    for_account_holder = models.BooleanField(default=False)
+
     class Status(models.TextChoices):
         PENDING = 'pending', 'Pending'
         APPROVED = 'approved', 'Approved'
@@ -131,6 +178,10 @@ class MemberApplication(models.Model):
 
     organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='applications')
     name = models.CharField(max_length=255)
+    first_name = models.CharField(max_length=150, blank=True)
+    surname = models.CharField(max_length=150, blank=True)
+    preferred_name = models.CharField(max_length=150, blank=True, help_text='What they like to be called, if not their first name')
+    pronouns = models.CharField(max_length=30, blank=True, help_text='e.g. she/her, he/him, they/them')
     date_of_birth = models.DateField(null=True, blank=True)
     email = models.EmailField(blank=True)
     phone = models.CharField(max_length=20, blank=True)
@@ -143,11 +194,35 @@ class MemberApplication(models.Model):
     guardian_email = models.EmailField(blank=True)
     guardian_phone = models.CharField(max_length=20, blank=True)
     medical_info = models.TextField(blank=True)
+    emergency_contact_name = models.CharField(max_length=255, blank=True)
+    emergency_contact_phone = models.CharField(max_length=20, blank=True)
+    emergency_contact_2_name = models.CharField('second emergency contact name', max_length=255, blank=True)
+    emergency_contact_2_phone = models.CharField('second emergency contact phone', max_length=20, blank=True)
     notes = models.TextField(blank=True, help_text='Any additional information from the applicant')
+    # A promo code entered on the join form (billing/promos.py), given to the member on approval.
+    promo = models.ForeignKey('billing.PolicyDiscount', on_delete=models.SET_NULL, null=True, blank=True,
+                              related_name='applications')
+    # Answers to the club's custom fields asked on the join form, {field pk: value}, as on Member.
+    custom_field_values = models.JSONField(default=dict, blank=True)
     signature_data = models.TextField(blank=True, help_text='Base64-encoded PNG of drawn signature')
+    # Who signed (the applicant, or their parent or guardian), from where, and which of the club's
+    # documents they ticked to agree to. The signed copies are made from these on approval.
+    signer_name = models.CharField(max_length=255, blank=True)
+    signer_ip = models.GenericIPAddressField(null=True, blank=True)
+    agreed_waivers = models.JSONField(default=list, blank=True)
     submitted_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
     decided_at = models.DateTimeField(null=True, blank=True, help_text='When the application was approved or rejected')
+
+    def custom_answers(self):
+        """[(field name, answer)] for the club's custom fields answered on the join form."""
+        answers = []
+        for field in self.organisation.custom_fields.filter(pk__in=[k for k in self.custom_field_values if str(k).isdigit()]):
+            value = self.custom_field_values.get(str(field.pk))
+            if field.field_type == CustomField.FieldType.BOOLEAN:
+                value = 'Yes' if value else 'No'
+            answers.append((field.name, value or '—'))
+        return answers
 
     def __str__(self):
         return f"{self.name} — {self.organisation} ({self.get_status_display()})"
@@ -180,6 +255,23 @@ class FamilyGroupMember(models.Model):
 
     class Meta:
         unique_together = ('family_group', 'member')
+
+
+def request_to_leave(member, reason=''):
+    """Flag that the member plans to stop training, for the club's staff to follow up. Returns the
+    pending request (an existing one if they've already asked)."""
+    pending = member.leaving_requests.filter(status=MemberLeavingRequest.Status.PENDING).first()
+    return pending or MemberLeavingRequest.objects.create(member=member, reason=(reason or '').strip())
+
+
+def current_plans(member):
+    """The billing policies the member is on: their own, or else those of the classes they're enrolled in."""
+    if not member.organisation.has_feature('billing'):
+        return []
+    if member.billing_policy_id:
+        return [member.billing_policy]
+    from billing.models import BillingPolicy
+    return list(BillingPolicy.objects.filter(classes__enrolments__member=member).distinct().order_by('name'))
 
 
 class MemberLeavingRequest(models.Model):

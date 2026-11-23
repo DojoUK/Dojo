@@ -81,6 +81,20 @@
             {% endfor %}
         </div>
         {% endif %}
+
+        {% if has_codes %}
+        <hr>
+        <form method="post" action="{% url 'portal_booking_action' token=member.token %}" class="d-flex flex-wrap align-items-end gap-2">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="apply_code">
+            <div>
+                <label class="form-label small fw-semibold mb-1" for="promo-code">Got a promo code?</label>
+                <input type="text" name="promo_code" id="promo-code" class="form-control form-control-sm text-uppercase" maxlength="30" required style="max-width:14rem;">
+            </div>
+            <button type="submit" class="btn btn-sm btn-outline-dark">Apply</button>
+            <div class="form-text w-100 mt-0">If it's for a different plan, you'll be moved onto that plan from the next invoice.</div>
+        </form>
+        {% endif %}
     </div>
 </div>
 

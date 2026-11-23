@@ -19,6 +19,7 @@ from billing.models import Invoice, Payment, PaymentSettings
 from billing.payment_forms import apply_post
 from members.models import Member
 from organisations.models import Organisation, OrganisationMember
+from organisations.test_location import SETUP_LOCATION
 
 WEBHOOK_SECRET = 'whsec_test_secret'
 
@@ -261,7 +262,7 @@ class InvoiceEmailTests(PaymentsTestCase):
 @override_settings(STRIPE_PUBLIC_KEY='', STRIPE_SECRET_KEY='', STRIPE_WEBHOOK_SECRET='')
 class SetupWizardTests(TestCase):
     def test_payment_choices_at_setup(self):
-        self.client.post(reverse('setup'), {
+        self.client.post(reverse('setup'), {**SETUP_LOCATION, 
             'org_name': 'New Club', 'username': 'founder', 'admin_email': 'f@example.com',
             'password': 'a-long-password', 'password_confirm': 'a-long-password', **BANK, 'pay_cash': '1',
         })
@@ -270,7 +271,7 @@ class SetupWizardTests(TestCase):
         self.assertTrue(payment_settings.accept_bank_transfer and payment_settings.accept_cash)
 
     def test_a_mistake_creates_nothing(self):
-        response = self.client.post(reverse('setup'), {
+        response = self.client.post(reverse('setup'), {**SETUP_LOCATION, 
             'org_name': 'New Club', 'username': 'founder', 'admin_email': 'f@example.com',
             'password': 'a-long-password', 'password_confirm': 'a-long-password',
             **form(bank_transfer='1', bank_sort_code='12'),

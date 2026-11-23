@@ -10,6 +10,7 @@ from django.urls import reverse
 from accounts import totp
 from accounts.models import RecoveryCode, TwoFactorDevice
 from organisations.models import Organisation, OrganisationMember
+from organisations.test_location import SETUP_LOCATION
 
 NOW = 1_700_000_000  # a fixed clock, so codes don't roll over mid-test
 SECRET = totp.generate_secret()
@@ -168,7 +169,7 @@ class PolicyTests(TwoFactorTestCase):
     def test_new_clubs_start_with_it_required(self):
         Organisation.objects.all().delete()
         User.objects.all().delete()
-        self.client.post(reverse('setup'), {
+        self.client.post(reverse('setup'), {**SETUP_LOCATION, 
             'org_name': 'New Club', 'username': 'founder', 'admin_email': 'f@example.com',
             'password': 'a-long-password', 'password_confirm': 'a-long-password',
         })

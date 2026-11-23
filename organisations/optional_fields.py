@@ -40,7 +40,7 @@ OPTIONAL_FIELDS = (
                   model_fields=('phone',)),
     OptionalField('address', 'Address', MEMBER,
                   'On member records and the join page.', default=True,
-                  model_fields=('address_line1', 'address_line2')),
+                  model_fields=('address_line1', 'address_line2', 'city', 'county', 'postcode')),
     OptionalField('emergency_contact_2', 'Second emergency contact', MEMBER,
                   'A second name and number alongside the first emergency contact.', default=True,
                   model_fields=('emergency_contact_2_name', 'emergency_contact_2_phone')),

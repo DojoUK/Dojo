@@ -27,15 +27,41 @@ from mailer import compose
 from billing.payment_forms import form_context as payment_form_context
 
 
+def location_form_context(values=None, listed_default=True):
+    """What templates/org/_location_fields.html needs: the location so far, the disciplines and the maps key."""
+    from . import disciplines
+    from .location import maps_key
+    values = values or {}
+    return {
+        'loc': {'listed_in_finder': listed_default, 'disciplines': [], **values},
+        'discipline_choices': disciplines.DISCIPLINES,
+        'starter_disciplines': disciplines.FROM_STARTER_TEMPLATE,
+        'maps_key': maps_key(),
+    }
+
+
+def _unique_slug(name):
+    from django.utils.text import slugify
+    base = slugify(name)[:240] or 'club'
+    slug, n = base, 2
+    while Organisation.objects.filter(slug=slug).exists():
+        slug, n = f'{base}-{n}', n + 1
+    return slug
+
+
 class SetupView(View):
     """
-    First-run, browser-only bootstrap: creates the organisation and its
-    first admin account. Locks itself out once an organisation exists.
+    Browser-only setup: creates a club and its first admin account. On a fresh installation it's
+    the first-run bootstrap. Once a club exists, further clubs can join the installation (the Dojo
+    club network) here too, if the visitor is a superuser or DOJO_OPEN_CLUB_REGISTRATION is on;
+    otherwise it sends them to sign in.
     """
     template_name = 'org/setup.html'
 
     def dispatch(self, request, *args, **kwargs):
-        if Organisation.objects.exists():
+        from django.conf import settings as django_settings
+        self.adding_club = Organisation.objects.exists()
+        if self.adding_club and not (request.user.is_superuser or django_settings.DOJO_OPEN_CLUB_REGISTRATION):
             return redirect('login')
         return super().dispatch(request, *args, **kwargs)
 
@@ -43,7 +69,9 @@ class SetupView(View):
         from .features import FEATURES, default_enabled, feature_rows
         from .optional_fields import effective_fields, field_groups
         return render(request, self.template_name, {
-            'demo_mode': request.GET.get('demo') == '1',
+            'demo_mode': request.GET.get('demo') == '1' and not self.adding_club,
+            'adding_club': self.adding_club,
+            **location_form_context(),
             'club_templates': starter.available(),
             'feature_rows': feature_rows({f.key for f in FEATURES if default_enabled(f)}),
             'field_groups': field_groups(effective_fields({})),
@@ -53,6 +81,8 @@ class SetupView(View):
 
     def post(self, request):
         if request.POST.get('mode') == 'demo':
+            if self.adding_club:
+                raise PermissionDenied
             return self._seed_demo(request)
         return self._create_org(request)
 
@@ -103,8 +133,15 @@ class SetupView(View):
         payment_settings = PaymentSettings()
         errors += apply_payment_post(payment_settings, request.POST)
 
+        # Where the club trains: a required step, so members can find it in the Dojo club finder.
+        from . import location
+        location_values, location_errors = location.from_post(request.POST, listed_default=True)
+        errors += location_errors
+
         if errors:
             return render(request, self.template_name, {
+                'adding_club': self.adding_club,
+                **location_form_context(location_values),
                 'feature_rows': feature_rows(effective_features(feature_choices)),
                 'field_groups': field_groups(effective_fields(optional_field_choices), labels),
                 'errors': errors,
@@ -121,9 +158,15 @@ class SetupView(View):
                 **payment_form_context(post=request.POST),
             })
 
-        user = User.objects.create_superuser(username=username, email=admin_email, password=password)
+        # The installation's first club admin runs the whole site; admins of clubs added later don't.
+        if self.adding_club:
+            user = User.objects.create_user(username=username, email=admin_email, password=password)
+        else:
+            user = User.objects.create_superuser(username=username, email=admin_email, password=password)
         org = Organisation.objects.create(
             name=org_name,
+            slug=_unique_slug(org_name),
+            **location_values,
             email=request.POST.get('org_email', '').strip(),
             phone=request.POST.get('org_phone', '').strip(),
             website=request.POST.get('org_website', '').strip(),
@@ -146,6 +189,10 @@ class SetupView(View):
         if template_key in {t['key'] for t in starter.available()}:
             starter.apply_template(org, template_key)
 
+        if self.adding_club and request.user.is_authenticated:
+            # A superuser adding a club for someone else stays signed in as themselves.
+            messages.success(request, f'{org.name} is set up. Its admin can sign in as "{username}".')
+            return redirect('root')
         login(request, user)
         return redirect('org_dashboard', org_slug=org.slug)
 
@@ -226,7 +273,6 @@ class DashboardView(OrgMixin, TemplateView):
 
         first_of_month = today.replace(day=1)
         four_weeks_ago = today - timedelta(weeks=4)
-        two_weeks_ago = today - timedelta(weeks=2)
 
         revenue_month = Payment.objects.filter(
             invoice__organisation=self.org,
@@ -252,14 +298,9 @@ class DashboardView(OrgMixin, TemplateView):
         attendance_rate = round(present_records / total_records * 100) if total_records else None
 
         from django.db.models import Max
-        at_risk = active_members.annotate(
-            last_attended=Max(
-                'attendance__session__date',
-                filter=Q(attendance__present=True),
-            )
-        ).filter(
-            Q(last_attended__lt=two_weeks_ago) | Q(last_attended__isnull=True)
-        ).count()
+        # The "Not seen lately" report's groups at two weeks: not seen, coming less often, never come.
+        from members import not_seen
+        at_risk = sum(len(rows) for rows in not_seen.report(self.org, days=14, describe=False).values())
 
         pending_applications = MemberApplication.objects.filter(
             organisation=self.org, status=MemberApplication.Status.PENDING
@@ -655,6 +696,8 @@ class OrgSettingsView(OrgAdminMixin, View):
     # (key, label, Bootstrap icon, help) for each settings tab; templates/org/settings/_<key>.html.
     SECTIONS = (
         ('general', 'General', 'building', 'Your club\'s name and contact details.'),
+        ('location', 'Location', 'geo-alt', 'Where your club trains and what it teaches. Members use this to find '
+                                            'you in the Dojo club finder.'),
         ('appearance', 'Appearance', 'palette', 'Colours and logo for your club\'s Dojo.'),
         ('features', 'Features', 'toggles', 'Switch off anything your club doesn\'t use and it disappears from Dojo. '
                                             'Nothing is deleted: switch a feature back on and its data is still there.'),
@@ -718,6 +761,11 @@ class OrgSettingsView(OrgAdminMixin, View):
             'field_groups': field_groups(self.org.enabled_fields, self.org.settings),
             'session_timeout_choices': Organisation.SESSION_TIMEOUT_CHOICES,
             'two_factor_choices': Organisation.TWO_FACTOR_CHOICES,
+            **location_form_context({
+                field: getattr(self.org, field) for field in (
+                    'address_line1', 'address_line2', 'city', 'postcode', 'country', 'latitude', 'longitude',
+                    'disciplines', 'listed_in_finder')
+            }),
             **self._email_context(),
             **self._payments_context(),
             'staff_without_two_factor': (
@@ -749,6 +797,17 @@ class OrgSettingsView(OrgAdminMixin, View):
                 else:
                     messages.error(request, f'The booking cut-off must be between 0 and '
                                             f'{Organisation.MAX_BOOKING_CUTOFF_HOURS} hours, so it wasn\'t changed.')
+            reminder_hours = request.POST.get('session_reminder_hours')
+            if reminder_hours is not None:
+                try:
+                    hours = int(reminder_hours)
+                except ValueError:
+                    hours = None
+                scope = request.POST.get('session_reminder_scope', 'booked')
+                if hours in Organisation.SESSION_REMINDER_HOURS_CHOICES and scope in dict(Organisation.SESSION_REMINDER_SCOPES):
+                    self.org.settings = {**(self.org.settings or {}), 'session_reminder_hours': hours,
+                                         'session_reminder_scope': scope}
+                    update_fields.append('settings')
             price_raw = request.POST.get('single_session_price')
             if price_raw is not None:
                 from decimal import Decimal, InvalidOperation
@@ -823,6 +882,19 @@ class OrgSettingsView(OrgAdminMixin, View):
                 messages.success(request, f'Email settings saved: sending with {email_settings.provider_info.label}. '
                                           'Send a test email to check.')
             return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#email")
+
+        if action == 'location':
+            from . import location
+            values, errors = location.from_post(request.POST, listed_default=self.org.listed_in_finder)
+            if errors:
+                for error in errors:
+                    messages.error(request, error)
+            else:
+                location.apply(self.org, values)
+                self.org.save(update_fields=list(values))
+                messages.success(request, 'Location saved.' if self.org.listed_in_finder
+                                 else 'Location saved. Your club is hidden from the Dojo club finder.')
+            return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#location")
 
         if action == 'security':
             try:
@@ -959,6 +1031,7 @@ class CustomFieldSettingsView(OrgAdminMixin, View):
                     show_on_registers=(
                         field_type == CustomField.FieldType.BOOLEAN and 'show_on_registers' in request.POST
                     ),
+                    on_application='on_application' in request.POST,
                 )
                 messages.success(request, f'Field "{name}" added.')
 
@@ -973,6 +1046,15 @@ class CustomFieldSettingsView(OrgAdminMixin, View):
                 messages.success(request, f'"{field.name}" now shows on class pages and registers.')
             else:
                 messages.success(request, f'"{field.name}" no longer shows on registers.')
+
+        elif action == 'on_application':
+            field = get_object_or_404(CustomField, pk=request.POST.get('field_pk'), organisation=self.org)
+            field.on_application = request.POST.get('value') == '1'
+            field.save(update_fields=['on_application'])
+            if field.on_application:
+                messages.success(request, f'"{field.name}" is now asked on your join form.')
+            else:
+                messages.success(request, f'"{field.name}" is no longer asked on your join form.')
 
         elif action == 'delete':
             field_pk = request.POST.get('field_pk')
@@ -1263,14 +1345,41 @@ class FinancialReportView(OrgAdminMixin, View):
 
 
 class AccountView(OrgMixin, View):
-    """Self-service account management — available to any logged-in member (coach or admin), not just org admins."""
+    """
+    My settings: self-service account management for any logged-in member (coach or admin), not
+    just org admins. Laid out like Organisation settings, one tab per section (SECTIONS), each in
+    templates/org/account/_<key>.html. Saving goes back to the same tab.
+    """
     template_name = 'org/account.html'
+    # (key, label, Bootstrap icon, help)
+    SECTIONS = (
+        ('profile', 'Profile details', 'person', 'Your name, email and emergency contacts.'),
+        ('certificates', 'Coaching certificates', 'patch-check', 'Your checks and coaching qualifications. '
+                                                                 'Club admins see these on the Staff page.'),
+        ('calendar', 'Calendar & colours', 'calendar3', 'Your colour on the club calendar, and how Dojo looks for you.'),
+        ('holidays', 'Holidays', 'airplane', 'Days you\'re away won\'t show you as available on any class register or the calendar.'),
+        ('security', 'Security', 'shield-lock', 'Your password and two-step sign-in.'),
+    )
+    ACTION_SECTIONS = {
+        'add_holiday': 'holidays', 'remove_holiday': 'holidays',
+        'update_appearance': 'calendar', 'update_calendar_colour': 'calendar',
+        'update_certificates': 'certificates',
+    }
+
+    def _back(self, action):
+        return redirect(reverse('account_settings', kwargs={'org_slug': self.org.slug})
+                        + '#' + self.ACTION_SECTIONS.get(action, 'profile'))
+
+    def _sections(self):
+        has_certificates = self.org.has_field('dbs') or self.org.has_field('coaching_licence')
+        return [s for s in self.SECTIONS if s[0] != 'certificates' or has_certificates]
 
     def get(self, request, org_slug):
         holidays = (
             self.org_membership.holidays.all() if self.org_membership else StaffHoliday.objects.none()
         )
         return render(request, self.template_name, {
+            'account_sections': self._sections(), 'dbs_label': self.org.field_label('dbs'),
             'org': self.org,
             'org_membership': self.org_membership,
             'memberships': request.user.organisation_memberships.select_related('organisation').order_by('organisation__name'),
@@ -1287,7 +1396,7 @@ class AccountView(OrgMixin, View):
         if action == 'add_holiday':
             if not self.org_membership:
                 messages.error(request, "You're not a staff member of this organisation.")
-                return redirect('account_settings', org_slug=self.org.slug)
+                return self._back(action)
 
             start_raw = request.POST.get('start_date', '').strip()
             end_raw = request.POST.get('end_date', '').strip()
@@ -1295,73 +1404,106 @@ class AccountView(OrgMixin, View):
 
             if not start_raw or not end_raw:
                 messages.error(request, 'Start and end date are required.')
-                return redirect('account_settings', org_slug=self.org.slug)
+                return self._back(action)
 
             try:
                 start_date = date.fromisoformat(start_raw)
                 end_date = date.fromisoformat(end_raw)
             except ValueError:
                 messages.error(request, 'Invalid date.')
-                return redirect('account_settings', org_slug=self.org.slug)
+                return self._back(action)
 
             if end_date < start_date:
                 messages.error(request, 'End date must be on or after the start date.')
-                return redirect('account_settings', org_slug=self.org.slug)
+                return self._back(action)
 
             StaffHoliday.objects.create(
                 member=self.org_membership, start_date=start_date, end_date=end_date, note=note,
             )
             messages.success(request, f'Holiday added ({start_date:%d %b %Y} – {end_date:%d %b %Y}).')
-            return redirect('account_settings', org_slug=self.org.slug)
+            return self._back(action)
 
         elif action == 'remove_holiday':
             if not self.org_membership:
                 messages.error(request, "You're not a staff member of this organisation.")
-                return redirect('account_settings', org_slug=self.org.slug)
+                return self._back(action)
 
             holiday_pk = request.POST.get('holiday_pk')
             # Scoped to the logged-in user's own membership — a coach can only remove their own holidays.
             holiday = get_object_or_404(StaffHoliday, pk=holiday_pk, member=self.org_membership)
             holiday.delete()
             messages.success(request, 'Holiday removed.')
-            return redirect('account_settings', org_slug=self.org.slug)
+            return self._back(action)
 
         elif action == 'update_appearance':
             if not self.org_membership:
                 messages.error(request, "You're not a staff member of this organisation.")
-                return redirect('account_settings', org_slug=self.org.slug)
+                return self._back(action)
             accent_theme = request.POST.get('accent_theme', '').strip()
             if accent_theme not in OrganisationMember.AccentTheme.values:
                 messages.error(request, 'Choose one of the colour themes.')
-                return redirect('account_settings', org_slug=self.org.slug)
+                return self._back(action)
             # Only ever the signed-in person's own view.
             self.org_membership.dark_mode = request.POST.get('dark_mode') == '1'
             self.org_membership.accent_theme = accent_theme
             self.org_membership.save(update_fields=['dark_mode', 'accent_theme'])
             messages.success(request, 'Appearance updated.')
-            return redirect('account_settings', org_slug=self.org.slug)
+            return self._back(action)
 
         elif action == 'update_calendar_colour':
             if not self.org_membership:
                 messages.error(request, "You're not a staff member of this organisation.")
-                return redirect('account_settings', org_slug=self.org.slug)
+                return self._back(action)
             import re
             colour = request.POST.get('calendar_colour', '').strip()
             if request.POST.get('clear'):
                 colour = ''
             if colour and not re.fullmatch(r'#[0-9a-fA-F]{6}', colour):
                 messages.error(request, 'Choose a colour like #2563EB.')
-                return redirect('account_settings', org_slug=self.org.slug)
+                return self._back(action)
             # Only ever the signed-in person's own colour.
             self.org_membership.calendar_colour = colour.upper()
             self.org_membership.save(update_fields=['calendar_colour'])
             messages.success(request, 'Calendar colour updated.')
-            return redirect('account_settings', org_slug=self.org.slug)
+            return self._back(action)
+
+        elif action == 'update_emails':
+            # Club admins choose whether they get the weekly club summary email.
+            if self.org_membership and self.org_membership.role == 'org_admin':
+                self.org_membership.weekly_summary = request.POST.get('weekly_summary') == '1'
+                self.org_membership.save(update_fields=['weekly_summary'])
+                messages.success(request, 'You\'ll get the weekly club summary on Monday mornings.'
+                                 if self.org_membership.weekly_summary else 'You won\'t get the weekly club summary.')
+            return self._back(action)
+
+        elif action == 'update_certificates':
+            if not self.org_membership:
+                messages.error(request, "You're not a staff member of this organisation.")
+                return self._back(action)
+            # The signed-in person's own checks and qualifications, for the fields the club records.
+            fields = []
+            if self.org.has_field('dbs'):
+                fields += ['dbs_number', 'dbs_expiry']
+            if self.org.has_field('coaching_licence'):
+                fields += ['coaching_licence', 'coaching_licence_expiry']
+            for name in fields:
+                raw = request.POST.get(name, '').strip()
+                if name.endswith('_expiry'):
+                    try:
+                        raw = date.fromisoformat(raw) if raw else None
+                    except ValueError:
+                        messages.error(request, 'Enter the expiry dates as dates.')
+                        return self._back(action)
+                setattr(self.org_membership, name, raw[:100] if isinstance(raw, str) else raw)
+            if fields:
+                self.org_membership.save(update_fields=fields)
+            messages.success(request, 'Coaching certificates updated.')
+            return self._back(action)
 
         elif action == 'update_emergency_contacts':
             if not self.org_membership:
                 messages.error(request, "You're not a staff member of this organisation.")
-                return redirect('account_settings', org_slug=self.org.slug)
+                return self._back(action)
             # Scoped to the logged-in user's own membership, and only the
             # emergency contact fields the club has switched on.
             from .optional_fields import STAFF, enabled_model_fields
@@ -1373,7 +1515,7 @@ class AccountView(OrgMixin, View):
             if fields:
                 self.org_membership.save(update_fields=fields)
             messages.success(request, 'Emergency contacts updated.')
-            return redirect('account_settings', org_slug=self.org.slug)
+            return self._back(action)
 
         user = request.user
         first_name = request.POST.get('first_name', '').strip()
@@ -1382,14 +1524,21 @@ class AccountView(OrgMixin, View):
 
         if not email:
             messages.error(request, 'Email is required.')
-            return redirect('account_settings', org_slug=self.org.slug)
+            return self._back(action)
 
         user.first_name = first_name
         user.last_name = last_name
         user.email = email
         user.save(update_fields=['first_name', 'last_name', 'email'])
         messages.success(request, 'Account details updated.')
-        return redirect('account_settings', org_slug=self.org.slug)
+        return self._back(action)
+
+
+class AccountSectionRedirect(OrgMixin, View):
+    section = 'profile'
+
+    def get(self, request, org_slug):
+        return redirect(reverse('account_settings', kwargs={'org_slug': self.org.slug}) + '#' + self.section)
 
 
 class KeepAliveView(OrgMixin, View):
@@ -1416,4 +1565,4 @@ class AccountPasswordChangeView(OrgMixin, PasswordChangeView):
 
     def get_success_url(self):
         messages.success(self.request, 'Password changed.')
-        return reverse('account_settings', kwargs={'org_slug': self.org.slug})
+        return reverse('account_settings', kwargs={'org_slug': self.org.slug}) + '#security'

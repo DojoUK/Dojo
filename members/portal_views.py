@@ -180,12 +180,19 @@ class PortalView(View):
         })
 
 
+def _account_holder(member):
+    """The member's Dojo account if this record is the account holder's own (not, say, a child's that
+    shares a parent's account): their contact, emergency and medical details then live in the account."""
+    return member.account if member.is_account_holder else None
+
+
 class PortalMyDetailsView(View):
     """
     Self-service edit of personal/emergency/medical details and the Photo
     consent custom field, plus the member's documents and the "stopping
     training" flag — everything about managing the account itself lives on
-    this one page.
+    this one page. For a Dojo account holder the personal details are edited
+    in the account's My details instead (and copied to each club from there).
     """
     def _photo_consent_field(self, org):
         from .models import CustomField
@@ -210,11 +217,29 @@ class PortalMyDetailsView(View):
             'documents': member.documents.order_by('-uploaded_at') if org.has_feature('documents') else [],
             'document_categories': _document_categories(),
             'leaving_request': leaving_request,
+            'account_holder': _account_holder(member),
         })
 
     def post(self, request, token):
         member = _portal_member(token)
 
+        if request.POST.get('reminders_shown'):
+            member.session_reminders = request.POST.get('session_reminders') == '1'
+            member.save(update_fields=['session_reminders'])
+
+        if _account_holder(member):
+            # Their details are kept in their Dojo account; only club-specific choices are saved here.
+            photo_consent_field = self._photo_consent_field(member.organisation)
+            if photo_consent_field:
+                values = dict(member.custom_field_values or {})
+                values[str(photo_consent_field.pk)] = 'photo_consent' in request.POST
+                member.custom_field_values = values
+                member.save(update_fields=['custom_field_values'])
+            messages.success(request, 'Saved.')
+            return redirect('portal_my_details', token=token)
+
+        member.preferred_name = request.POST.get('preferred_name', '').strip()[:150]
+        member.pronouns = request.POST.get('pronouns', '').strip()[:30]
         member.email = request.POST.get('email', '').strip()
         member.phone = request.POST.get('phone', '').strip()
         member.emergency_contact_name = request.POST.get('emergency_contact_name', '').strip()
@@ -230,7 +255,7 @@ class PortalMyDetailsView(View):
             member.custom_field_values = values
 
         member.save(update_fields=[
-            'email', 'phone', 'emergency_contact_name', 'emergency_contact_phone',
+            'preferred_name', 'pronouns', 'email', 'phone', 'emergency_contact_name', 'emergency_contact_phone',
             'emergency_contact_2_name', 'emergency_contact_2_phone', 'medical_info',
             'custom_field_values',
         ])
@@ -298,6 +323,11 @@ def _plan_context(member, quota, today):
     }
 
 
+def _club_has_codes(org):
+    from billing.models import PolicyDiscount
+    return PolicyDiscount.objects.filter(policy__organisation=org, policy__is_active=True).exclude(code='').exists()
+
+
 class PortalPlansView(View):
     """Choose or change a plan: its own section, with how much of the plan has been used."""
 
@@ -314,6 +344,7 @@ class PortalPlansView(View):
             'member': member,
             'org': member.organisation,
             'family_size': len(family_members(member)),
+            'has_codes': _club_has_codes(member.organisation),
             **_plan_context(member, booking.Quota(member, today), today),
         })
 
@@ -499,6 +530,32 @@ class PortalBookingActionView(View):
                             messages.warning(request, f'{m.name} is enrolled in {enrolled} classes, more than '
                                                       f'{policy.name} allows. They stay on them, but can\'t join '
                                                       f'another until they\'ve left enough to be under {policy.class_limit}.')
+            elif action == 'apply_code':
+                # A promo code on the Plans page: puts them on the plan it's for, if they can choose it themselves.
+                from django.http import Http404
+
+                from billing import promos
+                if not org.has_feature('billing'):
+                    raise Http404
+                discount = promos.find(org, request.POST.get('promo_code', ''))
+                if discount is None:
+                    raise booking.BookingError('We don\'t recognise that promo code.')
+                reason = promos.problem(discount, member)
+                if reason:
+                    raise booking.BookingError(reason)
+                policy = discount.policy
+                if member.billing_policy_id != policy.pk:
+                    if not policy.member_selectable:
+                        raise booking.BookingError(f'The code {discount.code} is for the {policy.name} plan. '
+                                                   f'Ask {org.name} to move you onto it.')
+                    from members.family import FamilyPlanFull, assign_plan
+                    try:
+                        assign_plan(member, policy)
+                    except FamilyPlanFull as e:
+                        raise booking.BookingError(str(e))
+                promos.redeem(member, discount)
+                messages.success(request, f'Code {discount.code} applied: {discount.offer_text()}. '
+                                          f'{member.name} is on the {policy.name} plan.')
             elif action in ('book', 'cancel_booking', 'skip_session', 'rejoin_session'):
                 session = get_object_or_404(
                     Session.objects.select_related('assigned_class__organisation'),
@@ -528,7 +585,7 @@ class PortalBookingActionView(View):
                 messages.error(request, 'That wasn\'t something we could do.')
         except booking.BookingError as e:
             messages.error(request, str(e))
-        return redirect('portal_plans' if action == 'choose_plan' else 'portal_bookings', token=token)
+        return redirect('portal_plans' if action in ('choose_plan', 'apply_code') else 'portal_bookings', token=token)
 
 
 class PortalCodeOfConductView(View):
@@ -571,13 +628,8 @@ class RequestStopTrainingView(View):
     """
     def post(self, request, token):
         member = _portal_member(token)
-        already_pending = MemberLeavingRequest.objects.filter(
-            member=member, status=MemberLeavingRequest.Status.PENDING,
-        ).exists()
-        if not already_pending:
-            MemberLeavingRequest.objects.create(
-                member=member, reason=request.POST.get('reason', '').strip(),
-            )
+        from .models import request_to_leave
+        request_to_leave(member, request.POST.get('reason', ''))
         messages.success(
             request,
             "We've let the club know you're planning to stop training — they'll be in touch, "
@@ -756,6 +808,9 @@ class DownloadDataView(View):
                 'emergency_contact_2_phone': member.emergency_contact_2_phone,
                 'address_line1': member.address_line1,
                 'address_line2': member.address_line2,
+                'city': member.city,
+                'county': member.county,
+                'postcode': member.postcode,
                 'joined_date': member.joined_date,
                 'licence_number': member.licence_number,
                 'licence_expiry': member.licence_expiry,

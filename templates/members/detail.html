@@ -146,6 +146,8 @@
                     </div>
                     <div class="card-body">
                         <dl class="row mb-0">
+                            <dt class="col-sm-4 text-muted fw-normal small">On registers</dt>
+                            <dd class="col-sm-8 small">{{ member.register_name }}{% if member.is_account_holder %} <span class="text-muted">· from their Dojo account</span>{% endif %}</dd>
                             {% if 'date_of_birth' in org.enabled_fields %}
                             <dt class="col-sm-4 text-muted fw-normal small">Date of birth</dt>
                             <dd class="col-sm-8 small">{{ member.date_of_birth|date:"d M Y"|default:"—" }}</dd>
@@ -176,7 +178,7 @@
                             <dt class="col-sm-4 text-muted fw-normal small">Address</dt>
                             <dd class="col-sm-8 small">
                                 {% if member.address_line1 %}
-                                    {{ member.address_line1 }}{% if member.address_line2 %}<br>{{ member.address_line2 }}{% endif %}
+                                    {{ member.address_line1 }}{% if member.address_line2 %}<br>{{ member.address_line2 }}{% endif %}{% if member.city or member.county or member.postcode %}<br>{{ member.city }}{% if member.city and member.county %}, {% endif %}{{ member.county }}{% if member.postcode %} {{ member.postcode }}{% endif %}{% endif %}
                                 {% else %}—{% endif %}
                             </dd>
                             {% endif %}
@@ -520,6 +522,34 @@
                     {% endif %}
                 </div>
                 {% endif %}
+
+                {% if progression_elsewhere %}
+                <div class="card border-0 shadow-sm mt-3">
+                    <div class="card-header bg-white border-bottom py-3">
+                        <h6 class="mb-0">Progression elsewhere <span class="badge bg-secondary-subtle text-secondary fw-normal ms-1"><i class="bi bi-lock me-1"></i>Read only</span></h6>
+                        <p class="text-muted small mb-0 mt-1">Grades from other clubs on Dojo, and ones {{ member.first_name|default:member.name }} added from before. These belong to the club that awarded them, or to {{ member.first_name|default:member.name }}, so they can't be changed here.</p>
+                    </div>
+                    <div class="card-body p-0">
+                        {% for group in progression_elsewhere %}
+                        <div class="px-3 pt-3 pb-1 small fw-semibold text-muted text-uppercase" style="font-size:.72rem;letter-spacing:.05em;">{{ group.label }}</div>
+                        <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <tbody>
+                                {% for entry in group.entries %}
+                                <tr>
+                                    <td class="ps-3 py-2" style="width:24px;">{% if entry.colour %}<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:{{ entry.colour }};border:1px solid rgba(0,0,0,0.1);"></span>{% endif %}</td>
+                                    <td class="py-2 small fw-semibold">{{ entry.grade }}{% if entry.change == 'demotion' %} <span class="badge bg-warning-subtle text-warning-emphasis">Demoted</span>{% endif %}</td>
+                                    <td class="py-2 small text-muted">{{ entry.date|date:"d M Y"|default:"—" }}</td>
+                                    <td class="py-2 small text-muted pe-3">{% if entry.source == 'club' %}{{ entry.awarded_by }}{% else %}{% if entry.awarded_by %}{{ entry.awarded_by }} · {% endif %}<em>added by the member</em>{% endif %}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
             </div>
             {% if syllabus_cards or technique_syllabus_cards %}
             <div class="col-lg-7">
@@ -667,8 +697,29 @@
                                     </div>
                                     {% endfor %}
                                 </div>
-                                {% else %}
+                                {% elif not auto_discounts %}
                                 <div class="text-muted small mb-2">No discounts applied.</div>
+                                {% endif %}
+                                {% if auto_discounts %}
+                                <div class="d-flex flex-wrap gap-1 mb-2">
+                                    {% for auto in auto_discounts %}
+                                    <div class="d-flex align-items-center gap-1">
+                                        {% if auto.exemption %}
+                                        <span class="badge bg-light text-muted border text-decoration-line-through" title="Exempted: not applied to {{ member.name }}"><i class="bi bi-lightning me-1"></i>{{ auto.discount }}</span>
+                                        <form method="post" action="{% url 'member_discount_remove' org_slug=org.slug pk=auto.exemption.pk %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-link p-0 small" style="font-size:0.75rem;">Apply again</button>
+                                        </form>
+                                        {% else %}
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle" title="Auto-applied to everyone on {{ auto.discount.policy.name }}"><i class="bi bi-lightning-fill me-1"></i>{{ auto.discount }}</span>
+                                        <form method="post" action="{% url 'member_discount_exempt' org_slug=org.slug member_pk=member.pk discount_pk=auto.discount.pk %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-link p-0 text-danger small" style="font-size:0.75rem;" title="Don't apply to {{ member.name }}">Don't apply</button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                </div>
                                 {% endif %}
                                 {% if available_discounts %}
                                 <form method="post" action="{% url 'member_discount_add' org_slug=org.slug member_pk=member.pk %}" class="d-flex gap-2 align-items-center mt-auto pt-2">

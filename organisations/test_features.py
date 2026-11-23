@@ -15,6 +15,7 @@ from members.models import Member
 from organisations.features import FEATURES, FEATURES_BY_KEY, effective_features
 from organisations.models import Organisation, OrganisationMember
 from progression.models import MemberProgression, ProgressionStage, ProgressionSystem
+from organisations.test_location import SETUP_LOCATION
 
 ALL_ON = {key: True for key in FEATURES_BY_KEY}
 
@@ -241,7 +242,7 @@ class FeatureSettingsTests(FeatureTestBase):
 
 class SetupWizardTests(TestCase):
     def test_setup_stores_chosen_features(self):
-        response = self.client.post(reverse('setup'), {
+        response = self.client.post(reverse('setup'), {**SETUP_LOCATION, 
             'org_name': 'New Club', 'username': 'boss',
             'password': 'a-long-password', 'password_confirm': 'a-long-password',
             'features': ['grades', 'billing', 'member_portal'],

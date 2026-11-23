@@ -53,6 +53,8 @@
                                     <span class="badge bg-success-subtle text-success border border-success-subtle">
                                         {{ d }}
                                         {% if d.auto_apply %}<i class="bi bi-lightning-fill" title="Auto-apply"></i>{% endif %}
+                                        {% if d.code %}<span class="ms-1 font-monospace" title="Promo code{% if d.new_members_only %}, new members only{% endif %}{% if d.duration_months %}, lasts {{ d.duration_months }} month{{ d.duration_months|pluralize }}{% endif %}{% if d.valid_until %}, until {{ d.valid_until|date:'j M Y' }}{% endif %}">· {{ d.code }}{% if d.max_uses %} ({{ d.uses }}/{{ d.max_uses }}){% else %} ({{ d.uses }} used){% endif %}</span>{% endif %}
+                                        {% if d.show_publicly %}<i class="bi bi-megaphone-fill ms-1" title="Shown as your intro offer"></i>{% endif %}
                                     </span>
                                     <form method="post" action="{% url 'billing_discount_delete' org_slug=org.slug pk=d.pk %}" class="d-inline" onsubmit="return confirm('Remove this discount?')">
                                         {% csrf_token %}
@@ -197,11 +199,44 @@
                                         <input type="number" name="value" class="form-control" step="0.01" min="0" max="999999.99" placeholder="e.g. 10" required>
                                     </div>
                                 </div>
+                                <details class="mb-3 border rounded p-2">
+                                    <summary class="small fw-semibold" style="cursor:pointer;">Make it a promo code or intro offer</summary>
+                                    <p class="text-muted small mt-2 mb-2">People type the code on your join form or their portal's Plans page to get this discount.</p>
+                                    <div class="row g-2">
+                                        <div class="col-sm-6">
+                                            <label class="form-label small fw-semibold" for="code{{ policy.pk }}">Code</label>
+                                            <input type="text" name="code" id="code{{ policy.pk }}" class="form-control text-uppercase" maxlength="30" placeholder="e.g. WELCOME">
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <label class="form-label small fw-semibold" for="duration{{ policy.pk }}">Lasts</label>
+                                            <select name="duration_months" id="duration{{ policy.pk }}" class="form-select">
+                                                <option value="">As long as they're on the plan</option>
+                                                <option value="1">1 month</option><option value="2">2 months</option><option value="3">3 months</option><option value="6">6 months</option><option value="12">12 months</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <label class="form-label small fw-semibold" for="until{{ policy.pk }}">Can be used until</label>
+                                            <input type="date" name="valid_until" id="until{{ policy.pk }}" class="form-control">
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <label class="form-label small fw-semibold" for="maxuses{{ policy.pk }}">Most uses</label>
+                                            <input type="number" name="max_uses" id="maxuses{{ policy.pk }}" class="form-control" min="1" placeholder="No limit">
+                                        </div>
+                                    </div>
+                                    <div class="form-check mt-2">
+                                        <input class="form-check-input" type="checkbox" name="new_members_only" value="1" id="newOnly{{ policy.pk }}">
+                                        <label class="form-check-label small" for="newOnly{{ policy.pk }}">New members only (never invoiced before)</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="show_publicly" value="1" id="public{{ policy.pk }}">
+                                        <label class="form-check-label small" for="public{{ policy.pk }}">Show it as your intro offer on Find clubs and your join page</label>
+                                    </div>
+                                </details>
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" name="auto_apply" value="1" id="autoApply{{ policy.pk }}">
                                     <label class="form-check-label small" for="autoApply{{ policy.pk }}">
-                                        Auto-apply to all members on this policy
-                                        <span class="text-muted d-block" style="font-size:0.8rem;">When set, this discount applies automatically when billing. Members can still have it removed per-invoice.</span>
+                                        Auto-apply to everyone on this plan
+                                        <span class="text-muted d-block" style="font-size:0.8rem;">Comes off every invoice for anyone billed on this plan, including members billed through their class's plan. Exempt someone from their member page. If it lasts a set time, that runs from when they joined the club.</span>
                                     </label>
                                 </div>
                             </div>

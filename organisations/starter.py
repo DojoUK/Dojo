@@ -11,14 +11,17 @@ from pathlib import Path
 
 from django.db import transaction
 
+from .disciplines import FROM_STARTER_TEMPLATE
+
 TEMPLATE_DIR = Path(__file__).resolve().parent / 'starter_templates'
 
 
 def available():
     """
-    One entry per template, by name: {'key', 'name', 'description', 'systems', 'syllabus'}.
+    One entry per template, by name: {'key', 'name', 'description', 'systems', 'syllabus', 'summary'}.
     `systems` is [{'name', 'stages': [{'name', 'colour'}]}] and `syllabus` the checklist section
-    names, so setup can show exactly what picking a template adds.
+    names, so setup can show exactly what picking a template adds; `summary` is the short version
+    shown first (see summarise).
     """
     found = []
     for path in sorted(TEMPLATE_DIR.glob('*.json')):
@@ -31,8 +34,44 @@ def available():
                 for system in data.get('progression_systems', [])
             ],
             'syllabus': [section['name'] for section in data.get('syllabus_sections', [])],
+            'summary': summarise(data),
         })
     return sorted(found, key=lambda t: t['name'])
+
+
+def _count(n, word):
+    return f'{n} {word}{"" if n == 1 else "s"}'
+
+
+def summarise(data):
+    """
+    What a club gets from a template, in a few lines: [{'key', 'title', 'text', 'included'}] for
+    progression, syllabus and gradings, so setup can say it at a glance.
+    """
+    systems = data.get('progression_systems', [])
+    sections = data.get('syllabus_sections', [])
+    features = set(data.get('enable_features', []))
+    stages = sum(len(system.get('stages', [])) for system in systems)
+    rows = [{
+        'key': 'progression', 'title': 'Progression', 'included': bool(systems),
+        'text': (f'{_count(len(systems), "grading scheme")} with {_count(stages, "grade")}: '
+                 + ', '.join(system['name'] for system in systems) + '.') if systems else 'Not included. Add your own grades later.',
+    }]
+    if sections:
+        items = sum(len(sub.get('items', [])) for section in sections for sub in section.get('subsections', []))
+        linked = sum(1 for system in systems for stage in system.get('stages', []) if stage.get('syllabus'))
+        text = f'{_count(len(sections), "checklist")} with {_count(items, "technique")}'
+        if linked:
+            text += f', each linked to the {_count(linked, "grade")} it\'s for'
+        rows.append({'key': 'syllabus', 'title': 'Syllabus', 'included': True, 'text': text + '.'})
+    else:
+        rows.append({'key': 'syllabus', 'title': 'Syllabus', 'included': False,
+                     'text': 'Not included. Add your own checklists later if you want them.'})
+    gradings = 'gradings' in features or any(system.get('uses_gradings') for system in systems)
+    rows.append({'key': 'gradings', 'title': 'Gradings', 'included': gradings,
+                 'text': 'Grading sessions switched on.' if gradings else
+                         'Not included. Switch on grading sessions in Settings when you\'re ready.'})
+    return rows
 
 
 def load(key):
@@ -98,6 +137,7 @@ def apply_template(org, key):
                 'order': next_order,
                 'uses_gradings': system_data.get('uses_gradings', False),
                 'assign_to_new_members': system_data.get('assign_to_new_members', False),
+                'discipline': system_data.get('discipline', FROM_STARTER_TEMPLATE.get(key, '')),
             },
         )
         if system_new:

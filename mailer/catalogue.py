@@ -46,6 +46,13 @@ EXAMPLE_INVOICE = {
     'pay_link': 'https://example.com/pay/…', 'portal_link': 'https://example.com/p/…',
 }
 
+SESSION_FIELDS = (
+    ('class_name', 'The class'),
+    ('session_date', 'The session\'s date, e.g. "Tuesday 3 November 2026"'),
+    ('session_time', 'When it starts and ends, e.g. "18:00–19:00" (blank if the class has no set time)'),
+)
+EXAMPLE_SESSION = {'class_name': 'Juniors', 'session_date': 'Tuesday 3 November 2026', 'session_time': '18:00–19:00'}
+
 INVOICE_FIELDS = (
     ('period', 'What the invoice is for, e.g. "Autumn Term 2026"'),
     ('amount', 'Amount still to pay, e.g. "£45.00"'),
@@ -263,9 +270,9 @@ If you can't make it any more, please cancel from your member portal so someone 
 
 See you on the mat,
 **{club_name}**""",
-        fields=(('class_name', 'The class'), ('session_date', 'The session\'s date, e.g. "Tuesday 3 November 2026"')),
-        blocks=(('booking_box', 'Highlighted box with the class and date'),),
-        example={'class_name': 'Juniors', 'session_date': 'Tuesday 3 November 2026'},
+        fields=SESSION_FIELDS,
+        blocks=(('booking_box', 'Highlighted box with the class, date and time'),),
+        example=EXAMPLE_SESSION,
     ),
     EmailType(
         'session_booking_cancelled', 'Session booking cancelled', 'When a member cancels their booking onto a single session.',
@@ -279,9 +286,75 @@ This is to confirm that {first_name}'s booking for this session has been **cance
 If this wasn't what you meant to do, you can book again from your member portal while there's space.
 
 **{club_name}**""",
-        fields=(('class_name', 'The class'), ('session_date', 'The session\'s date, e.g. "Tuesday 3 November 2026"')),
-        blocks=(('booking_box', 'Highlighted box with the class and date'),),
-        example={'class_name': 'Juniors', 'session_date': 'Tuesday 3 November 2026'},
+        fields=SESSION_FIELDS,
+        blocks=(('booking_box', 'Highlighted box with the class, date and time'),),
+        example=EXAMPLE_SESSION,
+    ),
+)
+
+EMAIL_TYPES += (
+    EmailType(
+        'session_reminder', 'Session reminder',
+        'Before a session someone is booked on (or, if the club chooses, any session they\'re expected at), '
+        'at the time set in Settings → Features.',
+        'Reminder: {class_name} on {session_date} ({club_name})',
+        """{greeting},
+
+Just a reminder that {first_name} is expected at this session:
+
+{booking_box}
+
+Can't make it any more? Please let us know from your member portal, so someone else can have the place.
+
+{portal_button}
+
+See you on the mat,
+**{club_name}**""",
+        fields=SESSION_FIELDS + (('portal_link', 'Link to the member portal'),),
+        blocks=(('booking_box', 'Highlighted box with the class, date and time'),
+                ('portal_button', 'A "Go to member portal" button with the link underneath')),
+        example={**EXAMPLE_SESSION, 'portal_link': 'https://example.com/p/…'},
+    ),
+)
+
+EMAIL_TYPES += (
+    EmailType(
+        'review_request', 'Review request',
+        'Once, after someone with a Dojo account has trained at the club a few times, if the club asks for reviews '
+        '(switch it off on the Reviews page).',
+        'How\'s training at {club_name}?',
+        """{greeting},
+
+We hope you're enjoying training at **{club_name}**. Would you take a minute to say how it's going?
+
+A star rating and a few words help other people find a club that suits them, and help us know what we're doing well and what to improve.
+
+{review_button}
+
+You can change your review any time.
+
+Thanks,
+**{club_name}**""",
+        fields=(('review_link', 'Link to review the club'),),
+        blocks=(('review_button', 'A "Review the club" button with the link underneath'),),
+        example={'review_link': 'https://example.com/clubs/your-club/#reviews'},
+    ),
+    EmailType(
+        'weekly_summary', 'Weekly club summary', 'Monday mornings, to staff who switch it on in My settings.',
+        'Your week at {club_name}: {week}',
+        """Hi {first_name},
+
+Here's how last week went at **{club_name}**.
+
+{summary}
+
+The full list of members not seen lately is attached, and on the Not seen lately page.
+
+**Dojo**""",
+        fields=(('first_name', 'The staff member\'s first name'), ('week', 'The week covered, e.g. "16–22 November 2026"')),
+        blocks=(('summary', 'The figures: attendance, members, money, things to follow up'),),
+        example={'first_name': 'Sam', 'week': '16–22 November 2026'},
+        to_members=False,
     ),
 )
 

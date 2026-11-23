@@ -17,11 +17,29 @@ def _send_overdue_reminders():
     return send_due_reminders()
 
 
+def _send_session_reminders():
+    from classes.reminders import send_due
+    return send_due()
+
+
+def _send_review_prompts():
+    from network.reviews import send_prompts
+    return send_prompts()
+
+
+def _send_weekly_summaries():
+    from organisations.weekly_summary import send_due
+    return send_due()
+
+
 JOBS = (
     ('collect_automatic_payments', 60, _collect_automatic_payments),
     # Both are safe to repeat: a period's invoices are made once, and reminders respect their repeat gap.
     ('create_scheduled_invoices', 15 * 60, _create_scheduled_invoices),
     ('send_overdue_reminders', 60 * 60, _send_overdue_reminders),
+    ('send_session_reminders', 10 * 60, _send_session_reminders),
+    ('send_review_prompts', 60 * 60, _send_review_prompts),
+    ('send_weekly_summaries', 30 * 60, _send_weekly_summaries),
 )
 
 

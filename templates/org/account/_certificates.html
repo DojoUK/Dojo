@@ -1,0 +1,31 @@
+{% if not org_membership %}{% include 'org/account/_not_staff.html' %}{% else %}
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="update_certificates">
+    <div class="row g-3">
+        {% if 'dbs' in org.enabled_fields %}
+        <div class="col-sm-6">
+            <label class="form-label small fw-semibold" for="cert-dbs">{{ dbs_label }} number</label>
+            <input type="text" name="dbs_number" id="cert-dbs" value="{{ org_membership.dbs_number }}" class="form-control" maxlength="100">
+        </div>
+        <div class="col-sm-6">
+            <label class="form-label small fw-semibold" for="cert-dbs-exp">{{ dbs_label }} expiry</label>
+            <input type="date" name="dbs_expiry" id="cert-dbs-exp" value="{{ org_membership.dbs_expiry|date:'Y-m-d' }}" class="form-control">
+            {% if org_membership.dbs_expiry and org_membership.dbs_expiry < today %}<div class="form-text text-danger">Expired</div>{% endif %}
+        </div>
+        {% endif %}
+        {% if 'coaching_licence' in org.enabled_fields %}
+        <div class="col-sm-6">
+            <label class="form-label small fw-semibold" for="cert-lic">{{ org.coaching_licence_label }}</label>
+            <input type="text" name="coaching_licence" id="cert-lic" value="{{ org_membership.coaching_licence }}" class="form-control" maxlength="100">
+        </div>
+        <div class="col-sm-6">
+            <label class="form-label small fw-semibold" for="cert-lic-exp">{{ org.coaching_licence_label }} expiry</label>
+            <input type="date" name="coaching_licence_expiry" id="cert-lic-exp" value="{{ org_membership.coaching_licence_expiry|date:'Y-m-d' }}" class="form-control">
+            {% if org_membership.coaching_licence_expiry and org_membership.coaching_licence_expiry < today %}<div class="form-text text-danger">Expired</div>{% endif %}
+        </div>
+        {% endif %}
+    </div>
+    <button type="submit" class="btn btn-dark btn-sm mt-3">Save certificates</button>
+</form>
+{% endif %}

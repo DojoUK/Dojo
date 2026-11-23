@@ -247,6 +247,17 @@ class SessionAbsence(models.Model):
         unique_together = ('session', 'member')
 
 
+class SessionReminder(models.Model):
+    """A reminder email sent (or tried) for a session, so each person is only reminded once."""
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name='reminders')
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='session_reminders_sent')
+    sent_at = models.DateTimeField(auto_now_add=True)
+    sent_to = models.EmailField(blank=True)   # blank when there was no address to send to
+
+    class Meta:
+        unique_together = ('session', 'member')
+
+
 class Attendance(models.Model):
     session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name='attendance')
     member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='attendance')

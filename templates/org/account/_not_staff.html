@@ -1,0 +1,4 @@
+<div class="alert alert-light border small mb-0">
+    You're signed in as a Dojo administrator, but you aren't on {{ org.name }}'s staff list, so there's nothing to set here for this club.
+    {% if request.user.is_superuser or org_membership.role == 'org_admin' %}<a href="{% url 'org_staff' org_slug=org.slug %}">Add yourself on the Staff page</a> to use it.{% endif %}
+</div>

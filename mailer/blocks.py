@@ -25,6 +25,23 @@ def reset_button(org, reset_link):
     }
 
 
+# Made-up figures for previewing the weekly summary in the email editor.
+_EXAMPLE_SUMMARY = {
+    'week': '16–22 November 2026', 'sessions': 12, 'registers_missing': 1, 'attended': 148, 'attended_change': 9,
+    'active_members': 86, 'new_members': 3, 'billing': True, 'paid': 1240, 'overdue_count': 4, 'overdue_total': 180,
+    'not_seen': 6, 'slowing': 4, 'never': 2, 'not_seen_names': ['Ann Lee', 'Ben Cole', 'Cara Dunn'],
+    'applications': 2, 'leaving': 1, 'staff_checks_expiring': 1,
+    'not_seen_url': 'https://example.com/org/your-club/members/not-seen/', 'dashboard_url': 'https://example.com/org/your-club/',
+}
+
+
+def link_button(org, text, url):
+    return {
+        'html': render_to_string('emails/blocks/link_button.html', {'url': url, 'text': text, 'accent': _accent(org)}),
+        'text': f'{text}: {url}',
+    }
+
+
 def session_box(class_name, session_date):
     return {
         'html': render_to_string('emails/blocks/session_box.html', {'class_name': class_name, 'session_date': session_date}),
@@ -112,9 +129,16 @@ def example(org, key):
     if 'session_box' in names:
         blocks['session_box'] = session_box(values['class_name'], values['session_date'])
     if 'booking_box' in names:
-        blocks['booking_box'] = booking_box(values['class_name'], values.get('session_date') or values.get('class_schedule', ''))
+        when = values.get('session_date') or values.get('class_schedule', '')
+        if values.get('session_date') and values.get('session_time'):
+            when = f"{when}, {values['session_time']}"
+        blocks['booking_box'] = booking_box(values['class_name'], when)
     if 'message' in names:
         blocks['message'] = message(values['message'])
+    if 'review_button' in names:
+        blocks['review_button'] = link_button(org, 'Review ' + org.name, values['review_link'])
+    if 'summary' in names:
+        blocks['summary'] = {'html': render_to_string('emails/blocks/weekly_summary.html', _EXAMPLE_SUMMARY), 'text': ''}
     if 'invoice_summary' in names:
         summary = {'member_name': values['member_name'], 'overdue': key == 'invoice_reminder', **values}
         blocks['invoice_summary'] = {'html': render_to_string('emails/blocks/invoice_summary.html', summary), 'text': ''}

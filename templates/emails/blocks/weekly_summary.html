@@ -1,0 +1,24 @@
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e5e7eb;border-radius:8px;margin:0 0 20px;font-size:14px;color:#111827;">
+  <tr><td style="padding:14px 18px;border-bottom:1px solid #e5e7eb;background:#f9fafb;"><strong>{{ week }}</strong></td></tr>
+  <tr><td style="padding:12px 18px;">
+    <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="font-size:14px;">
+      <tr><td style="padding:4px 0;color:#6b7280;">Sessions run</td><td style="padding:4px 0;text-align:right;"><strong>{{ sessions }}</strong>{% if registers_missing %} <span style="color:#b45309;">({{ registers_missing }} without a register)</span>{% endif %}</td></tr>
+      <tr><td style="padding:4px 0;color:#6b7280;">Attendances</td><td style="padding:4px 0;text-align:right;"><strong>{{ attended }}</strong> <span style="color:{% if attended_change < 0 %}#b91c1c{% else %}#047857{% endif %};">{% if attended_change >= 0 %}+{% endif %}{{ attended_change }} on the week before</span></td></tr>
+      <tr><td style="padding:4px 0;color:#6b7280;">Active members</td><td style="padding:4px 0;text-align:right;"><strong>{{ active_members }}</strong>{% if new_members %} ({{ new_members }} new){% endif %}</td></tr>
+      {% if billing %}
+      <tr><td style="padding:4px 0;color:#6b7280;">Paid last week</td><td style="padding:4px 0;text-align:right;"><strong>£{{ paid|floatformat:2 }}</strong></td></tr>
+      <tr><td style="padding:4px 0;color:#6b7280;">Overdue</td><td style="padding:4px 0;text-align:right;"><strong>{{ overdue_count }}</strong> invoice{{ overdue_count|pluralize }}{% if overdue_count %}, £{{ overdue_total|floatformat:2 }}{% endif %}</td></tr>
+      {% endif %}
+    </table>
+  </td></tr>
+  <tr><td style="padding:12px 18px;border-top:1px solid #e5e7eb;">
+    <strong>To follow up</strong>
+    <ul style="margin:6px 0 0;padding-left:18px;">
+      <li>Not seen in 3 weeks: <strong>{{ not_seen }}</strong> · coming less often: <strong>{{ slowing }}</strong> · never come: <strong>{{ never }}</strong>{% if not_seen_names %} ({{ not_seen_names|join:", " }}{% if not_seen|add:slowing > not_seen_names|length %} and others{% endif %}){% endif %}</li>
+      {% if applications %}<li>Applications waiting: <strong>{{ applications }}</strong></li>{% endif %}
+      {% if leaving %}<li>Members asking to leave: <strong>{{ leaving }}</strong></li>{% endif %}
+      {% if staff_checks_expiring %}<li>Staff checks expiring in the next 30 days: <strong>{{ staff_checks_expiring }}</strong></li>{% endif %}
+    </ul>
+    <p style="margin:10px 0 0;"><a href="{{ not_seen_url }}" style="color:#2563eb;">Open Not seen lately</a> · <a href="{{ dashboard_url }}" style="color:#2563eb;">Go to your dashboard</a></p>
+  </td></tr>
+</table>

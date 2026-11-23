@@ -40,6 +40,12 @@
         <div class="p-brand">
             {% org_logo org org.theme.sidebar_color 32 140 %}
             <span class="p-brand-name">{{ org.name }}</span>
+            {# Back out to the Dojo network: all their clubs if they have a Dojo account, otherwise the club finder. #}
+            {% if member.account_id %}
+            <a class="p-hero-link" href="{% url 'network_home' %}"><i class="bi bi-grid-fill" aria-hidden="true"></i>My clubs</a>
+            {% else %}
+            <a class="p-hero-link" href="{% url 'network_finder' %}"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i>Find clubs</a>
+            {% endif %}
         </div>
         {# The page title, with the family picker (if there's a family) on the right of the same line. #}
         <div class="p-title-row">
@@ -136,6 +142,23 @@
             </label>
         </div>
         <div class="card">
+            {% if member.account_id %}
+            <a href="{% url 'network_home' %}" class="p-row has-icon">
+                <span class="p-icon is-accent"><i class="bi bi-grid-fill"></i></span>
+                <span class="p-row-main"><span class="p-row-title">My clubs</span><span class="p-row-sub d-block">All your clubs in your Dojo account</span></span>
+                <i class="bi bi-chevron-right p-chevron"></i>
+            </a>
+            <a href="{% url 'network_progression' %}" class="p-row has-icon">
+                <span class="p-icon is-orange"><i class="bi bi-award-fill"></i></span>
+                <span class="p-row-main"><span class="p-row-title">Progression</span><span class="p-row-sub d-block">Your grades from every club</span></span>
+                <i class="bi bi-chevron-right p-chevron"></i>
+            </a>
+            {% endif %}
+            <a href="{% url 'network_finder' %}" class="p-row has-icon">
+                <span class="p-icon is-red"><i class="bi bi-geo-alt-fill"></i></span>
+                <span class="p-row-main"><span class="p-row-title">Find clubs</span><span class="p-row-sub d-block">Martial arts clubs on Dojo near you</span></span>
+                <i class="bi bi-chevron-right p-chevron"></i>
+            </a>
             <a href="{% url 'portal_my_data' token=member.token %}" class="p-row has-icon">
                 <span class="p-icon is-grey"><i class="bi bi-file-earmark-text"></i></span>
                 <span class="p-row-main"><span class="p-row-title">My data</span></span>

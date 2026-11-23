@@ -71,6 +71,53 @@ class MemberListView(OrgAdminMixin, ListView):
         return context
 
 
+class NotSeenLatelyView(OrgAdminMixin, View):
+    """Members the club may be about to lose: not seen lately, never come, or coming less often."""
+
+    def get(self, request, org_slug):
+        from . import not_seen
+        try:
+            days = int(request.GET.get('days', not_seen.DEFAULT_DAYS))
+        except ValueError:
+            days = not_seen.DEFAULT_DAYS
+        if days not in not_seen.DAY_CHOICES:
+            days = not_seen.DEFAULT_DAYS
+        found = not_seen.report(self.org, days)
+        if request.GET.get('format') == 'csv':
+            return self._csv(found)
+        sections = [
+            ('not_seen', f'Not seen in {days} days or more', 'They used to come, but haven\'t been marked present since.',
+             found['not_seen']),
+            ('slowing', 'Coming less often', 'Still coming, but in the last 4 weeks about half as often as usual or less.',
+             found['slowing']),
+            ('never', 'Never come', f'No attendance recorded, and they joined {days} days ago or more (or no join date).',
+             found['never']),
+        ]
+        return render(request, 'members/not_seen.html', {
+            'org': self.org, 'org_membership': self.org_membership, 'days': days,
+            'day_choices': not_seen.DAY_CHOICES, 'sections': sections,
+            'total': sum(len(rows) for *_, rows in sections),
+        })
+
+    def _csv(self, found):
+        import csv
+        from django.http import HttpResponse
+        from .emails import _recipient
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="not-seen-lately.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Group', 'Name', 'Last seen', 'Days since', 'Last 4 weeks', 'Usual 4 weeks', 'Classes',
+                         'Email', 'Phone', 'Leaving requested', 'Overdue invoices'])
+        labels = {'not_seen': 'Not seen', 'slowing': 'Coming less often', 'never': 'Never come'}
+        for key, rows in found.items():
+            for row in rows:
+                m = row['member']
+                writer.writerow([labels[key], m.name, row['last_seen'] or '', row['days_since'] if row['days_since'] is not None else '',
+                                 row['recent'], row['usual'], ', '.join(m.class_names), _recipient(m) or '', m.phone,
+                                 'Yes' if m.leaving else '', m.overdue or ''])
+        return response
+
+
 class MemberBulkActionView(OrgAdminMixin, View):
     def post(self, request, org_slug):
         action = request.POST.get('bulk_action')
@@ -251,6 +298,9 @@ class MemberDetailView(OrgAdminMixin, DetailView):
             organisation=self.org
         ).prefetch_related('stages')
         context['current_grade'] = context['progressions'].first()
+        # Their progression from other clubs and grades they added themselves: theirs, so read only here.
+        from network.progression import elsewhere
+        context['progression_elsewhere'] = elsewhere(self.object) if self.org.has_feature('grades') else []
 
         from progression.models import MemberSyllabusProgress
         current_by_system = {}
@@ -325,8 +375,17 @@ class MemberDetailView(OrgAdminMixin, DetailView):
                            .values_list('member_id', flat=True))
         context['family_candidates'] = Member.objects.filter(organisation=self.org, is_active=True) \
             .exclude(pk__in=in_family | in_any_group).order_by('name')
+        # Auto-apply discounts on the plans they're billed on: applied unless exempted.
+        from .models import current_plans
+        exempt = {md.discount_id: md for md in MemberDiscount.objects.filter(member=self.object, is_active=False)}
+        has_active = {md.discount_id for md in context['member_discounts']}
+        context['auto_discounts'] = [
+            {'discount': d, 'exemption': exempt.get(d.pk)}
+            for d in PolicyDiscount.objects.filter(policy__in=current_plans(self.object), auto_apply=True)
+            .select_related('policy') if d.pk not in has_active
+        ]
         context['available_discounts'] = PolicyDiscount.objects.filter(
-            policy__organisation=self.org
+            policy__organisation=self.org, auto_apply=False
         ).exclude(
             member_discounts__member=self.object, member_discounts__is_active=True
         ).select_related('policy')
@@ -641,13 +700,31 @@ class ApproveApplicationView(OrgAdminMixin, View):
         app = get_object_or_404(MemberApplication, pk=pk, organisation=self.org)
         member = Member.objects.create(
             organisation=self.org,
+            account=app.account,   # applied from a Dojo account: the membership shows up there
+            account_role=(('' if not app.account_id else
+                           Member.AccountRole.HOLDER if app.for_account_holder else Member.AccountRole.DEPENDANT)),
             name=app.name,
+            first_name=app.first_name,
+            surname=app.surname,
+            preferred_name=app.preferred_name,
+            pronouns=app.pronouns,
             date_of_birth=app.date_of_birth,
             email=app.email,
             phone=app.phone,
             medical_info=app.medical_info,
             address_line1=app.address_line1,
             address_line2=app.address_line2,
+            city=app.city,
+            county=app.county,
+            postcode=app.postcode,
+            emergency_contact_name=app.emergency_contact_name,
+            emergency_contact_phone=app.emergency_contact_phone,
+            emergency_contact_2_name=app.emergency_contact_2_name,
+            emergency_contact_2_phone=app.emergency_contact_2_phone,
+            joined_date=timezone.localdate(),
+            # Answers to custom fields asked on the join form, for fields the club still has.
+            custom_field_values={key: value for key, value in (app.custom_field_values or {}).items()
+                                 if self.org.custom_fields.filter(pk=key).exists()},
         )
         if app.guardian_name:
             from .models import Guardian
@@ -657,7 +734,16 @@ class ApproveApplicationView(OrgAdminMixin, View):
                 email=app.guardian_email,
                 phone=app.guardian_phone,
                 relationship='Guardian',
+                # A parent applying from their account for their child: the guardian is the account holder.
+                account=(app.account if app.account_id and not app.for_account_holder
+                         and app.guardian_email.strip().lower() == app.account.email.lower() else None),
             )
+        if app.promo_id:
+            from billing import promos
+            try:
+                promos.redeem(member, app.promo)
+            except ValueError as e:
+                messages.warning(request, f'The promo code they used wasn\'t applied: {e}')
         app.status = MemberApplication.Status.APPROVED
         app.decided_at = timezone.now()
         app.save(update_fields=['status', 'decided_at'])
@@ -667,14 +753,18 @@ class ApproveApplicationView(OrgAdminMixin, View):
             from documents.models import WaiverTemplate, SignedWaiver
             from documents.pdf_utils import stamp_signature_on_pdf
             from django.core.files.base import ContentFile
-            for template in self.org.waiver_templates.filter(is_active=True):
+            templates = self.org.waiver_templates.filter(is_active=True)
+            if app.agreed_waivers:   # the documents they ticked; older applications agreed to all
+                templates = templates.filter(pk__in=app.agreed_waivers)
+            signer = app.signer_name or app.name
+            for template in templates:
                 try:
                     signed_pdf = stamp_signature_on_pdf(
-                        template.file, app.signature_data, app.name, app.submitted_at
+                        template.file, app.signature_data, signer, app.submitted_at
                     )
                     sw = SignedWaiver(
                         member=member, application=app, template=template,
-                        signer_name=app.name, signed_at=app.submitted_at,
+                        signer_name=signer, signed_at=app.submitted_at, ip_address=app.signer_ip,
                     )
                     sw.signed_pdf.save(
                         f"{app.name}_{template.name}.pdf".replace(' ', '_'),
@@ -683,10 +773,15 @@ class ApproveApplicationView(OrgAdminMixin, View):
                 except Exception:
                     pass  # Don't block approval if PDF stamping fails
 
-        if self.org.has_feature('member_portal'):
-            from .emails import send_welcome_email
-            send_welcome_email(member)
         messages.success(request, f'{member.name} approved and added as a member.')
+        if self.org.has_feature('member_portal'):
+            # The member is already added, so a failed welcome email mustn't turn this into an error page.
+            from .emails import send_welcome_email
+            try:
+                send_welcome_email(member)
+            except Exception as e:
+                messages.warning(request, f'The welcome email couldn\'t be sent ({e}). Check Settings → Email, then '
+                                          f'use "Send welcome email" on {member.name}\'s page.')
         return redirect('member_detail', org_slug=self.org.slug, pk=member.pk)
 
 

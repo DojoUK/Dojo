@@ -20,5 +20,27 @@
         Required if you offer class booking with Billing switched on. A member who hasn't chosen a plan can't enrol on a whole class;
         to book a single session they pay this price through Stripe first, and the booking is confirmed once the payment clears.
     </div>
+    <hr class="my-4">
+    <h6 class="mb-1">Session reminders</h6>
+    <p class="form-text mt-0">An email before each session, with its time and a link to cancel from the member portal. Members can switch them off in their portal.</p>
+    <div class="row g-2">
+        <div class="col-sm-5">
+            <label class="form-label small fw-semibold" for="reminder-hours">Send</label>
+            <select name="session_reminder_hours" id="reminder-hours" class="form-select form-select-sm">
+                {% for hours in org.SESSION_REMINDER_HOURS_CHOICES %}
+                <option value="{{ hours }}" {% if hours == org.session_reminder_hours %}selected{% endif %}>{% if hours %}{{ hours }} hours before the session{% else %}Don't send reminders{% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-sm-7">
+            <label class="form-label small fw-semibold" for="reminder-scope">To</label>
+            <select name="session_reminder_scope" id="reminder-scope" class="form-select form-select-sm">
+                {% for key, label in org.SESSION_REMINDER_SCOPES %}
+                <option value="{{ key }}" {% if key == org.session_reminder_scope %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="form-text">Change the wording in Settings → Email → Customise emails → Session reminder.</div>
     <button type="submit" class="btn btn-dark btn-sm mt-3">Save features</button>
 </form>

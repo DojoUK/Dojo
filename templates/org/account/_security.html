@@ -1,0 +1,21 @@
+<h6 class="mb-1">Password</h6>
+<p class="text-muted small mb-2">Change the password you use to sign in to Dojo.</p>
+<a href="{% url 'account_password_change' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-key me-1"></i> Change password</a>
+
+<hr class="my-4">
+{% url 'account_settings' org_slug=org.slug as account_url %}
+<div class="d-flex align-items-center gap-2 mb-1" id="two-factor">
+    <h6 class="mb-0">Two-step sign-in</h6>
+    {% if two_factor %}<span class="badge bg-success-subtle text-success">On</span>{% else %}<span class="badge bg-secondary-subtle text-secondary">Off</span>{% endif %}
+</div>
+{% if two_factor %}
+<p class="text-muted small mb-2">You sign in with your password and a code from your authenticator app. {{ two_factor.recovery_codes_left }} recovery code{{ two_factor.recovery_codes_left|pluralize }} left.</p>
+<div class="d-flex flex-wrap gap-2">
+    <a href="{% url 'two_factor_recovery_codes' %}?next={{ account_url|urlencode }}%23security" class="btn btn-outline-secondary btn-sm"><i class="bi bi-list-ol me-1"></i> New recovery codes</a>
+    {% if not two_factor_required %}<a href="{% url 'two_factor_disable' %}?next={{ account_url|urlencode }}%23security" class="btn btn-outline-danger btn-sm">Turn off</a>{% endif %}
+</div>
+{% if two_factor_required %}<div class="form-text mt-2">Your club requires it. New phone? Ask an admin to reset it, then set it up again.</div>{% endif %}
+{% else %}
+<p class="text-muted small mb-2">Protect your account with a code from your phone as well as your password.</p>
+<a href="{% url 'two_factor_setup' %}?next={{ account_url|urlencode }}%23security" class="btn btn-dark btn-sm"><i class="bi bi-shield-lock me-1"></i> Set up</a>
+{% endif %}

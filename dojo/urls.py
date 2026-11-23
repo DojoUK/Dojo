@@ -37,6 +37,7 @@ urlpatterns = [
     path('password-reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     path('password-reset/complete/', auth_views.PasswordResetCompleteView.as_view(), name='password_reset_complete'),
     path('', root_redirect, name='root'),
+    path('', include('network.urls')),   # Dojo network: /account/ and /clubs/
     path('org/<slug:org_slug>/', include('organisations.urls')),
     path('p/<str:token>/', include('members.portal_urls')),
     path('portal-login/<slug:org_slug>/', include('members.portal_login_urls')),

@@ -69,6 +69,7 @@
     </div>
     <p class="p-caption text-center mt-4">
         Questions? Contact {{ org.name }}{% if org.email %} at <a href="mailto:{{ org.email }}">{{ org.email }}</a>{% endif %}.
+        <br>Train at more than one club? <a href="{% url 'network_login' %}">Sign in to your Dojo account</a>.
     </p>
 </div>
 <script>document.addEventListener('touchstart', function () {}, { passive: true });</script>

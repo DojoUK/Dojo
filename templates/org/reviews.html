@@ -1,0 +1,86 @@
+{% extends 'org/base.html' %}
+{% load network_stars %}
+{% block title %}Reviews{% endblock %}
+{% block page_title %}Reviews{% endblock %}
+{% block page_subtitle %}What members say about {{ org.name }} on Dojo{% endblock %}
+
+{% block main_content %}
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                {% if review_summary.count %}
+                <div class="d-flex align-items-baseline gap-2">
+                    <span class="display-5 fw-semibold">{{ review_summary.average }}</span>
+                    <span style="color:#f5a623;" aria-label="{{ review_summary.average }} out of 5 stars">{% stars review_summary.average %}</span>
+                </div>
+                <p class="text-muted small">From {{ review_summary.count }} review{{ review_summary.count|pluralize }}</p>
+                {% for row in review_summary.stars %}
+                <div class="d-flex align-items-center gap-2 small mb-1">
+                    <span style="width:2.4rem;">{{ row.stars }} <i class="bi bi-star-fill" style="color:#f5a623;"></i></span>
+                    <div class="progress flex-grow-1" style="height:.5rem;" role="presentation"><div class="progress-bar" style="width:{{ row.percent }}%;background:#f5a623;"></div></div>
+                    <span class="text-muted" style="width:2rem;text-align:right;">{{ row.count }}</span>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p class="text-muted small mb-0">No reviews yet.</p>
+                {% endif %}
+                <hr>
+                {% if can_reply %}
+                <form method="post" class="mb-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="prompts">
+                    <input type="hidden" name="on" value="{% if prompts_on %}0{% else %}1{% endif %}">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" id="prompts-switch" {% if prompts_on %}checked{% endif %} onchange="this.form.submit()">
+                        <label class="form-check-label small fw-semibold" for="prompts-switch">Ask members for a review</label>
+                    </div>
+                    <div class="form-text mt-0">One email, after someone with a Dojo account has trained here {{ prompt_after }} times{% if not org.listed_in_finder %}. Only sent while you're listed in Find clubs{% endif %}.</div>
+                    <noscript><button type="submit" class="btn btn-sm btn-outline-secondary mt-1">{% if prompts_on %}Stop asking{% else %}Start asking{% endif %}</button></noscript>
+                </form>
+                {% endif %}
+                <p class="text-muted small mb-0">Members with a Dojo account can rate {{ org.name }} from 1 to 5 stars and say why. They can change their review at any time, so it's worth getting in touch if one raises something you've since sorted out. {% if org.listed_in_finder %}Your average rating shows in Find clubs, where better rated clubs are listed first.{% else %}{{ org.name }} isn't listed in Find clubs, so reviews only show on its Dojo page to its members.{% endif %}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        {% for review in reviews %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span style="color:#f5a623;" aria-label="{{ review.rating }} out of 5 stars">{% stars review.rating %}</span>
+                    <span class="text-muted small">{{ review.updated_at|date:"j M Y" }}{% if review.edited %} · edited (first posted {{ review.created_at|date:"j M Y" }}){% endif %}</span>
+                </div>
+                {% if review.text %}<p class="mb-1" style="white-space:pre-line;">{{ review.text }}</p>{% else %}<p class="text-muted small mb-1">No comment, just a rating.</p>{% endif %}
+                <div class="text-muted small">{{ review.reviewer }}</div>
+                {% if review.reply %}
+                <div class="border-start border-3 ps-3 mt-3">
+                    <div class="small fw-semibold">Your reply{% if review.replied_by %} <span class="text-muted fw-normal">by {{ review.replied_by.get_full_name|default:review.replied_by.username }}</span>{% endif %} <span class="text-muted fw-normal">· {{ review.replied_at|date:"j M Y" }}</span></div>
+                    <p class="small mb-1" style="white-space:pre-line;">{{ review.reply }}</p>
+                    {% if review.updated_since_reply %}<div class="small text-warning-emphasis"><i class="bi bi-pencil me-1"></i>The member has changed their review since you replied.</div>{% endif %}
+                </div>
+                {% endif %}
+                {% if can_reply %}
+                <details class="mt-2">
+                    <summary class="small text-primary" style="cursor:pointer;">{% if review.reply %}Change or remove your reply{% else %}Reply publicly{% endif %}</summary>
+                    <form method="post" class="mt-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="review" value="{{ review.pk }}">
+                        <label class="visually-hidden" for="reply-{{ review.pk }}">Your reply</label>
+                        <textarea name="reply" id="reply-{{ review.pk }}" class="form-control form-control-sm mb-2" rows="3" maxlength="2000" placeholder="Thank them, or say what you've done about something they raised. Everyone can see this.">{{ review.reply }}</textarea>
+                        <button type="submit" name="action" value="reply" class="btn btn-dark btn-sm">{% if review.reply %}Save reply{% else %}Post reply{% endif %}</button>
+                        {% if review.reply %}<button type="submit" name="action" value="remove_reply" class="btn btn-outline-danger btn-sm">Remove reply</button>{% endif %}
+                    </form>
+                </details>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="card border-0 shadow-sm"><div class="card-body text-center py-5">
+            <i class="bi bi-star display-6 text-muted d-block mb-2"></i>
+            <p class="text-muted small mb-0">When members review {{ org.name }}, their reviews will appear here.</p>
+        </div></div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

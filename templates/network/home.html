@@ -1,0 +1,142 @@
+{% extends 'network/base.html' %}
+{% block title %}My clubs · Dojo{% endblock %}
+{% block page_title %}My clubs{% endblock %}
+{% block bar_title %}My clubs{% endblock %}
+{% block page_subtitle %}<p class="p-subtitle">{{ account.name }}</p>{% endblock %}
+{% block content %}
+{% if not account.is_verified %}
+<div class="p-banner is-info" role="status">
+    <i class="bi bi-envelope-fill"></i>
+    <span class="flex-grow-1">Confirm your email to see clubs you're already a member of. We sent a link to {{ account.email }}.
+        <form method="post" action="{% url 'network_verify_resend' %}" class="d-inline">{% csrf_token %}<button type="submit" class="p-btn-plain">Send it again</button></form>
+    </span>
+</div>
+{% endif %}
+
+<div class="portal-grid p-dash">
+    <section class="p-group">
+        <div class="p-section"><h2>Memberships</h2></div>
+        {% for club in clubs %}
+        <div class="card mb-3">
+            <div class="p-row">
+                <div class="p-row-main">
+                    <a class="p-row-title text-reset" href="{% url 'network_club' slug=club.org.slug %}">{{ club.org.name }}</a>
+                    <div class="p-row-sub">{{ club.org.discipline_labels|join:" · " }}</div>
+                </div>
+            </div>
+            {% for member in club.members %}
+            <div class="p-row flex-wrap">
+                <div class="p-row-main">
+                    <div>{{ member.name }}</div>
+                    {% if member.plans %}
+                    <div class="p-row-sub">
+                        <i class="bi bi-tag me-1" aria-hidden="true"></i><span class="visually-hidden">Plan: </span>{% for plan in member.plans %}{% if not forloop.first %}, {% endif %}{{ plan.name }}{% with price=plan.price_summary %}{% if price %} · {{ price }}{% endif %}{% endwith %}{% endfor %}
+                    </div>
+                    {% elif 'billing' in club.org.enabled_features %}
+                    <div class="p-row-sub">No plan yet</div>
+                    {% endif %}
+                    {% if member.leaving %}
+                    <div class="p-row-sub text-warning-emphasis"><i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>Leaving: you told the club on {{ member.leaving.requested_at|date:"j M Y" }}. They'll be in touch.</div>
+                    {% endif %}
+                </div>
+                {% if club.portal %}
+                <div class="p-row-end">
+                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'portal_bookings' token=member.token %}">Book</a>
+                    <a class="btn btn-sm btn-dark" href="{% url 'member_portal' token=member.token %}">Open</a>
+                </div>
+                {% else %}
+                <span class="p-caption">Contact the club to book</span>
+                {% endif %}
+                {% if not member.leaving %}
+                <details class="w-100 mt-1 n-leave">
+                    <summary class="p-caption" style="cursor:pointer;">Leaving {{ club.org.name }}?</summary>
+                    <form method="post" action="{% url 'network_leave' pk=member.pk %}" class="mt-2">
+                        {% csrf_token %}
+                        <p class="p-caption mb-2">Let {{ club.org.name }} know {% if member.is_account_holder %}you're{% else %}{{ member.name }} is{% endif %} planning to stop training. They'll review it and follow up before anything changes{% if member.plans %}, including {% if member.plans|length == 1 %}the {{ member.plans.0.name }} plan{% else %}their plans{% endif %}{% endif %}.</p>
+                        <label class="visually-hidden" for="leave-reason-{{ member.pk }}">Reason (optional)</label>
+                        <textarea name="reason" id="leave-reason-{{ member.pk }}" class="form-control form-control-sm mb-2" rows="2" placeholder="Reason (optional)"></textarea>
+                        <button type="submit" class="btn btn-outline-danger btn-sm"
+                                onclick="return confirm('Let {{ club.org.name|escapejs }} know {% if member.is_account_holder %}you\'re{% else %}{{ member.name|escapejs }} is{% endif %} planning to stop training?')">
+                            Tell {{ club.org.name }} {% if member.is_account_holder %}I'm{% else %}{{ member.name }} is{% endif %} leaving
+                        </button>
+                    </form>
+                </details>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% empty %}
+        <div class="card"><div class="p-empty">
+            <i class="bi bi-people text-muted"></i>
+            <div class="p-row-title">No memberships yet</div>
+            <p class="p-row-sub mb-3">{% if account.is_verified %}Clubs you join show up here, along with any club membership under {{ account.email }}.{% else %}Confirm your email and any club membership under it will show up here.{% endif %}</p>
+            <a href="{% url 'network_finder' %}" class="btn btn-dark btn-sm">Find a club</a>
+        </div></div>
+        {% endfor %}
+    </section>
+
+    <section class="p-group">
+        <div class="p-section"><h2>Up next</h2></div>
+        <div class="card">
+            {% for row in up_next %}
+            <div class="p-row">
+                <div class="p-date" aria-hidden="true">
+                    <span class="p-date-dow">{{ row.session.date|date:"D" }}</span>
+                    <span class="p-date-day">{{ row.session.date|date:"j" }}</span>
+                </div>
+                <div class="p-row-main">
+                    <div class="p-row-title">{{ row.session.assigned_class.name }}</div>
+                    <div class="p-row-sub"><span class="visually-hidden">{{ row.session.date|date:"l j F" }}, </span>{% if row.time %}{{ row.time }} · {% endif %}{{ row.org.name }}{% if several_people %} · {{ row.member.name }}{% endif %}</div>
+                </div>
+                <div class="p-row-end">
+                    {% if row.pending %}<span class="badge bg-warning-subtle text-warning-emphasis">Awaiting payment</span>
+                    {% elif row.kind == 'booking' %}<span class="badge bg-success-subtle text-success">Booked</span>
+                    {% else %}<span class="badge bg-secondary-subtle text-secondary">Enrolled</span>{% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="p-empty"><i class="bi bi-calendar2 text-muted"></i><p class="p-row-sub mb-0">Nothing booked in the next three weeks.</p></div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="p-group">
+        <div class="p-section"><h2>Favourites</h2><a href="{% url 'network_finder' %}">Find clubs</a></div>
+        <div class="card">
+            {% for fav in favourites %}
+            <div class="p-row">
+                <div class="p-row-main">
+                    <a class="p-row-title text-reset" href="{% url 'network_club' slug=fav.org.slug %}">{{ fav.org.name }}</a>
+                    <div class="p-row-sub">{{ fav.org.city }}{% if fav.org.discipline_labels %} · {{ fav.org.discipline_labels|join:", " }}{% endif %}</div>
+                </div>
+                <div class="p-row-end">
+                    {% if fav.status == 'member' %}<span class="badge bg-success-subtle text-success">Member</span>
+                    {% elif fav.status == 'applied' %}<span class="badge bg-warning-subtle text-warning-emphasis">Applied</span>
+                    {% elif fav.takes_applications %}<a class="btn btn-sm btn-dark" href="{% url 'network_join' slug=fav.org.slug %}">Apply</a>{% endif %}
+                    <form method="post" action="{% url 'network_favourite' slug=fav.org.slug %}">
+                        {% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}">
+                        <button type="submit" class="n-unsave btn btn-sm btn-link p-0 text-danger" aria-label="Remove {{ fav.org.name }} from favourites"><i class="bi bi-heart-fill"></i></button>
+                    </form>
+                </div>
+            </div>
+            {% empty %}
+            <div class="p-empty"><i class="bi bi-heart text-muted"></i><p class="p-row-sub mb-3">Save clubs from the club finder to keep them here.</p><a href="{% url 'network_finder' %}" class="btn btn-dark btn-sm">Find clubs</a></div>
+            {% endfor %}
+        </div>
+    </section>
+
+    {% if applications %}
+    <section class="p-group">
+        <div class="p-section"><h2>Applications</h2></div>
+        <div class="card">
+            {% for app in applications %}
+            <div class="p-row">
+                <div class="p-row-main"><div class="p-row-title">{{ app.organisation.name }}</div><div class="p-row-sub">{{ app.name }} · sent {{ app.submitted_at|date:"j M Y" }}</div></div>
+                <span class="badge bg-warning-subtle text-warning-emphasis">Waiting for the club</span>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

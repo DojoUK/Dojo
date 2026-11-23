@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 
 from dojo.mixins import OrgAdminMixin
+from organisations.disciplines import DISCIPLINES
 from .models import (
     MemberProgression, MemberSyllabusProgress, ProgressionStage, ProgressionSystem,
     SyllabusItem, SyllabusSection, SyllabusSubsection,
@@ -28,6 +29,7 @@ class ProgressionSettingsView(OrgAdminMixin, View):
             'syllabus_sections': syllabus_sections,
             'org': self.org,
             'org_membership': self.org_membership,
+            'discipline_choices': DISCIPLINES,
         })
 
 
@@ -43,10 +45,16 @@ class AddSystemView(OrgAdminMixin, View):
             messages.error(request, f'A system called "{name}" already exists.')
             return redirect('progression_settings', org_slug=org_slug)
         last = ProgressionSystem.objects.filter(organisation=self.org).order_by('order').last()
+        from organisations.disciplines import LABELS
+        discipline = request.POST.get('discipline', '')
+        if discipline not in LABELS:
+            # One martial art at the club: that's the one; otherwise it's set on the system afterwards.
+            discipline = self.org.disciplines[0] if len(self.org.disciplines or []) == 1 else ''
         ProgressionSystem.objects.create(
             organisation=self.org,
             name=name,
             order=(last.order + 1) if last else 0,
+            discipline=discipline,
         )
         messages.success(request, f'"{name}" system created.')
         return redirect('progression_settings', org_slug=org_slug)
@@ -72,6 +80,19 @@ class ToggleAutoAssignView(OrgAdminMixin, View):
         system = get_object_or_404(ProgressionSystem, pk=pk, organisation=self.org)
         system.assign_to_new_members = not system.assign_to_new_members
         system.save(update_fields=['assign_to_new_members'])
+        return redirect('progression_settings', org_slug=org_slug)
+
+
+class SetSystemDisciplineView(OrgAdminMixin, View):
+    required_feature = 'grades'
+
+    def post(self, request, org_slug, pk):
+        from organisations.disciplines import LABELS
+        system = get_object_or_404(ProgressionSystem, pk=pk, organisation=self.org)
+        discipline = request.POST.get('discipline', '')
+        system.discipline = discipline if discipline in LABELS else ''
+        system.save(update_fields=['discipline'])
+        messages.success(request, f'"{system.name}" is {"in " + LABELS[discipline] if system.discipline else "not set to a martial art"}.')
         return redirect('progression_settings', org_slug=org_slug)
 
 

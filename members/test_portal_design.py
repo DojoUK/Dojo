@@ -88,3 +88,15 @@ class PortalDesignTests(TestCase):
         self.assertIn("localStorage.getItem('portalTheme') === 'dark'", html)
         login = self.client.get(reverse('portal_login_request', kwargs={'org_slug': self.org.slug})).content.decode()
         self.assertIn("localStorage.getItem('portalTheme') === 'dark'", login)
+
+    def test_header_links_back_to_the_dojo_network(self):
+        from network.models import MemberAccount
+        from django.contrib.auth.models import User
+        html = self.page()
+        self.assertIn('class="p-hero-link" href="/clubs/"', html)          # no account: the club finder
+        user = User.objects.create_user('alice@example.com', email='alice@example.com', password='x-long-pass-1')
+        self.member.account = MemberAccount.objects.create(user=user, name='Alice Able')
+        self.member.save()
+        html = self.page()
+        self.assertIn('class="p-hero-link" href="/account/"', html)        # linked: all their clubs
+        self.assertIn('>Find clubs<', html)                                 # and the finder from the More sheet

@@ -53,7 +53,7 @@
             <tr>
                 <td style="color:#999;">{{ forloop.counter }}</td>
                 <td>
-                    {{ cm.member.name }}{% if cm.member.photo_consent %} 📷{% endif %}
+                    {{ cm.member.register_name }}{% if cm.member.photo_consent %} 📷{% endif %}
                     {% if cm.is_former_member %}<span class="note">(no longer enrolled)</span>{% endif %}
                     {% for flag in cm.member.register_flags %}<span class="flag">{{ flag }}</span>{% endfor %}
                 </td>
@@ -111,7 +111,7 @@
             <tbody>
                 {% for helper in helpers %}
                 <tr>
-                    <td>{{ helper.member.name }}</td>
+                    <td>{{ helper.member.register_name }}</td>
                     <td style="text-align:center;">
                         <span class="tick-box {% if helper.member.pk in present_helper_ids %}present{% endif %}"></span>
                     </td>

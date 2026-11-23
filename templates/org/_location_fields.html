@@ -1,0 +1,124 @@
+{% comment %}
+Where the club trains and what it teaches, for the Dojo club finder. Used by setup and by
+Settings → Location. Context: loc (address_line1…, latitude, longitude, disciplines, listed_in_finder),
+discipline_choices, maps_key. See organisations/location.py.
+{% endcomment %}
+<div class="row g-2">
+    <div class="col-12">
+        <label class="form-label small fw-semibold" for="loc-line1">Address where you train</label>
+        <input type="text" name="address_line1" id="loc-line1" value="{{ loc.address_line1|default:'' }}" class="form-control loc-address" autocomplete="address-line1" placeholder="e.g. Unit 4, Riverside Sports Centre" required>
+    </div>
+    <div class="col-12">
+        <input type="text" name="address_line2" id="loc-line2" value="{{ loc.address_line2|default:'' }}" class="form-control loc-address" autocomplete="address-line2" placeholder="Second line (optional)" aria-label="Second address line">
+    </div>
+    <div class="col-sm-6">
+        <label class="form-label small fw-semibold" for="loc-city">Town or city</label>
+        <input type="text" name="city" id="loc-city" value="{{ loc.city|default:'' }}" class="form-control loc-address" autocomplete="address-level2" required>
+    </div>
+    <div class="col-sm-6">
+        <label class="form-label small fw-semibold" for="loc-postcode">Postcode</label>
+        <input type="text" name="postcode" id="loc-postcode" value="{{ loc.postcode|default:'' }}" class="form-control loc-address" autocomplete="postal-code" required>
+    </div>
+    <input type="hidden" name="country" id="loc-country" value="{{ loc.country|default:'United Kingdom' }}">
+</div>
+
+{% if maps_key %}
+<input type="hidden" name="latitude" id="loc-lat" value="{{ loc.latitude|default_if_none:''|stringformat:'s' }}">
+<input type="hidden" name="longitude" id="loc-lng" value="{{ loc.longitude|default_if_none:''|stringformat:'s' }}">
+<div class="d-flex align-items-center gap-2 mt-3 flex-wrap">
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="loc-find"><i class="bi bi-geo-alt me-1"></i>Find on map</button>
+    <span class="small text-muted" id="loc-status">{% if loc.latitude %}Pinned on the map.{% else %}Enter the address, then find it on the map.{% endif %}</span>
+</div>
+<div id="loc-map" class="mt-2 border rounded" style="height:260px;" role="application" aria-label="Map: drag the pin to where your club trains"></div>
+<div class="form-text">Drag the pin to exactly where you train, if it isn't quite right. If you don't place it, Dojo finds the address when you save.</div>
+{% else %}
+<div class="row g-2 mt-1">
+    <div class="col-sm-6">
+        <label class="form-label small fw-semibold" for="loc-lat">Latitude</label>
+        <input type="text" inputmode="decimal" name="latitude" id="loc-lat" value="{{ loc.latitude|default_if_none:''|stringformat:'s' }}" class="form-control" placeholder="e.g. 51.507351" required>
+    </div>
+    <div class="col-sm-6">
+        <label class="form-label small fw-semibold" for="loc-lng">Longitude</label>
+        <input type="text" inputmode="decimal" name="longitude" id="loc-lng" value="{{ loc.longitude|default_if_none:''|stringformat:'s' }}" class="form-control" placeholder="e.g. -0.127758" required>
+    </div>
+</div>
+<div class="form-text">Where your club is on the map. On Google Maps, right-click your club and click the numbers at the top of the menu to copy them; the first is the latitude.</div>
+{% endif %}
+
+<div class="mt-3">
+    <span class="form-label small fw-semibold d-block mb-1">Martial arts you teach</span>
+    <div class="d-flex flex-wrap gap-2" id="loc-disciplines">
+        {% for key, label in discipline_choices %}
+        <input type="checkbox" class="btn-check" name="disciplines" value="{{ key }}" id="disc-{{ key }}" autocomplete="off" {% if key in loc.disciplines %}checked{% endif %}>
+        <label class="btn btn-sm btn-outline-secondary rounded-pill" for="disc-{{ key }}">{{ label }}</label>
+        {% endfor %}
+    </div>
+    <div class="form-text">Members can filter the club finder by these.</div>
+</div>
+
+<div class="form-check form-switch mt-3">
+    <input type="hidden" name="listed_in_finder_shown" value="1">
+    <input class="form-check-input" type="checkbox" name="listed_in_finder" value="1" id="loc-listed" {% if loc.listed_in_finder %}checked{% endif %}>
+    <label class="form-check-label small" for="loc-listed">Show my club in the Dojo club finder</label>
+    <div class="form-text mt-0">Members of the public can find your club, its address and contact details, and apply to join.</div>
+</div>
+
+{% if maps_key %}
+<script>
+(function () {
+    var lat = document.getElementById('loc-lat'), lng = document.getElementById('loc-lng');
+    var status = document.getElementById('loc-status');
+    var map, marker, geocoder;
+    function address() {
+        return ['loc-line1', 'loc-line2', 'loc-city', 'loc-postcode', 'loc-country']
+            .map(function (id) { return document.getElementById(id).value.trim(); }).filter(Boolean).join(', ');
+    }
+    function place(position, message) {
+        marker.setPosition(position);
+        marker.setVisible(true);
+        map.panTo(position);
+        if (map.getZoom() < 15) map.setZoom(16);
+        lat.value = position.lat().toFixed(6);
+        lng.value = position.lng().toFixed(6);
+        status.textContent = message;
+    }
+    function find() {
+        if (!address()) { status.textContent = 'Enter the address first.'; return; }
+        status.textContent = 'Finding…';
+        geocoder.geocode({address: address(), region: 'gb'}, function (results, result) {
+            if (result === 'OK' && results[0]) place(results[0].geometry.location, 'Found. Drag the pin if it needs moving.');
+            else status.textContent = 'We couldn’t find that address. Check it, or drag the pin into place.';
+        });
+    }
+    window.dojoLocationMap = function () {
+        var start = lat.value && lng.value ? {lat: parseFloat(lat.value), lng: parseFloat(lng.value)} : {lat: 54.2, lng: -2.5};
+        map = new google.maps.Map(document.getElementById('loc-map'), {
+            center: start, zoom: lat.value ? 16 : 5, streetViewControl: false, mapTypeControl: false, fullscreenControl: false,
+        });
+        geocoder = new google.maps.Geocoder();
+        marker = new google.maps.Marker({map: map, position: start, draggable: true, visible: !!lat.value, title: 'Your club'});
+        marker.addListener('dragend', function () { place(marker.getPosition(), 'Pin moved.'); });
+        map.addListener('click', function (e) { place(e.latLng, 'Pin placed.'); });
+        document.getElementById('loc-find').addEventListener('click', find);
+    };
+    // A map drawn inside a hidden settings tab needs re-centring once the tab is shown.
+    document.addEventListener('shown.bs.tab', function () {
+        if (!map) return;
+        google.maps.event.trigger(map, 'resize');
+        map.setCenter(marker.getVisible() ? marker.getPosition() : map.getCenter());
+    });
+    // Changing the address clears the pin, so a stale position is never saved with a new address.
+    document.querySelectorAll('.loc-address').forEach(function (input) {
+        input.addEventListener('change', function () {
+            lat.value = ''; lng.value = '';
+            if (marker) marker.setVisible(false);
+            status.textContent = 'Address changed: find it on the map, or Dojo will when you save.';
+        });
+    });
+    var s = document.createElement('script');
+    s.src = 'https://maps.googleapis.com/maps/api/js?key={{ maps_key|urlencode }}&callback=dojoLocationMap&loading=async';
+    s.async = true;
+    document.head.appendChild(s);
+})();
+</script>
+{% endif %}

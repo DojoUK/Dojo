@@ -2,6 +2,7 @@ from django.contrib.auth.models import User
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from organisations.disciplines import DISCIPLINES, LABELS
 from organisations.models import Organisation
 from members.models import Member
 
@@ -19,6 +20,13 @@ class ProgressionSystem(models.Model):
         help_text='Promotions in this system happen at grading events, rather than being awarded '
                   'by a coach whenever someone is ready.',
     )
+    # Which martial art the grades are in (organisations/disciplines.py), so a member's progression
+    # can be shown by discipline when it follows them from club to club.
+    discipline = models.CharField(max_length=20, blank=True, choices=DISCIPLINES)
+
+    @property
+    def discipline_label(self):
+        return LABELS.get(self.discipline, '')
 
     def __str__(self):
         return f"{self.organisation} — {self.name}"

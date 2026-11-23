@@ -41,14 +41,49 @@
         {% csrf_token %}
         <input type="hidden" name="signature_data" id="signatureData">
 
+        {% if account %}
+        <div class="alert alert-info d-flex gap-2 align-items-start mb-4">
+            <i class="bi bi-person-check-fill mt-1"></i>
+            <div>We've filled this in from your Dojo account, with just the details {{ org.name }} asks for. Check it over, change anything that's different, and submit.
+            {% if not errors %}<a href="{% url 'network_details' %}" class="alert-link">Edit My details</a>{% endif %}</div>
+        </div>
+        <div class="card mb-4"><div class="card-body">
+            <div class="fw-semibold mb-2">Who is this application for?</div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="applicant" value="me" id="applicantMe" {% if data.applicant != 'other' %}checked{% endif %}>
+                <label class="form-check-label" for="applicantMe">Me</label>
+                <div class="form-text mt-0">Anything you change here is saved to My details, and kept up to date at your other clubs.</div>
+            </div>
+            <div class="form-check mt-2">
+                <input class="form-check-input" type="radio" name="applicant" value="other" id="applicantOther" {% if data.applicant == 'other' %}checked{% endif %}>
+                <label class="form-check-label" for="applicantOther">Someone I look after, such as my child</label>
+                <div class="form-text mt-0">You'll be their parent or guardian. Your own details aren't changed.</div>
+            </div>
+        </div></div>
+        {{ account_holder|json_script:"accountHolder" }}
+        {% endif %}
+
         {# ── Personal details ── #}
         <div class="card mb-4">
             <div class="card-header bg-white py-3"><h6 class="mb-0">Personal details</h6></div>
             <div class="card-body">
                 <div class="row g-3">
-                    <div class="col-12">
-                        <label class="form-label small fw-semibold">Full name <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control" value="{{ data.name|default:'' }}" required autofocus>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold" for="firstName">First name <span class="text-danger">*</span></label>
+                        <input type="text" name="first_name" id="firstName" class="form-control" value="{{ data.first_name|default:'' }}" maxlength="150" autocomplete="given-name" required autofocus>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold" for="surname">Surname <span class="text-danger">*</span></label>
+                        <input type="text" name="surname" id="surname" class="form-control" value="{{ data.surname|default:'' }}" maxlength="150" autocomplete="family-name" required>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold" for="preferredName">Preferred name <span class="text-muted fw-normal">(optional)</span></label>
+                        <input type="text" name="preferred_name" id="preferredName" class="form-control" value="{{ data.preferred_name|default:'' }}" maxlength="150" placeholder="If not their first name">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold" for="pronouns">Pronouns <span class="text-muted fw-normal">(optional)</span></label>
+                        <input type="text" name="pronouns" id="pronouns" class="form-control" value="{{ data.pronouns|default:'' }}" maxlength="30" list="pronounOptions" placeholder="e.g. she/her, he/him, they/them">
+                        <datalist id="pronounOptions">{% for p in pronoun_suggestions %}<option value="{{ p }}">{% endfor %}</datalist>
                     </div>
                     {% if 'date_of_birth' in org.enabled_fields %}
                     <div class="col-sm-6">
@@ -102,6 +137,33 @@
         {% endif %}
 
         {# ── Guardian (shown for under-18s via JS) ── #}
+        {# ── Emergency contacts ── #}
+        <div class="card mb-4">
+            <div class="card-header bg-white py-3"><h6 class="mb-0">Emergency contact</h6></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold" for="ec1-name">Name</label>
+                        <input type="text" name="emergency_contact_name" id="ec1-name" class="form-control" value="{{ data.emergency_contact_name|default:'' }}" autocomplete="off">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold" for="ec1-phone">Phone</label>
+                        <input type="tel" name="emergency_contact_phone" id="ec1-phone" class="form-control" value="{{ data.emergency_contact_phone|default:'' }}" autocomplete="off">
+                    </div>
+                    {% if 'emergency_contact_2' in org.enabled_fields %}
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold" for="ec2-name">Second contact: name <span class="text-muted fw-normal">(optional)</span></label>
+                        <input type="text" name="emergency_contact_2_name" id="ec2-name" class="form-control" value="{{ data.emergency_contact_2_name|default:'' }}" autocomplete="off">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold" for="ec2-phone">Second contact: phone <span class="text-muted fw-normal">(optional)</span></label>
+                        <input type="tel" name="emergency_contact_2_phone" id="ec2-phone" class="form-control" value="{{ data.emergency_contact_2_phone|default:'' }}" autocomplete="off">
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
         {% if 'guardians' in org.enabled_fields %}
         <div class="card mb-4" id="guardianCard" style="display:none;">
             <div class="card-header bg-white py-3">
@@ -141,6 +203,44 @@
         </div>
         {% endif %}
 
+        {# ── The club's own questions (custom fields it asks on the join form) ── #}
+        {% if custom_fields %}
+        <div class="card mb-4">
+            <div class="card-header bg-white py-3"><h6 class="mb-0">A few more questions from {{ org.name }}</h6></div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% for cf in custom_fields %}
+                    {% if cf.is_bool %}
+                    <div class="col-12"><div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="{{ cf.key }}" id="{{ cf.key }}" {% if cf.checked %}checked{% endif %}>
+                        <label class="form-check-label small" for="{{ cf.key }}">{{ cf.field.name }}</label>
+                    </div></div>
+                    {% else %}
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold">{{ cf.field.name }}</label>
+                        {{ cf.html }}
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if ask_promo %}
+        <div class="card mb-4">
+            <div class="card-header bg-white py-3"><h6 class="mb-0">Promo code</h6></div>
+            <div class="card-body">
+                {% for offer in intro_offers %}
+                <div class="alert alert-success small py-2 mb-2"><i class="bi bi-gift me-1"></i><strong>Intro offer:</strong> {{ offer.offer_text }}. Use code <span class="font-monospace fw-semibold">{{ offer.code }}</span>.</div>
+                {% endfor %}
+                <label class="form-label small fw-semibold" for="promoCode">Got a code? <span class="text-muted fw-normal">(optional)</span></label>
+                <input type="text" name="promo_code" id="promoCode" class="form-control text-uppercase" maxlength="30" value="{{ promo_code }}" style="max-width:16rem;" autocomplete="off">
+                <div class="form-text">It's applied when {{ org.name }} approves your application and puts you on the plan it's for.</div>
+            </div>
+        </div>
+        {% endif %}
+
         {# ── Additional notes ── #}
         <div class="card mb-4">
             <div class="card-header bg-white py-3"><h6 class="mb-0">Anything else?</h6></div>
@@ -150,12 +250,12 @@
             </div>
         </div>
 
-        {# ── Waiver / e-signature ── #}
+        {# ── Waiver / e-signature: read each document, tick to agree, type a name and sign. ── #}
         {% if waivers %}
-        <div class="card mb-4">
+        <div class="card mb-4" id="waiverCard">
             <div class="card-header bg-white py-3">
-                <h6 class="mb-0">Documents &amp; signature</h6>
-                <p class="text-muted small mb-0 mt-1">Please read the document(s) below, then sign.</p>
+                <h6 class="mb-0">{{ org.name }}'s rules and waiver</h6>
+                <p class="text-muted small mb-0 mt-1">Read each document, tick to agree, then sign. Signing binds the member to {{ org.name }}'s code of conduct and the liability terms in these documents.</p>
             </div>
             <div class="card-body">
                 {% for waiver in waivers %}
@@ -164,20 +264,34 @@
                         <span class="fw-semibold small">{{ waiver.name }}</span>
                         {% if waiver.is_required %}
                         <span class="badge bg-danger-subtle text-danger" style="font-size:0.65rem;">Required</span>
+                        {% else %}
+                        <span class="badge bg-secondary-subtle text-secondary" style="font-size:0.65rem;">Optional</span>
                         {% endif %}
                     </div>
                     {% if waiver.description %}
                     <p class="text-muted small mb-2">{{ waiver.description }}</p>
                     {% endif %}
-                    <a href="{{ waiver.file.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">
-                        <i class="bi bi-file-pdf me-1"></i> View / download PDF
+                    <details class="mb-2">
+                        <summary class="small text-primary" style="cursor:pointer;">Read it here</summary>
+                        <iframe src="{{ waiver.file.url }}" title="{{ waiver.name }}" class="w-100 border rounded mt-2" style="height:420px;" loading="lazy"></iframe>
+                    </details>
+                    <a href="{{ waiver.file.url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary mb-2">
+                        <i class="bi bi-file-pdf me-1"></i> Open or download the PDF
                     </a>
+                    <div class="form-check">
+                        <input class="form-check-input waiver-agree" type="checkbox" name="agree_{{ waiver.pk }}" value="1" id="agree{{ waiver.pk }}"
+                               {% if waiver.pk|stringformat:"s" in agreed %}checked{% endif %}{% if waiver.is_required %} required{% endif %}>
+                        <label class="form-check-label small" for="agree{{ waiver.pk }}">I've read {{ waiver.name }} and agree to it</label>
+                    </div>
                 </div>
                 {% endfor %}
 
                 <div class="mt-2 pt-3 border-top">
+                    <label class="form-label small fw-semibold" for="signerName">Full name of the person signing <span class="text-danger">*</span></label>
+                    <input type="text" name="signer_name" id="signerName" class="form-control mb-1" value="{{ data.signer_name|default:'' }}" autocomplete="name">
+                    <div class="form-text mt-0 mb-3" id="signerNote">The member, or their parent or guardian if they're under 18.</div>
                     <label class="form-label small fw-semibold">Your signature <span class="text-danger">*</span></label>
-                    <p class="text-muted small mb-2">Draw your signature below using your mouse or finger.</p>
+                    <p class="text-muted small mb-2">Draw your signature below using your mouse or finger.{% if errors %} Please sign again.{% endif %}</p>
                     <canvas id="sigCanvas" class="sig-canvas" height="150"></canvas>
                     <div class="d-flex align-items-center gap-3 mt-2">
                         <button type="button" class="btn btn-sm btn-outline-secondary" id="clearSig">
@@ -185,6 +299,7 @@
                         </button>
                         <span class="small" id="sigStatus" style="color:#94a3b8;">Not yet signed</span>
                     </div>
+                    <p class="text-muted small mt-3 mb-0">Your name, signature, the date and time and your IP address are recorded with a signed copy of each document you agree to.</p>
                 </div>
             </div>
         </div>
@@ -214,6 +329,34 @@ function checkAge() {
 }
 if (dobInput) dobInput.addEventListener('change', checkAge);
 checkAge();
+
+{% if account %}
+// Applying for someone else: start their name, date of birth and medical information blank, and
+// put the account holder in as their parent or guardian. Switching back restores what was there.
+(function () {
+    const holder = JSON.parse(document.getElementById('accountHolder').textContent);
+    const form = document.getElementById('signupForm');
+    const field = name => form.elements[name];
+    const personal = ['first_name', 'surname', 'preferred_name', 'pronouns', 'date_of_birth', 'medical_info'];
+    const guardian = {guardian_name: holder.name, guardian_email: holder.email, guardian_phone: holder.phone};
+    let saved = null;
+    function apply(forOther) {
+        if (forOther && !saved) {
+            saved = {};
+            personal.concat(Object.keys(guardian)).forEach(n => { if (field(n)) saved[n] = field(n).value; });
+            personal.forEach(n => { if (field(n)) field(n).value = ''; });
+            Object.entries(guardian).forEach(([n, v]) => { if (field(n)) field(n).value = v || ''; });
+            if (guardianCard) guardianCard.style.display = 'block';
+        } else if (!forOther && saved) {
+            Object.entries(saved).forEach(([n, v]) => { field(n).value = v; });
+            saved = null;
+            checkAge();
+        }
+    }
+    document.getElementById('applicantOther').addEventListener('change', () => apply(true));
+    document.getElementById('applicantMe').addEventListener('change', () => apply(false));
+})();
+{% endif %}
 
 {% if waivers %}
 // Canvas signature
@@ -270,6 +413,22 @@ document.getElementById('clearSig').addEventListener('click', () => {
     sigStatus.style.color = '#94a3b8';
     sigDataInput.value = '';
 });
+
+// The signer's name follows the applicant's, until it's typed in, or the parent's when applying for someone else.
+const signerName = document.getElementById('signerName');
+const applicantNames = ['first_name', 'surname'].map(n => document.querySelector('#signupForm [name="' + n + '"]'));
+let signerTyped = !!signerName.value;
+signerName.addEventListener('input', () => { signerTyped = true; });
+function defaultSigner() {
+    if (signerTyped) return;
+    const other = document.getElementById('applicantOther');
+    const holder = document.getElementById('accountHolder');
+    signerName.value = other && other.checked && holder ? JSON.parse(holder.textContent).name
+        : applicantNames.map(f => f.value.trim()).filter(Boolean).join(' ');
+}
+applicantNames.forEach(f => f.addEventListener('input', defaultSigner));
+document.querySelectorAll('[name="applicant"]').forEach(r => r.addEventListener('change', () => setTimeout(defaultSigner)));
+defaultSigner();
 
 document.getElementById('signupForm').addEventListener('submit', () => {
     if (hasSig) sigDataInput.value = canvas.toDataURL('image/png');

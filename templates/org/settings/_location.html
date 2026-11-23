@@ -1,0 +1,9 @@
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="location">
+    {% if not org.has_location %}
+    <div class="alert alert-warning py-2 small"><i class="bi bi-geo-alt me-1"></i> Your club doesn't have a location yet, so members can't find it in the Dojo club finder.</div>
+    {% endif %}
+    {% include 'org/_location_fields.html' %}
+    <button type="submit" class="btn btn-dark btn-sm mt-3">Save location</button>
+</form>

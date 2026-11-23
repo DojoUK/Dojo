@@ -59,8 +59,11 @@
                         {% else %}—{% endif %}
                     </td>
                     {% endif %}
-                    <td class="py-2 small text-muted" style="max-width:200px;">
+                    <td class="py-2 small text-muted" style="max-width:220px;">
                         {{ app.notes|truncatechars:80|default:"—" }}
+                        {% for label, answer in app.custom_answers %}<div><span class="text-dark">{{ label }}:</span> {{ answer }}</div>{% endfor %}
+                        {% if app.promo %}<div class="text-success"><i class="bi bi-gift me-1"></i>Code {{ app.promo.code }}: {{ app.promo.offer_text }}</div>{% endif %}
+                        {% if app.agreed_waivers %}<div class="text-success"><i class="bi bi-pen me-1"></i>Signed by {{ app.signer_name }}</div>{% endif %}
                     </td>
                     <td class="py-2 small text-muted">{{ app.submitted_at|date:"d M Y" }}</td>
                     {% if status_filter == 'pending' %}

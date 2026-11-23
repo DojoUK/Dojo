@@ -7,13 +7,41 @@
 
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-white border-bottom py-3">
-            <h6 class="mb-0">Edit my details</h6>
-            <p class="text-muted small mb-0 mt-1">Name and date of birth are kept up to date by {{ org.name }} — contact them if these need changing.</p>
+            <h6 class="mb-0">{% if account_holder %}My details{% else %}Edit my details{% endif %}</h6>
+            <p class="text-muted small mb-0 mt-1">{% if account_holder %}Kept in your Dojo account and shared with {{ org.name }}.{% else %}Name and date of birth are kept up to date by {{ org.name }} — contact them if these need changing.{% endif %}</p>
         </div>
         <div class="card-body">
             <form method="post">
                 {% csrf_token %}
 
+                {% if account_holder %}
+                {# Their details live in their Dojo account (My details), which updates every club they belong to. #}
+                <dl class="row small mb-3">
+                    <dt class="col-sm-5">Name</dt><dd class="col-sm-7">{{ member.name }}</dd>
+                    <dt class="col-sm-5">Name on registers</dt><dd class="col-sm-7">{{ member.register_name }}</dd>
+                    <dt class="col-sm-5">Email</dt><dd class="col-sm-7">{{ member.email|default:"—" }}</dd>
+                    {% if 'date_of_birth' in org.enabled_fields %}<dt class="col-sm-5">Date of birth</dt><dd class="col-sm-7">{{ member.date_of_birth|date:"j F Y"|default:"—" }}</dd>{% endif %}
+                    {% if 'phone' in org.enabled_fields %}<dt class="col-sm-5">Phone</dt><dd class="col-sm-7">{{ member.phone|default:"—" }}</dd>{% endif %}
+                    {% if 'address' in org.enabled_fields %}<dt class="col-sm-5">Address</dt><dd class="col-sm-7">{% if member.address_line1 %}{{ member.address_line1 }}{% if member.address_line2 %}, {{ member.address_line2 }}{% endif %}{% if member.city %}, {{ member.city }}{% endif %}{% if member.postcode %} {{ member.postcode }}{% endif %}{% else %}—{% endif %}</dd>{% endif %}
+                    <dt class="col-sm-5">Emergency contact</dt><dd class="col-sm-7">{{ member.emergency_contact_name|default:"—" }}{% if member.emergency_contact_phone %} · {{ member.emergency_contact_phone }}{% endif %}</dd>
+                    {% if 'emergency_contact_2' in org.enabled_fields and member.emergency_contact_2_name %}<dt class="col-sm-5">Second contact</dt><dd class="col-sm-7">{{ member.emergency_contact_2_name }}{% if member.emergency_contact_2_phone %} · {{ member.emergency_contact_2_phone }}{% endif %}</dd>{% endif %}
+                    {% if 'medical_info' in org.enabled_fields %}<dt class="col-sm-5">Medical information</dt><dd class="col-sm-7" style="white-space:pre-line;">{{ member.medical_info|default:"None given" }}</dd>{% endif %}
+                </dl>
+                <a href="{% url 'network_details' %}" class="btn btn-dark btn-sm mb-4">Edit in My details</a>
+                {% else %}
+                <p class="small fw-semibold text-muted text-uppercase mb-2" style="font-size:0.72rem;letter-spacing:.05em;">How you're known</p>
+                <div class="row g-3 mb-1">
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold" for="md-preferred">Preferred name</label>
+                        <input type="text" name="preferred_name" id="md-preferred" value="{{ member.preferred_name }}" class="form-control" maxlength="150" placeholder="If not {{ member.first_name|default:'your first name' }}">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label small fw-semibold" for="md-pronouns">Pronouns</label>
+                        <input type="text" name="pronouns" id="md-pronouns" value="{{ member.pronouns }}" class="form-control" maxlength="30" list="md-pronoun-options" placeholder="e.g. she/her, he/him, they/them">
+                        <datalist id="md-pronoun-options"><option value="she/her"><option value="he/him"><option value="they/them"><option value="she/they"><option value="he/they"></datalist>
+                    </div>
+                </div>
+                <p class="form-text mb-4">On {{ org.name }}'s registers you show as <strong>{{ member.register_name }}</strong>.</p>
                 <p class="small fw-semibold text-muted text-uppercase mb-2" style="font-size:0.72rem;letter-spacing:.05em;">Contact details</p>
                 <div class="row g-3 mb-4">
                     <div class="col-sm-6">
@@ -51,6 +79,7 @@
                     <label class="form-label small fw-semibold">Conditions, allergies, or anything coaches should know about</label>
                     <textarea name="medical_info" class="form-control" rows="3">{{ member.medical_info }}</textarea>
                 </div>
+                {% endif %}
 
                 {% if photo_consent_field %}
                 <p class="small fw-semibold text-muted text-uppercase mb-2" style="font-size:0.72rem;letter-spacing:.05em;">Photo consent</p>
@@ -62,7 +91,20 @@
                 </div>
                 {% endif %}
 
+                {% if org.session_reminder_hours %}
+                <p class="small fw-semibold text-muted text-uppercase mb-2" style="font-size:0.72rem;letter-spacing:.05em;">Reminders</p>
+                <input type="hidden" name="reminders_shown" value="1">
+                <div class="mb-4 form-check form-switch">
+                    <input type="checkbox" name="session_reminders" value="1" class="form-check-input" role="switch" id="session-reminders" {% if member.session_reminders %}checked{% endif %}>
+                    <label class="form-check-label small" for="session-reminders">
+                        Email me a reminder {{ org.session_reminder_hours }} hours before sessions{% if org.session_reminder_scope == 'booked' %} I've booked{% endif %}
+                    </label>
+                </div>
+                {% endif %}
+
+                {% if not account_holder or photo_consent_field or org.session_reminder_hours %}
                 <button type="submit" class="btn btn-dark">Save changes</button>
+                {% endif %}
             </form>
         </div>
     </div>
