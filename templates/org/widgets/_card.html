@@ -1,0 +1,8 @@
+{# A list or chart card. Widgets extend this and fill in the blocks. #}
+<div class="card dash-card">
+    <div class="dash-card-head">
+        <h6 class="mb-0 text-truncate"><i class="bi {% block icon %}{% endblock %} me-1 text-muted" aria-hidden="true"></i>{% block title %}{% endblock %}{% block subtitle %}{% endblock %}</h6>
+        {% block action %}{% endblock %}
+    </div>
+    <div class="dash-scroll">{% block body %}{% endblock %}</div>
+</div>

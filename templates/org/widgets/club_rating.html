@@ -1,0 +1,6 @@
+{% extends 'org/widgets/_stat.html' %}
+{% block colours %}#ca8a04,#a16207{% endblock %}
+{% block link %}<a href="{% url 'org_reviews' org_slug=org.slug %}" class="stretched-link" aria-label="Open reviews"></a>{% endblock %}
+{% block label %}Club rating{% endblock %}{% block icon %}bi-star{% endblock %}
+{% block value %}{% if rating.count %}{{ rating.average }} <span class="dash-stat-stars" aria-label="{{ rating.average }} out of 5 stars">{% for icon in rating_stars %}<i class="bi {{ icon }}" aria-hidden="true"></i>{% endfor %}</span>{% else %}–{% endif %}{% endblock %}
+{% block note %}{% if rating.count %}From {{ rating.count }} review{{ rating.count|pluralize }}{% else %}No reviews yet{% endif %}{% endblock %}

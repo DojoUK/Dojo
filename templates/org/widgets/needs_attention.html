@@ -1,0 +1,68 @@
+{% extends 'org/widgets/_card.html' %}
+{% block icon %}bi-bell{% endblock %}{% block title %}Needs attention{% endblock %}
+{% block body %}
+{% if all_clear %}
+<div class="dash-empty"><i class="bi bi-check2-circle text-success"></i>Nothing needs your attention.</div>
+{% else %}
+<div class="dash-alerts">
+    {% if missing_location %}
+    <div class="dash-alert dash-alert-warning">
+        <i class="bi bi-geo-alt-fill"></i>
+        <span><strong>Add your club's location.</strong> Members find clubs on the Dojo network by where they train and the martial arts they teach.</span>
+        <a href="{% url 'org_settings' org_slug=org.slug %}#location" class="btn btn-sm btn-dark">Add location</a>
+    </div>
+    {% endif %}
+    {% if attention_single_session %}
+    <div class="dash-alert dash-alert-warning">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span><strong>Members without a plan can book single sessions for free.</strong>
+        {% if 'price' in attention_single_session %}Set a single session price.{% endif %}
+        {% if 'stripe' in attention_single_session %}Connect Stripe so they can pay for it.{% endif %}</span>
+        <a href="{% url 'org_settings' org_slug=org.slug %}{% if 'price' in attention_single_session %}#features{% else %}#payments{% endif %}" class="btn btn-sm btn-warning">Set up</a>
+    </div>
+    {% endif %}
+    {% if unsigned_waivers_count %}
+    <div class="dash-alert dash-alert-danger">
+        <i class="bi bi-file-earmark-x-fill"></i>
+        <span><strong>{{ unsigned_waivers_count }} member{{ unsigned_waivers_count|pluralize }}</strong> without a signed waiver — they should not train.</span>
+        <a href="{% url 'member_list' org_slug=org.slug %}?waiver=unsigned" class="btn btn-sm btn-danger">View</a>
+    </div>
+    {% endif %}
+    {% if pending_applications %}
+    <div class="dash-alert dash-alert-warning">
+        <i class="bi bi-person-plus-fill"></i>
+        <span><strong>{{ pending_applications }} membership application{{ pending_applications|pluralize }}</strong> waiting for review.</span>
+        <a href="{% url 'application_list' org_slug=org.slug %}" class="btn btn-sm btn-warning">Review</a>
+    </div>
+    {% endif %}
+    {% if licences_expired %}
+    <div class="dash-alert dash-alert-danger">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span><strong>{{ licences_expired }} member{{ licences_expired|pluralize }}</strong> with an expired {{ org.licence_label }}.</span>
+        <a href="{% url 'member_list' org_slug=org.slug %}?licence=expired" class="btn btn-sm btn-danger">View</a>
+    </div>
+    {% endif %}
+    {% if licences_expiring %}
+    <div class="dash-alert dash-alert-warning">
+        <i class="bi bi-card-checklist"></i>
+        <span><strong>{{ licences_expiring }} member{{ licences_expiring|pluralize }}</strong> with a {{ org.licence_label }} expiring in the next 30 days.</span>
+        <a href="{% url 'member_list' org_slug=org.slug %}?licence=expiring" class="btn btn-sm btn-warning">View</a>
+    </div>
+    {% endif %}
+    {% if staff_expired %}
+    <div class="dash-alert dash-alert-danger">
+        <i class="bi bi-shield-exclamation"></i>
+        <span><strong>{{ staff_expired }} staff member{{ staff_expired|pluralize }}</strong> with an expired {{ staff_check_names }}.</span>
+        <a href="{% url 'org_staff' org_slug=org.slug %}" class="btn btn-sm btn-danger">View staff</a>
+    </div>
+    {% endif %}
+    {% if staff_expiring %}
+    <div class="dash-alert dash-alert-warning">
+        <i class="bi bi-shield-check"></i>
+        <span><strong>{{ staff_expiring }} staff member{{ staff_expiring|pluralize }}</strong> with a {{ staff_check_names }} expiring soon.</span>
+        <a href="{% url 'org_staff' org_slug=org.slug %}" class="btn btn-sm btn-warning">View staff</a>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

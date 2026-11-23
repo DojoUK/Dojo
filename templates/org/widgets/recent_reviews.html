@@ -1,0 +1,21 @@
+{% extends 'org/widgets/_card.html' %}
+{% block icon %}bi-chat-square-quote{% endblock %}{% block title %}Latest reviews{% endblock %}
+{% block action %}<a href="{% url 'org_reviews' org_slug=org.slug %}" class="small text-nowrap">All reviews</a>{% endblock %}
+{% block body %}
+{% if latest_reviews %}
+<ul class="list-group list-group-flush small">
+    {% for review in latest_reviews %}
+    <li class="list-group-item py-2">
+        <div class="d-flex align-items-center gap-2">
+            <span style="color:#f5a623;" aria-label="{{ review.rating }} out of 5 stars">{% for icon in review.stars %}<i class="bi {{ icon }}" aria-hidden="true"></i>{% endfor %}</span>
+            <span class="text-muted">{{ review.reviewer }} · {{ review.updated_at|date:"d M" }}</span>
+            {% if not review.reply %}<span class="badge bg-light text-dark border ms-auto">No reply</span>{% endif %}
+        </div>
+        {% if review.text %}<div class="dash-clamp mt-1">{{ review.text }}</div>{% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<div class="dash-empty"><i class="bi bi-chat-square-quote"></i>No reviews yet.</div>
+{% endif %}
+{% endblock %}

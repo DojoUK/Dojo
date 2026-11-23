@@ -1,0 +1,17 @@
+{% extends 'org/widgets/_card.html' %}
+{% block icon %}bi-bar-chart-steps{% endblock %}{% block title %}Busiest classes{% endblock %}
+{% block subtitle %} <span class="text-muted fw-normal small">— average present, 4 weeks</span>{% endblock %}
+{% block body %}
+{% if class_rows %}
+<ul class="list-unstyled mb-0 px-3 py-2 small">
+    {% for row in class_rows %}
+    <li class="mb-2">
+        <div class="d-flex justify-content-between gap-2"><span class="text-truncate">{{ row.cls.name }}</span><span class="fw-semibold text-nowrap">{{ row.average }}</span></div>
+        <div class="dash-bar" role="presentation"><span style="width: {{ row.percent }}%;"></span></div>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<div class="dash-empty"><i class="bi bi-bar-chart-steps"></i>No registers taken in the last 4 weeks.</div>
+{% endif %}
+{% endblock %}

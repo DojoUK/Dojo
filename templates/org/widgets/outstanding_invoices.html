@@ -1,0 +1,6 @@
+{% extends 'org/widgets/_stat.html' %}
+{% block colours %}{% if overdue_count %}#dc2626,#b91c1c{% else %}#475569,#334155{% endif %}{% endblock %}
+{% block link %}<a href="{% url 'invoice_list' org_slug=org.slug %}" class="stretched-link" aria-label="View invoices"></a>{% endblock %}
+{% block label %}Unpaid invoices{% endblock %}{% block icon %}bi-receipt{% endblock %}
+{% block value %}£{{ unpaid_amount|floatformat:2 }}{% endblock %}
+{% block note %}{% if overdue_count %}{{ overdue_count }} overdue (£{{ overdue_amount|floatformat:2 }}){% elif unpaid_count %}{{ unpaid_count }} unpaid, none overdue{% else %}Nothing unpaid{% endif %}{% endblock %}

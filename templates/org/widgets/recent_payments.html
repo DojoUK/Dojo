@@ -1,0 +1,18 @@
+{% extends 'org/widgets/_card.html' %}
+{% block icon %}bi-cash-coin{% endblock %}{% block title %}Recent payments{% endblock %}
+{% block action %}<a href="{% url 'invoice_list' org_slug=org.slug %}" class="small text-nowrap">Billing</a>{% endblock %}
+{% block body %}
+{% if payments %}
+<div class="list-group list-group-flush small">
+    {% for payment in payments %}
+    <a href="{% url 'invoice_detail' org_slug=org.slug pk=payment.invoice_id %}" class="list-group-item list-group-item-action d-flex align-items-center gap-2 py-2">
+        <span class="text-truncate flex-grow-1">{{ payment.invoice.member.register_name|default:payment.invoice.member.name }}</span>
+        <span class="text-muted text-nowrap">{{ payment.paid_at|date:"d M" }}</span>
+        <span class="fw-semibold text-nowrap">£{{ payment.amount|floatformat:2 }}</span>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="dash-empty"><i class="bi bi-cash-coin"></i>No payments recorded yet.</div>
+{% endif %}
+{% endblock %}

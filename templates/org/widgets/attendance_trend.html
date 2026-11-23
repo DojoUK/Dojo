@@ -1,0 +1,5 @@
+{% extends 'org/widgets/_card.html' %}
+{% block icon %}bi-bar-chart{% endblock %}{% block title %}Attendance trend{% endblock %}
+{% block subtitle %} <span class="text-muted fw-normal small">— present each week{% if not is_admin %}, your classes{% endif %}</span>{% endblock %}
+{% block action %}<a href="{% url 'attendance_analytics' org_slug=org.slug %}" class="small text-nowrap">Analytics</a>{% endblock %}
+{% block body %}<div class="dash-chart"><canvas data-chart="{{ attendance_chart }}" role="img" aria-label="Members present each week for the last 12 weeks"></canvas></div>{% endblock %}

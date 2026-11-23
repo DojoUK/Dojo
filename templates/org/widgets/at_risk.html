@@ -1,0 +1,6 @@
+{% extends 'org/widgets/_stat.html' %}
+{% block colours %}{% if at_risk_count %}#d97706,#b45309{% else %}#7c3aed,#6d28d9{% endif %}{% endblock %}
+{% block link %}{% url 'member_not_seen' org_slug=org.slug as not_seen_url %}<a href="{% if not_seen_url %}{{ not_seen_url }}?days=14{% else %}{% url 'attendance_analytics' org_slug=org.slug %}{% endif %}" class="stretched-link" aria-label="See who"></a>{% endblock %}
+{% block label %}Members at risk{% endblock %}{% block icon %}bi-exclamation-triangle{% endblock %}
+{% block value %}{{ at_risk_count }}{% endblock %}
+{% block note %}{% if tracks_slowing %}Not seen in 2 weeks or slowing{% else %}Not seen for 2 weeks or more{% endif %}{% endblock %}

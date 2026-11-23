@@ -1,0 +1,692 @@
+"""
+The club dashboard: a grid of widgets that each club arranges for itself.
+
+The grid is made of 50px square cells. A layout is a list of
+{'key', 'x', 'y', 'w', 'h'} measured in cells, saved in
+Organisation.settings['dashboard']. A club without one gets the default
+layout, packed to fit the widgets it can use.
+
+Admins arrange the club's layout. Everyone else sees the same layout with
+the widgets they aren't allowed to see taken out and the rest moved up.
+Only the widgets on the layout are worked out, so a lean dashboard is a
+fast one.
+
+Some widgets report on parts of Dojo that not every build has (the Dojo
+network's reviews, the "Not seen lately" report). Those say what they need
+and are left out where it isn't there, so this module works on any branch.
+"""
+from dataclasses import dataclass
+from datetime import date, timedelta
+from decimal import Decimal
+import json
+
+from django.apps import apps
+from django.db.models import Count, Max, Q, Sum
+from django.db.models.functions import TruncMonth
+from django.utils.functional import cached_property
+
+CELL = 50
+MAX_COLUMNS = 48          # 2,400px: wider than any screen the dashboard is used on.
+MAX_ROWS = 400
+DEFAULT_COLUMNS = 20      # 1,000px: fits a laptop screen beside the sidebar.
+SETTINGS_KEY = 'dashboard'
+
+CATEGORIES = (
+    ('numbers', 'Key numbers'),
+    ('lists', 'Lists and alerts'),
+    ('charts', 'Charts'),
+)
+
+
+@dataclass(frozen=True)
+class Widget:
+    key: str
+    title: str
+    description: str
+    icon: str
+    category: str
+    size: tuple                 # default (w, h) in cells
+    min_size: tuple
+    data: object = None         # fn(board) -> dict for the template
+    max_size: tuple = (MAX_COLUMNS, 24)
+    admin_only: bool = False
+    capability: str = ''        # admins, or staff granted this, can see it
+    features: tuple = ()        # every one must be switched on
+    fields: tuple = ()          # optional member/staff fields, any one switched on
+    needs_apps: tuple = ()      # Django apps that must be installed
+
+    @property
+    def template(self):
+        return f'org/widgets/{self.key}.html'
+
+    def available(self, org):
+        """Whether this build and the club have what this widget reports on."""
+        if any(not apps.is_installed(a) for a in self.needs_apps):
+            return False
+        if any(not org.has_feature(f) for f in self.features):
+            return False
+        return not self.fields or any(org.has_field(f) for f in self.fields)
+
+    def visible(self, board):
+        if not self.available(board.org):
+            return False
+        if self.admin_only and not board.is_admin:
+            return False
+        if self.capability and not board.can(self.capability):
+            return False
+        return True
+
+    def clamp(self, w, h):
+        return (max(self.min_size[0], min(self.max_size[0], w)),
+                max(self.min_size[1], min(self.max_size[1], h)))
+
+    def catalogue_entry(self):
+        return {
+            'key': self.key, 'title': self.title, 'description': self.description,
+            'icon': self.icon, 'category': self.category,
+            'w': self.size[0], 'h': self.size[1],
+            'minW': self.min_size[0], 'minH': self.min_size[1],
+            'maxW': self.max_size[0], 'maxH': self.max_size[1],
+        }
+
+
+class Board:
+    """What the widgets need to know about the person looking, worked out once per page."""
+
+    def __init__(self, org, user, membership, today=None):
+        self.org = org
+        self.user = user
+        self.membership = membership
+        self.today = today or date.today()
+
+    @cached_property
+    def is_admin(self):
+        # No membership means a superuser looking in, as in OrgMixin.
+        return self.membership is None or self.membership.is_org_admin or self.user.is_superuser
+
+    def can(self, capability):
+        if self.is_admin:
+            return True
+        return self.membership is not None and self.membership.has_capability(capability)
+
+    @cached_property
+    def class_ids(self):
+        """The classes this person's numbers cover: all of them for admins, their own for coaches."""
+        from classes.models import Class, ClassCoach
+        if self.is_admin:
+            return list(Class.objects.filter(organisation=self.org).values_list('pk', flat=True))
+        return list(ClassCoach.objects.filter(
+            user=self.user, assigned_class__organisation=self.org,
+        ).values_list('assigned_class_id', flat=True).distinct())
+
+    @cached_property
+    def not_seen(self):
+        """{'not_seen', 'never', 'slowing'}: rows of members absent for 2 weeks or more."""
+        try:
+            from members import not_seen
+        except ImportError:
+            return _not_seen_here(self)
+        return not_seen.report(self.org, days=14, today=self.today, describe=False)
+
+    @cached_property
+    def active_members(self):
+        return self.org.club_members.filter(is_active=True)
+
+    @property
+    def first_of_month(self):
+        return self.today.replace(day=1)
+
+    def months_back(self, count):
+        """First days of the last `count` months, oldest first, ending with this month."""
+        months, first = [], self.first_of_month
+        for _ in range(count):
+            months.append(first)
+            first = (first - timedelta(days=1)).replace(day=1)
+        return months[::-1]
+
+
+def _not_seen_here(board):
+    """The "Not seen lately" groups for builds without members/not_seen.py: active members whose
+    last session was 2 or more weeks ago, and those who joined that long ago and never came."""
+    cutoff = board.today - timedelta(days=14)
+    groups = {'not_seen': [], 'never': [], 'slowing': []}
+    members = board.active_members.annotate(
+        last_seen=Max('attendance__session__date', filter=Q(attendance__present=True)),
+    )
+    for member in members:
+        last = member.last_seen
+        row = {'member': member, 'last_seen': last, 'days_since': (board.today - last).days if last else None}
+        if last is None:
+            if member.joined_date is None or member.joined_date <= cutoff:
+                groups['never'].append(row)
+        elif last <= cutoff:
+            groups['not_seen'].append(row)
+    groups['not_seen'].sort(key=lambda r: r['last_seen'])
+    groups['never'].sort(key=lambda r: r['member'].name)
+    return groups
+
+
+def star_icons(rating):
+    """Bootstrap icon names for five stars showing a rating to the nearest half star."""
+    halves = round(float(rating or 0) * 2)
+    return ['bi-star-fill' if halves >= n * 2 else 'bi-star-half' if halves == n * 2 - 1 else 'bi-star'
+            for n in range(1, 6)]
+
+
+def _chart(kind, labels, series, prefix='', stacked=False):
+    return json.dumps({'type': kind, 'labels': labels, 'series': series, 'prefix': prefix, 'stacked': stacked})
+
+
+def _attendance(board, start, end):
+    """(present, recorded) attendance marks for this person's classes between two dates."""
+    from classes.models import Attendance
+    rows = Attendance.objects.filter(
+        session__assigned_class_id__in=board.class_ids, session__date__gte=start, session__date__lte=end,
+    ).aggregate(total=Count('pk'), present=Count('pk', filter=Q(present=True)))
+    return rows['present'], rows['total']
+
+
+def _month(value):
+    """TruncMonth gives a date for a date field and a datetime for a datetime field."""
+    if hasattr(value, 'hour'):
+        value = value.date()
+    return value.replace(day=1)
+
+
+def _rate(present, total):
+    return round(present / total * 100) if total else None
+
+
+# ── Key numbers ──────────────────────────────────────────────────────────
+
+def active_members(board):
+    return {
+        'member_count': board.active_members.count(),
+        'new_members_month': board.active_members.filter(joined_date__gte=board.first_of_month).count(),
+    }
+
+
+def sessions_week(board):
+    from classes.models import Session
+    four_weeks_ago = board.today - timedelta(weeks=4)
+    present, total = _attendance(board, four_weeks_ago, board.today)
+    return {
+        'sessions_this_week': Session.objects.filter(
+            assigned_class_id__in=board.class_ids, date__gte=board.today,
+            date__lte=board.today + timedelta(days=7),
+        ).count(),
+        'attendance_rate': _rate(present, total),
+    }
+
+
+def revenue_month(board):
+    from billing.models import Invoice, Payment
+    return {
+        'revenue_month': Payment.objects.filter(
+            invoice__organisation=board.org, paid_at__date__gte=board.first_of_month,
+        ).aggregate(t=Sum('amount'))['t'] or 0,
+        'outstanding': Invoice.objects.filter(
+            organisation=board.org, status=Invoice.Status.UNPAID,
+        ).aggregate(t=Sum('amount'))['t'] or 0,
+    }
+
+
+def outstanding_invoices(board):
+    from billing.models import Invoice
+    unpaid = Invoice.objects.filter(organisation=board.org, status=Invoice.Status.UNPAID)
+    totals = unpaid.aggregate(
+        unpaid_count=Count('pk'), unpaid_amount=Sum('amount'),
+        overdue_count=Count('pk', filter=Q(due_date__lt=board.today)),
+        overdue_amount=Sum('amount', filter=Q(due_date__lt=board.today)),
+    )
+    return {
+        'unpaid_count': totals['unpaid_count'], 'unpaid_amount': totals['unpaid_amount'] or 0,
+        'overdue_count': totals['overdue_count'], 'overdue_amount': totals['overdue_amount'] or 0,
+    }
+
+
+def at_risk(board):
+    groups = board.not_seen
+    try:
+        from members import not_seen  # noqa: F401  (only this report spots members coming less often)
+        tracks_slowing = True
+    except ImportError:
+        tracks_slowing = False
+    return {
+        'tracks_slowing': tracks_slowing,
+        'at_risk_count': sum(len(rows) for rows in groups.values()),
+        'at_risk_groups': {name: len(rows) for name, rows in groups.items()},
+    }
+
+
+def attendance_rate(board):
+    four_weeks_ago = board.today - timedelta(weeks=4)
+    eight_weeks_ago = board.today - timedelta(weeks=8)
+    present, total = _attendance(board, four_weeks_ago + timedelta(days=1), board.today)
+    before_present, before_total = _attendance(board, eight_weeks_ago + timedelta(days=1), four_weeks_ago)
+    rate, before = _rate(present, total), _rate(before_present, before_total)
+    return {
+        'rate_now': rate,
+        'rate_change': rate - before if rate is not None and before is not None else None,
+        'rate_marks': present,
+    }
+
+
+def new_members(board):
+    last_month = (board.first_of_month - timedelta(days=1)).replace(day=1)
+    members = board.org.club_members
+    return {
+        'joined_this_month': members.filter(joined_date__gte=board.first_of_month).count(),
+        'joined_last_month': members.filter(
+            joined_date__gte=last_month, joined_date__lt=board.first_of_month,
+        ).count(),
+    }
+
+
+def club_rating(board):
+    from network import reviews
+    rating = reviews.summary(board.org)
+    return {'rating': rating, 'rating_stars': star_icons(rating['average'])}
+
+
+# ── Lists and alerts ─────────────────────────────────────────────────────
+
+def single_session_setup(org):
+    """What a club offering class booking still has to set up before members without a plan pay
+    per session: 'price' and/or 'stripe'."""
+    from billing.payments import stripe_keys
+    missing = []
+    if not hasattr(org, 'single_session_price'):        # a build without class booking
+        return missing
+    if org.has_feature('billing') and org.has_bookable_classes:
+        if org.single_session_price is None:
+            missing.append('price')
+        if stripe_keys(org) is None:
+            missing.append('stripe')
+    return missing
+
+
+def needs_attention(board):
+    """The warnings that used to sit across the top of the dashboard."""
+    from members.models import MemberApplication
+    from .models import OrganisationMember
+
+    org, today, active = board.org, board.today, board.active_members
+    thirty_days = today + timedelta(days=30)
+
+    track_licences = org.has_field('licence')
+    staff_checks = [
+        (expiry_field, label)
+        for key, expiry_field, label in (
+            ('dbs', 'dbs_expiry', 'DBS'),
+            ('coaching_licence', 'coaching_licence_expiry', org.coaching_licence_label),
+        )
+        if org.has_field(key)
+    ]
+    staff_expiring = staff_expired = 0
+    if staff_checks:
+        staff = OrganisationMember.objects.filter(organisation=org)
+        expiring_q, expired_q = Q(pk__in=[]), Q(pk__in=[])
+        for expiry_field, _ in staff_checks:
+            expiring_q |= Q(**{f'{expiry_field}__lte': thirty_days, f'{expiry_field}__gte': today})
+            expired_q |= Q(**{f'{expiry_field}__lt': today})
+        staff_expiring = staff.filter(expiring_q).count()
+        staff_expired = staff.filter(expired_q).count()
+
+    unsigned_waivers_count = 0
+    if org.has_feature('documents'):
+        from documents.models import SignedWaiver, WaiverTemplate
+        required = WaiverTemplate.objects.filter(organisation=org, is_active=True, is_required=True)
+        if required.exists():
+            signed = SignedWaiver.objects.filter(template__in=required).values_list('member_id', flat=True)
+            unsigned_waivers_count = active.exclude(pk__in=set(signed)).count()
+
+    data = {
+        'missing_location': not getattr(org, 'has_location', True),   # builds without club locations skip this
+        'attention_single_session': single_session_setup(org),
+        'unsigned_waivers_count': unsigned_waivers_count,
+        'pending_applications': MemberApplication.objects.filter(
+            organisation=org, status=MemberApplication.Status.PENDING,
+        ).count() if org.has_feature('applications') else 0,
+        'licences_expiring': active.filter(
+            licence_expiry__lte=thirty_days, licence_expiry__gte=today,
+        ).count() if track_licences else 0,
+        'licences_expired': active.filter(licence_expiry__lt=today).count() if track_licences else 0,
+        'staff_expiring': staff_expiring,
+        'staff_expired': staff_expired,
+        'staff_check_names': ' or '.join(label for _, label in staff_checks),
+    }
+    data['all_clear'] = not any(v for k, v in data.items() if k != 'staff_check_names')
+    return data
+
+
+def upcoming_sessions(board):
+    from classes.models import Attendance, ClassMember, Session
+    sessions = Session.objects.filter(
+        assigned_class_id__in=board.class_ids, date__gte=board.today,
+        date__lte=board.today + timedelta(days=7),
+    ).select_related('assigned_class').order_by('date', 'assigned_class__name')
+    rows = []
+    for session in sessions:
+        marks = Attendance.objects.filter(session=session).aggregate(
+            total=Count('pk'), present=Count('pk', filter=Q(present=True)),
+        )
+        rows.append({
+            'session': session,
+            'taken': bool(marks['total']),
+            'enrolled': ClassMember.objects.filter(assigned_class_id=session.assigned_class_id).count(),
+            'present': marks['present'] if marks['total'] else None,
+        })
+    return {'upcoming': rows}
+
+
+def quick_actions(board):
+    return {}
+
+
+def not_seen_list(board):
+    groups = board.not_seen
+    rows = [dict(row, group='Not seen') for row in groups['not_seen']] \
+        + [dict(row, group='Coming less often') for row in groups['slowing']] \
+        + [dict(row, group='Never come') for row in groups['never']]
+    return {'not_seen_rows': rows[:25], 'not_seen_more': max(0, len(rows) - 25)}
+
+
+def applications_list(board):
+    from members.models import MemberApplication
+    pending = MemberApplication.objects.filter(
+        organisation=board.org, status=MemberApplication.Status.PENDING,
+    ).order_by('-submitted_at')
+    return {'applications': list(pending[:10]), 'applications_count': pending.count()}
+
+
+def upcoming_gradings(board):
+    from progression.models import GradingSession
+    sessions = GradingSession.objects.filter(
+        grading__organisation=board.org, date__gte=board.today,
+    ).select_related('grading', 'grading__system').annotate(
+        candidate_count=Count('candidates', distinct=True),
+    ).order_by('date', 'pk')[:10]
+    return {'grading_sessions': list(sessions)}
+
+
+def birthdays(board):
+    """Active members with a birthday in the next 14 days, soonest first."""
+    soon = []
+    for member in board.active_members.exclude(date_of_birth__isnull=True):
+        dob = member.date_of_birth
+        for year in (board.today.year, board.today.year + 1):
+            try:
+                day = dob.replace(year=year)
+            except ValueError:          # 29 February outside a leap year
+                day = date(year, 3, 1)
+            if day >= board.today:
+                break
+        days = (day - board.today).days
+        if days <= 14:
+            soon.append({'member': member, 'day': day, 'days': days, 'age': day.year - dob.year})
+    soon.sort(key=lambda row: (row['days'], row['member'].name))
+    return {'birthdays': soon}
+
+
+def recent_reviews(board):
+    from network.models import ClubReview
+    reviews = list(ClubReview.objects.filter(organisation=board.org).select_related('account')
+                   .order_by('-updated_at')[:5])
+    for review in reviews:
+        review.stars = star_icons(review.rating)
+    return {'latest_reviews': reviews}
+
+
+def class_attendance(board):
+    """Average members at each class's sessions over the last four weeks, busiest first."""
+    from classes.models import Class
+    start = board.today - timedelta(weeks=4)
+    classes = Class.objects.filter(pk__in=board.class_ids).annotate(
+        run=Count('sessions', filter=Q(
+            sessions__date__gte=start, sessions__date__lte=board.today, sessions__is_cancelled=False,
+            sessions__attendance__isnull=False,
+        ), distinct=True),
+        present=Count('sessions__attendance', filter=Q(
+            sessions__date__gte=start, sessions__date__lte=board.today,
+            sessions__attendance__present=True,
+        )),
+    )
+    rows = [{'cls': c, 'run': c.run, 'average': round(c.present / c.run, 1)} for c in classes if c.run]
+    rows.sort(key=lambda r: (-r['average'], r['cls'].name))
+    top = max((r['average'] for r in rows), default=0)
+    for row in rows:
+        row['percent'] = round(row['average'] / top * 100) if top else 0
+    return {'class_rows': rows}
+
+
+def recent_payments(board):
+    from billing.models import Payment
+    payments = Payment.objects.filter(invoice__organisation=board.org).select_related('invoice__member')
+    return {'payments': list(payments.order_by('-paid_at')[:10])}
+
+
+# ── Charts ───────────────────────────────────────────────────────────────
+
+def attendance_trend(board):
+    """Members present each week for the last 12 weeks, Monday to Sunday."""
+    from classes.models import Attendance
+    this_monday = board.today - timedelta(days=board.today.weekday())
+    weeks = [this_monday - timedelta(weeks=n) for n in range(11, -1, -1)]
+    counts = dict.fromkeys(weeks, 0)
+    for day, n in Attendance.objects.filter(
+        session__assigned_class_id__in=board.class_ids, present=True,
+        session__date__gte=weeks[0], session__date__lte=board.today,
+    ).values_list('session__date').annotate(n=Count('pk')):
+        counts[day - timedelta(days=day.weekday())] += n
+    return {'attendance_chart': _chart(
+        'bar', [f'{w:%d %b}' for w in weeks], [{'label': 'Present', 'data': [counts[w] for w in weeks]}],
+    )}
+
+
+def member_growth(board):
+    """Members joining each month for the last 12 months, and the active total at each month's end."""
+    months = board.months_back(12)
+    members = board.org.club_members
+    joined = dict.fromkeys(months, 0)
+    for month, n in members.filter(joined_date__gte=months[0], joined_date__lte=board.today).annotate(
+        month=TruncMonth('joined_date'),
+    ).values_list('month').annotate(n=Count('pk')):
+        joined[_month(month)] += n
+    return {'growth_chart': _chart(
+        'bar', [f'{m:%b %y}' for m in months], [{'label': 'Joined', 'data': [joined[m] for m in months]}],
+    ), 'joined_year': sum(joined.values())}
+
+
+def revenue_trend(board):
+    from billing.models import Payment
+    months = board.months_back(12)
+    totals = dict.fromkeys(months, Decimal(0))
+    for month, total in Payment.objects.filter(
+        invoice__organisation=board.org, paid_at__date__gte=months[0],
+    ).annotate(month=TruncMonth('paid_at')).values_list('month').annotate(t=Sum('amount')):
+        key = _month(month)
+        if key in totals:
+            totals[key] += total or 0
+    return {'revenue_chart': _chart(
+        'line', [f'{m:%b %y}' for m in months],
+        [{'label': 'Payments', 'data': [float(totals[m]) for m in months]}], prefix='£',
+    ), 'revenue_year': sum(totals.values())}
+
+
+WIDGETS = (
+    Widget('active_members', 'Active members', 'How many members are active, and how many joined this month.',
+           'bi-people', 'numbers', (5, 3), (4, 2), active_members, max_size=(12, 6)),
+    Widget('sessions_week', 'Sessions this week', 'Sessions in the next 7 days and attendance over the last 4 weeks.',
+           'bi-calendar-check', 'numbers', (5, 3), (4, 2), sessions_week, max_size=(12, 6)),
+    Widget('revenue_month', 'Revenue this month', 'Payments taken this month and what is still unpaid.',
+           'bi-currency-pound', 'numbers', (5, 3), (4, 2), revenue_month, max_size=(12, 6),
+           admin_only=True, features=('billing',)),
+    Widget('at_risk', 'Members at risk', 'Members not seen for 2 weeks, coming less often, or who have never come.',
+           'bi-exclamation-triangle', 'numbers', (5, 3), (4, 2), at_risk, max_size=(12, 6), admin_only=True),
+    Widget('outstanding_invoices', 'Unpaid invoices', 'Unpaid invoices, and how many are overdue.',
+           'bi-receipt', 'numbers', (5, 3), (4, 2), outstanding_invoices, max_size=(12, 6),
+           admin_only=True, features=('billing',)),
+    Widget('attendance_rate', 'Attendance rate', 'Attendance over the last 4 weeks against the 4 weeks before.',
+           'bi-graph-up-arrow', 'numbers', (5, 3), (4, 2), attendance_rate, max_size=(12, 6)),
+    Widget('new_members', 'New members', 'Members who joined this month against last month.',
+           'bi-person-plus', 'numbers', (5, 3), (4, 2), new_members, max_size=(12, 6), admin_only=True),
+    Widget('club_rating', 'Club rating', 'Your average rating from members on the Dojo network.',
+           'bi-star', 'numbers', (5, 3), (4, 2), club_rating, max_size=(12, 6),
+           needs_apps=('network',)),
+
+    Widget('needs_attention', 'Needs attention', 'Applications, waivers, licences and staff checks that need action.',
+           'bi-bell', 'lists', (20, 5), (6, 2), needs_attention, admin_only=True),
+    Widget('upcoming_sessions', 'Upcoming sessions', 'The next 7 days of sessions, with a button to take each register.',
+           'bi-clipboard-check', 'lists', (14, 8), (6, 4), upcoming_sessions),
+    Widget('quick_actions', 'Quick actions', 'Shortcuts to the things you do most.',
+           'bi-lightning', 'lists', (6, 8), (4, 3), quick_actions),
+    Widget('not_seen_list', 'Not seen lately', 'The members behind "Members at risk", with when each last trained.',
+           'bi-person-dash', 'lists', (8, 8), (5, 4), not_seen_list, admin_only=True),
+    Widget('applications_list', 'Applications', 'Membership applications waiting for review.',
+           'bi-inbox', 'lists', (8, 6), (5, 3), applications_list, admin_only=True, features=('applications',)),
+    Widget('upcoming_gradings', 'Upcoming gradings', 'Grading sessions coming up, with how many are taking part.',
+           'bi-award', 'lists', (8, 6), (5, 3), upcoming_gradings, capability='manage_gradings',
+           features=('gradings',)),
+    Widget('birthdays', 'Birthdays', 'Members with a birthday in the next two weeks.',
+           'bi-cake2', 'lists', (6, 6), (4, 3), birthdays, admin_only=True),
+    Widget('recent_reviews', 'Latest reviews', 'The newest reviews of your club on the Dojo network.',
+           'bi-chat-square-quote', 'lists', (8, 7), (5, 4), recent_reviews,
+           needs_apps=('network',)),
+    Widget('class_attendance', 'Busiest classes', 'Average members at each class over the last 4 weeks.',
+           'bi-bar-chart-steps', 'lists', (8, 7), (5, 4), class_attendance),
+    Widget('recent_payments', 'Recent payments', 'The latest payments recorded.',
+           'bi-cash-coin', 'lists', (8, 7), (5, 4), recent_payments, admin_only=True, features=('billing',)),
+
+    Widget('attendance_trend', 'Attendance trend', 'Members present each week for the last 12 weeks.',
+           'bi-bar-chart', 'charts', (10, 7), (6, 5), attendance_trend),
+    Widget('member_growth', 'New members by month', 'Members joining each month for the last year.',
+           'bi-graph-up', 'charts', (10, 7), (6, 5), member_growth, admin_only=True),
+    Widget('revenue_trend', 'Revenue by month', 'Payments taken each month for the last year.',
+           'bi-cash-stack', 'charts', (10, 7), (6, 5), revenue_trend, admin_only=True, features=('billing',)),
+)
+WIDGETS_BY_KEY = {w.key: w for w in WIDGETS}
+
+# The dashboard a club starts with: the same things the fixed dashboard used to show.
+DEFAULT_WIDGETS = ('active_members', 'sessions_week', 'revenue_month', 'at_risk',
+                   'needs_attention', 'upcoming_sessions', 'quick_actions')
+
+
+# ── Layout ───────────────────────────────────────────────────────────────
+
+def overlaps(a, b):
+    return a['x'] < b['x'] + b['w'] and b['x'] < a['x'] + a['w'] \
+        and a['y'] < b['y'] + b['h'] and b['y'] < a['y'] + a['h']
+
+
+def first_fit(placed, w, h, columns):
+    """The highest, then leftmost, free spot for a w×h widget."""
+    columns = max(columns, w)
+    for y in range(MAX_ROWS):
+        for x in range(columns - w + 1):
+            spot = {'x': x, 'y': y, 'w': w, 'h': h}
+            if not any(overlaps(spot, p) for p in placed):
+                return x, y
+    return 0, max((p['y'] + p['h'] for p in placed), default=0)
+
+
+def push_down(items):
+    """Moves widgets down until none overlap, keeping the ones higher up where they are."""
+    placed = []
+    for item in sorted(items, key=lambda i: (i['y'], i['x'])):
+        moved = True
+        while moved:
+            moved = False
+            for p in placed:
+                if overlaps(item, p):
+                    item['y'] = p['y'] + p['h']
+                    moved = True
+        placed.append(item)
+    return placed
+
+
+def compact(items):
+    """Moves each widget up as far as it can go, so nothing floats above a gap."""
+    placed = []
+    for item in sorted(items, key=lambda i: (i['y'], i['x'])):
+        while item['y'] > 0 and not any(overlaps(dict(item, y=item['y'] - 1), p) for p in placed):
+            item['y'] -= 1
+        placed.append(item)
+    return placed
+
+
+def default_layout(org):
+    """The standard layout as an admin sees it, packed around the widgets the club can't use."""
+    placed = []
+    for key in DEFAULT_WIDGETS:
+        widget = WIDGETS_BY_KEY[key]
+        if not widget.available(org):
+            continue
+        w, h = widget.size
+        if key == 'needs_attention':
+            w = DEFAULT_COLUMNS
+        x, y = first_fit(placed, w, h, DEFAULT_COLUMNS)
+        placed.append({'key': key, 'x': x, 'y': y, 'w': w, 'h': h})
+    return placed
+
+
+def clean(raw, board):
+    """A layout made safe to keep: known widgets this person can see, each once, in range, not overlapping."""
+    items, seen = [], set()
+    for entry in raw if isinstance(raw, list) else []:
+        if not isinstance(entry, dict):
+            continue
+        widget = WIDGETS_BY_KEY.get(entry.get('key'))
+        if widget is None or widget.key in seen or not widget.visible(board):
+            continue
+        try:
+            x, y, w, h = (int(entry.get(k, 0)) for k in ('x', 'y', 'w', 'h'))
+        except (TypeError, ValueError):
+            continue
+        w, h = widget.clamp(w, h)
+        w = min(w, MAX_COLUMNS)
+        items.append({'key': widget.key, 'x': max(0, min(x, MAX_COLUMNS - w)),
+                      'y': max(0, min(y, MAX_ROWS)), 'w': w, 'h': h})
+        seen.add(widget.key)
+    return push_down(items)
+
+
+def saved_layout(org):
+    stored = (org.settings or {}).get(SETTINGS_KEY)
+    return stored.get('widgets') if isinstance(stored, dict) else None
+
+
+def layout_for(board):
+    """The layout this person sees: the club's (or the default), less the widgets they can't see."""
+    raw = saved_layout(board.org)
+    if raw is None:
+        raw = default_layout(board.org)
+    items = clean(raw, board)
+    if len(items) < len(raw):
+        items = compact(items)      # close the gaps left by widgets this person can't see
+    return items
+
+
+def save_layout(org, raw, board):
+    items = clean(raw, board)
+    org.settings = {**(org.settings or {}), SETTINGS_KEY: {'version': 1, 'widgets': items}}
+    org.save(update_fields=['settings'])
+    return items
+
+
+def reset_layout(org):
+    org.settings = {k: v for k, v in (org.settings or {}).items() if k != SETTINGS_KEY}
+    org.save(update_fields=['settings'])
+
+
+def catalogue(board):
+    """Every widget this person could add, for the Add widget panel."""
+    return [w.catalogue_entry() for w in WIDGETS if w.visible(board)]
+
+
+def render_data(widget, board):
+    return widget.data(board) if widget.data else {}
+
+
+def grid_area(item):
+    return f"{item['y'] + 1} / {item['x'] + 1} / span {item['h']} / span {item['w']}"

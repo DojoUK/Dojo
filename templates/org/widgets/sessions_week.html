@@ -1,0 +1,6 @@
+{% extends 'org/widgets/_stat.html' %}
+{% block colours %}#0891b2,#0e7490{% endblock %}
+{% block link %}<a href="{% url 'org_calendar' org_slug=org.slug %}" class="stretched-link" aria-label="Open the calendar"></a>{% endblock %}
+{% block label %}Sessions this week{% endblock %}{% block icon %}bi-calendar-check{% endblock %}
+{% block value %}{{ sessions_this_week }}{% endblock %}
+{% block note %}{% if attendance_rate is not None %}{{ attendance_rate }}% attendance (4 wks){% else %}Next 7 days{% endif %}{% endblock %}

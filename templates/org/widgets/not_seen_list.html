@@ -1,0 +1,19 @@
+{% extends 'org/widgets/_card.html' %}
+{% block icon %}bi-person-dash{% endblock %}{% block title %}Not seen lately{% endblock %}
+{% block action %}{% url 'member_not_seen' org_slug=org.slug as not_seen_url %}<a href="{% if not_seen_url %}{{ not_seen_url }}?days=14{% else %}{% url 'attendance_analytics' org_slug=org.slug %}{% endif %}" class="small text-nowrap">Full report</a>{% endblock %}
+{% block body %}
+{% if not_seen_rows %}
+<ul class="list-group list-group-flush small">
+    {% for row in not_seen_rows %}
+    <li class="list-group-item d-flex align-items-center gap-2 py-2">
+        <a href="{% url 'member_detail' org_slug=org.slug pk=row.member.pk %}" class="text-truncate flex-grow-1">{{ row.member.register_name|default:row.member.name }}</a>
+        <span class="text-muted text-nowrap">{% if row.last_seen %}{{ row.days_since }} day{{ row.days_since|pluralize }} ago{% else %}Never{% endif %}</span>
+        <span class="badge {% if row.group == 'Coming less often' %}bg-warning-subtle text-warning-emphasis{% elif row.group == 'Never come' %}bg-secondary-subtle text-secondary-emphasis{% else %}bg-danger-subtle text-danger-emphasis{% endif %}">{{ row.group }}</span>
+    </li>
+    {% endfor %}
+</ul>
+{% if not_seen_more %}<div class="small text-muted px-3 py-2">And {{ not_seen_more }} more in the full report.</div>{% endif %}
+{% else %}
+<div class="dash-empty"><i class="bi bi-check2-circle text-success"></i>Everyone has trained in the last 2 weeks.</div>
+{% endif %}
+{% endblock %}

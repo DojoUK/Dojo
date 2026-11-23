@@ -1,0 +1,6 @@
+{% extends 'org/widgets/_stat.html' %}
+{% block colours %}#059669,#047857{% endblock %}
+{% block link %}<a href="{% url 'invoice_list' org_slug=org.slug %}" class="stretched-link" aria-label="View billing"></a>{% endblock %}
+{% block label %}Revenue this month{% endblock %}{% block icon %}bi-currency-pound{% endblock %}
+{% block value %}£{{ revenue_month|floatformat:2 }}{% endblock %}
+{% block note %}{% if outstanding %}£{{ outstanding|floatformat:2 }} outstanding{% else %}All paid up{% endif %}{% endblock %}

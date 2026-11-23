@@ -1,0 +1,40 @@
+{% extends 'org/widgets/_card.html' %}
+{% block icon %}bi-clipboard-check{% endblock %}{% block title %}Upcoming sessions{% endblock %}
+{% block subtitle %} <span class="text-muted fw-normal small">— next 7 days{% if not is_admin %} (your classes){% endif %}</span>{% endblock %}
+{% block body %}
+{% if upcoming %}
+<table class="table table-hover mb-0 align-middle">
+    <tbody>
+        {% for item in upcoming %}
+        <tr>
+            <td class="ps-3 py-2" style="width: 110px;">
+                <div class="fw-semibold small">{{ item.session.date|date:"D d M" }}</div>
+                {% if item.session.date == today %}<span class="badge bg-primary-subtle text-primary" style="font-size:0.6rem;">Today</span>{% endif %}
+            </td>
+            <td class="py-2">
+                <div class="fw-semibold small">{{ item.session.assigned_class.name }}</div>
+                {% if item.session.is_cancelled %}<span class="badge bg-danger-subtle text-danger" style="font-size:0.6rem;">Cancelled</span>{% endif %}
+            </td>
+            <td class="py-2 text-muted small text-nowrap">{{ item.enrolled }} enrolled</td>
+            <td class="py-2 text-end pe-3 text-nowrap">
+                {% if item.taken %}
+                <a href="{% url 'session_register' org_slug=org.slug pk=item.session.assigned_class.pk session_pk=item.session.pk %}" class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-check2 me-1"></i>{{ item.present }}/{{ item.enrolled }} taken
+                </a>
+                {% else %}
+                <a href="{% url 'session_register' org_slug=org.slug pk=item.session.assigned_class.pk session_pk=item.session.pk %}" class="btn btn-sm btn-dark">
+                    <i class="bi bi-clipboard me-1"></i>Take register
+                </a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="dash-empty">
+    <i class="bi bi-calendar-check"></i>No sessions in the next 7 days.
+    {% if is_admin %}<a href="{% url 'class_list' org_slug=org.slug %}" class="d-block mt-1">Generate sessions from a class</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}
