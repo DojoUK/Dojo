@@ -34,7 +34,7 @@
         {% csrf_token %}
         <button type="submit" class="btn btn-outline-secondary btn-sm"
                 title="Invalidate their current portal link and issue a new one"
-                onclick="return confirm('Reset {{ member.name }}\'s portal link? The old link will stop working immediately.')">
+                data-confirm="Reset {{ member.name }}’s portal link? The old link will stop working immediately.">
             <i class="bi bi-key me-1"></i> Reset portal link
         </button>
     </form>
@@ -43,7 +43,7 @@
         {% csrf_token %}
         {% if member.is_active %}
         <button type="submit" class="btn btn-outline-danger btn-sm"
-                onclick="return confirm('Archive {{ member.name }}? They will be marked inactive.')">
+                data-confirm="Archive {{ member.name }}? They will be marked inactive.">
             <i class="bi bi-archive me-1"></i> Archive
         </button>
         {% else %}
@@ -85,7 +85,7 @@
                 {% csrf_token %}
                 <input type="hidden" name="resolution" value="archive">
                 <button type="submit" class="btn btn-sm btn-warning"
-                        onclick="return confirm('Archive {{ member.name }}?')">Archive member</button>
+                        data-confirm="Archive {{ member.name }}?">Archive member</button>
             </form>
         </div>
     </div>
@@ -484,7 +484,7 @@
                                         <form method="post" action="{% url 'member_progression_delete' org_slug=org.slug pk=member.pk prog_pk=prog.pk %}">
                                             {% csrf_token %}
                                             <button type="submit" class="btn btn-sm btn-outline-danger"
-                                                    onclick="return confirm('Remove this record?')">
+                                                    data-confirm="Remove this record?">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </form>
@@ -782,7 +782,7 @@
                                             <form method="post" action="{% url 'signed_waiver_delete' org_slug=org.slug member_pk=member.pk pk=sw.pk %}">
                                                 {% csrf_token %}
                                                 <button type="submit" class="btn btn-sm btn-outline-danger"
-                                                        onclick="return confirm('Remove this signed waiver?')"><i class="bi bi-trash"></i></button>
+                                                        data-confirm="Remove this signed waiver?"><i class="bi bi-trash"></i></button>
                                             </form>
                                         </div>
                                     </td>
@@ -863,7 +863,7 @@
                                             <form method="post" action="{% url 'document_delete' org_slug=org.slug member_pk=member.pk pk=doc.pk %}">
                                                 {% csrf_token %}
                                                 <button type="submit" class="btn btn-sm btn-outline-danger"
-                                                        onclick="return confirm('Delete this document?')">
+                                                        data-confirm="Delete this document?">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </form>
@@ -916,7 +916,7 @@
                                 <form method="post" action="{% url 'member_note_delete' org_slug=org.slug pk=member.pk note_pk=note.pk %}">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-sm btn-link text-danger p-0"
-                                            onclick="return confirm('Delete this note?')">
+                                            data-confirm="Delete this note?">
                                         <i class="bi bi-trash" style="font-size:0.8rem;"></i>
                                     </button>
                                 </form>

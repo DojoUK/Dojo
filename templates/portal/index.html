@@ -37,7 +37,7 @@
                 <form method="post" action="{% url 'portal_autopay_off' token=member.token %}">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-outline-danger w-100"
-                            onclick="return confirm('Turn off automatic payments? Future invoices will be emailed to you to pay.')">Turn off</button>
+                            data-confirm="Turn off automatic payments? Future invoices will be emailed to you to pay.">Turn off</button>
                 </form>
                 {% endif %}
             </div>
@@ -76,7 +76,7 @@
                     <form method="post" action="{% url 'portal_cancel_subscription' token=member.token %}">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-sm btn-outline-danger w-100"
-                                onclick="return confirm('Cancel autopay at the end of this billing period?')">
+                                data-confirm="Cancel autopay at the end of this billing period?">
                             Cancel autopay
                         </button>
                     </form>
@@ -111,7 +111,7 @@
             <form method="post" action="{% url 'portal_stop_training' token=member.token %}" class="d-flex gap-2 flex-shrink-0">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-outline-danger btn-sm"
-                        onclick="return confirm('Let {{ org.name }} know you\'re planning to stop training?')">
+                        data-confirm="Let {{ org.name }} know you’re planning to stop training?">
                     I'm planning to stop training
                 </button>
             </form>

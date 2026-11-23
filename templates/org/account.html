@@ -269,7 +269,7 @@
                         <input type="hidden" name="action" value="remove_holiday">
                         <input type="hidden" name="holiday_pk" value="{{ holiday.pk }}">
                         <button type="submit" class="btn btn-sm btn-outline-danger"
-                                onclick="return confirm('Remove this holiday?')">
+                                data-confirm="Remove this holiday?">
                             <i class="bi bi-trash"></i>
                         </button>
                     </form>

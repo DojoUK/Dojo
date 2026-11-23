@@ -73,7 +73,7 @@
                             <form method="post" action="{% url 'application_reject' org_slug=org.slug pk=app.pk %}">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-sm btn-outline-danger"
-                                        onclick="return confirm('Reject this application?')">Reject</button>
+                                        data-confirm="Reject this application?">Reject</button>
                             </form>
                         </div>
                     </td>

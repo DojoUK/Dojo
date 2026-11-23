@@ -1,0 +1,165 @@
+/* Dojo's confirm dialog (static/js/confirm.js): a centred alert with a soft, blurred backdrop.
+   It follows the page's light or dark theme and accent colour. */
+
+.dojo-confirm {
+    --dc-surface: #ffffff;
+    --dc-text: #0f172a;
+    --dc-muted: #64748b;
+    --dc-fill: rgba(118, 118, 128, .12);
+    --dc-fill-hover: rgba(118, 118, 128, .2);
+    --dc-hairline: rgba(15, 23, 42, .06);
+    --dc-accent: var(--dojo-accent, var(--p-accent, #2563eb));
+    --dc-on-accent: var(--dojo-accent-text, var(--p-on-accent, #ffffff));
+    --dc-danger: #dc2626;
+    --dc-danger-hover: #b91c1c;
+    --dc-tone: var(--dc-accent);
+
+    /* The <dialog> itself is just the stage; the panel is what you see. */
+    padding: 0;
+    border: 0;
+    background: transparent;
+    max-width: 100vw;
+    max-height: 100dvh;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    color: var(--dc-text);
+}
+.dojo-confirm[open] {
+    display: grid;
+    place-items: center;
+}
+[data-bs-theme="dark"] .dojo-confirm {
+    --dc-surface: #1f1f22;
+    --dc-text: #f4f4f5;
+    --dc-muted: #a1a1aa;
+    --dc-fill: rgba(118, 118, 128, .26);
+    --dc-fill-hover: rgba(118, 118, 128, .36);
+    --dc-hairline: rgba(255, 255, 255, .08);
+    --dc-danger: #ef4444;
+    --dc-danger-hover: #dc2626;
+}
+.dojo-confirm.dc-danger { --dc-tone: var(--dc-danger); }
+
+.dojo-confirm::backdrop {
+    background: rgba(15, 23, 42, .32);
+    -webkit-backdrop-filter: blur(8px) saturate(140%);
+    backdrop-filter: blur(8px) saturate(140%);
+}
+[data-bs-theme="dark"] .dojo-confirm::backdrop { background: rgba(0, 0, 0, .55); }
+
+.dc-panel {
+    width: min(360px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+    padding: 28px 24px 20px;
+    border-radius: 20px;
+    background: var(--dc-surface);
+    box-shadow:
+        0 0 0 1px var(--dc-hairline),
+        0 2px 6px rgba(15, 23, 42, .06),
+        0 24px 64px rgba(15, 23, 42, .22);
+    text-align: center;
+    font-family: inherit;
+}
+
+.dc-icon {
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 1.45rem;
+    color: var(--dc-tone);
+    background: rgba(37, 99, 235, .1);
+    background: color-mix(in srgb, var(--dc-tone) 12%, transparent);
+}
+.dojo-confirm.dc-danger .dc-icon { background: rgba(220, 38, 38, .1); background: color-mix(in srgb, var(--dc-tone) 12%, transparent); }
+
+.dc-title {
+    margin: 0;
+    font-size: 1.0625rem;
+    font-weight: 650;
+    line-height: 1.35;
+    letter-spacing: -.01em;
+    color: var(--dc-text);
+    overflow-wrap: anywhere;
+    text-wrap: balance;
+}
+.dc-message {
+    margin: 6px 0 0;
+    font-size: .875rem;
+    line-height: 1.5;
+    color: var(--dc-muted);
+    overflow-wrap: anywhere;
+    text-wrap: pretty;
+}
+
+.dc-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 22px;
+}
+.dc-btn {
+    min-height: 44px;           /* a comfortable target for a finger */
+    padding: 10px 14px;
+    border: 0;
+    border-radius: 12px;
+    font: inherit;
+    font-size: .9375rem;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: background-color .15s ease, transform .12s ease, box-shadow .15s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+.dc-btn:active { transform: scale(.97); }
+.dc-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--dc-surface), 0 0 0 5px var(--dc-tone);
+}
+.dc-dismiss { background: var(--dc-fill); color: var(--dc-text); }
+.dc-dismiss:hover { background: var(--dc-fill-hover); }
+.dc-action { background: var(--dc-accent); color: var(--dc-on-accent); }
+.dc-action:hover { filter: brightness(.94); }
+.dojo-confirm.dc-danger .dc-action { background: var(--dc-danger); color: #ffffff; }
+.dojo-confirm.dc-danger .dc-action:hover { background: var(--dc-danger-hover); filter: none; }
+
+/* Narrow phones: buttons stack, the action on top. */
+@media (max-width: 359.98px) {
+    .dc-actions { grid-template-columns: 1fr; }
+    .dc-action { order: -1; }
+}
+
+/* ── Motion: in with a soft spring, out quickly ─────────────────────── */
+.dojo-confirm[open] .dc-panel { animation: dc-in .34s cubic-bezier(.34, 1.3, .64, 1); }
+.dojo-confirm[open]::backdrop { animation: dc-fade .2s ease-out; }
+.dojo-confirm.dc-closing .dc-panel { animation: dc-out .16s ease-in forwards; }
+.dojo-confirm.dc-closing::backdrop { animation: dc-fade .16s ease-in reverse forwards; }
+.dc-panel.dc-nudge { animation: dc-nudge .32s cubic-bezier(.34, 1.56, .64, 1); }
+
+@keyframes dc-in {
+    from { opacity: 0; transform: scale(.9) translateY(6px); }
+    to { opacity: 1; transform: none; }
+}
+@keyframes dc-out {
+    to { opacity: 0; transform: scale(.96); }
+}
+@keyframes dc-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes dc-nudge {
+    40% { transform: scale(1.03); }
+    to { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dojo-confirm[open] .dc-panel { animation: dc-fade .15s ease-out; }
+    .dojo-confirm.dc-closing .dc-panel { animation: none; }
+    .dc-btn { transition: none; }
+    .dc-btn:active { transform: none; }
+}

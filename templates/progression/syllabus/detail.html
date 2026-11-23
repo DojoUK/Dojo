@@ -8,7 +8,7 @@
     <a href="{% url 'syllabus_home' org_slug=org.slug %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> Syllabus</a>
     <form method="post" action="{% url 'syllabus_delete' org_slug=org.slug pk=syllabus.pk %}">
         {% csrf_token %}
-        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Delete {{ syllabus.name|escapejs }}? Its techniques stay in the library.')">
+        <button type="submit" class="btn btn-outline-danger btn-sm" data-confirm="Delete {{ syllabus.name }}? Its techniques stay in the library.">
             <i class="bi bi-trash"></i>
         </button>
     </form>
@@ -34,7 +34,7 @@
                         <button type="submit" name="action" value="up" class="btn btn-sm btn-link text-muted" title="Move heading up"><i class="bi bi-arrow-up"></i></button>
                         <button type="submit" name="action" value="down" class="btn btn-sm btn-link text-muted" title="Move heading down"><i class="bi bi-arrow-down"></i></button>
                         <button type="submit" name="action" value="delete" class="btn btn-sm btn-link text-danger" title="Remove heading"
-                                onclick="return confirm('Remove this heading? Its techniques stay in the syllabus.')"><i class="bi bi-x-lg"></i></button>
+                                data-confirm="Remove this heading? Its techniques stay in the syllabus."><i class="bi bi-x-lg"></i></button>
                     </div>
                 </form>
                 {% else %}
@@ -57,7 +57,7 @@
                             <button type="submit" name="action" value="down" class="btn btn-sm btn-link text-muted" title="Move down"><i class="bi bi-arrow-down"></i></button>
                             <button type="button" class="btn btn-sm btn-link text-muted" data-bs-toggle="collapse" data-bs-target="#entry-{{ entry.pk }}" title="Edit"><i class="bi bi-pencil"></i></button>
                             <button type="submit" name="action" value="delete" class="btn btn-sm btn-link text-danger" title="Remove from this syllabus"
-                                    onclick="return confirm('Remove {{ entry.technique.name|escapejs }} from this syllabus?')"><i class="bi bi-x-lg"></i></button>
+                                    data-confirm="Remove {{ entry.technique.name }} from this syllabus?"><i class="bi bi-x-lg"></i></button>
                         </form>
                     </div>
                     <div class="collapse mt-2" id="entry-{{ entry.pk }}">

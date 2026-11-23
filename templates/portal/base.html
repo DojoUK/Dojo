@@ -7,6 +7,7 @@
     <title>{{ org.name }}{% block title_suffix %}{% endblock %}</title>
     <link href="{% static 'vendor/bootstrap/bootstrap.min.css' %}" rel="stylesheet">
     <link href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/confirm.css' %}?v={{ dojo_version.commit|slice:':12'|default:'1' }}" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="{% static 'img/favicon/favicon.ico' %}">
     <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/favicon/favicon-32x32.png' %}">
     <link rel="apple-touch-icon" href="{% static 'img/favicon/apple-touch-icon.png' %}">
@@ -118,5 +119,6 @@
 {% block content %}{% endblock %}
 </div>
 
+<script src="{% static 'js/confirm.js' %}?v={{ dojo_version.commit|slice:':12'|default:'1' }}" defer></script>
 </body>
 </html>

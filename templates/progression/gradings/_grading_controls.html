@@ -47,7 +47,7 @@
                     <form method="post" action="{% url 'grading_delete' org_slug=org.slug pk=grading.pk %}" class="mt-4 pt-3 border-top">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-sm btn-outline-danger"
-                                onclick="return confirm('Delete {{ grading.name|escapejs }} and all its sessions?')">
+                                data-confirm="Delete {{ grading.name }} and all its sessions?">
                             <i class="bi bi-trash me-1"></i> Delete grading
                         </button>
                     </form>

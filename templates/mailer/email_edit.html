@@ -84,7 +84,7 @@
                 <button type="submit" name="action" value="test" class="btn btn-outline-secondary btn-sm"><i class="bi bi-send me-1"></i> Send me a test</button>
                 {% if saved %}
                 <button type="submit" name="action" value="reset" class="btn btn-outline-danger btn-sm ms-auto"
-                        onclick="return confirm('Go back to Dojo\'s default for this email? Your version will be deleted.')">Reset to default</button>
+                        data-confirm="Go back to Dojo’s default for this email? Your version will be deleted.">Reset to default</button>
                 {% endif %}
             </div>
         </form>
@@ -162,7 +162,11 @@
 
     document.getElementById('start-from-design').addEventListener('click', async () => {
         const area = document.getElementById('html');
-        if (area.value.trim() && !confirm('Replace your HTML with Dojo\'s design, based on the wording?')) return;
+        if (area.value.trim() && !(await window.dojoConfirm({
+            title: 'Replace your HTML with Dojo’s design?',
+            message: 'Dojo builds it from the wording. The HTML you have now will be replaced.',
+            button: 'Replace', tone: 'danger',
+        }))) return;
         area.value = (await post({start_from_design: '1'})).html;
         soon();
     });

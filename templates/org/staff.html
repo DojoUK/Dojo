@@ -192,7 +192,7 @@
                                 <input type="hidden" name="action" value="remove">
                                 <input type="hidden" name="member_pk" value="{{ om.pk }}">
                                 <button type="submit" class="btn btn-sm btn-outline-danger"
-                                        onclick="return confirm('Remove {{ om.user.get_full_name|default:om.user.username }}?')">
+                                        data-confirm="Remove {{ om.user.get_full_name|default:om.user.username }}?">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </form>
@@ -292,7 +292,7 @@
                         <input type="hidden" name="action" value="reset_two_factor">
                         <input type="hidden" name="member_pk" value="{{ om.pk }}">
                         <button type="submit" class="btn btn-sm btn-outline-secondary"
-                                onclick="return confirm('Reset two-step sign-in for {{ who|escapejs }}? Their app and recovery codes stop working.')">
+                                data-confirm="Reset two-step sign-in for {{ who }}? Their app and recovery codes stop working.">
                             <i class="bi bi-phone me-1"></i> Reset two-step sign-in
                         </button>
                     </form>
@@ -303,7 +303,7 @@
                         {% if om.user.is_active %}
                         <input type="hidden" name="action" value="lock_account">
                         <button type="submit" class="btn btn-sm btn-outline-danger"
-                                onclick="return confirm('Lock {{ who|escapejs }} out? They\'ll be signed out and unable to sign in until unlocked.')">
+                                data-confirm="Lock {{ who }} out? They’ll be signed out and unable to sign in until unlocked.">
                             <i class="bi bi-lock me-1"></i> Lock out
                         </button>
                         {% else %}
@@ -427,7 +427,7 @@
                             <input type="hidden" name="action" value="remove_holiday">
                             <input type="hidden" name="holiday_pk" value="{{ holiday.pk }}">
                             <button type="submit" class="btn btn-sm btn-outline-danger"
-                                    onclick="return confirm('Remove this holiday?')">
+                                    data-confirm="Remove this holiday?">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </form>

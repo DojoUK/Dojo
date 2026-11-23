@@ -49,7 +49,7 @@
                                         {{ d }}
                                         {% if d.auto_apply %}<i class="bi bi-lightning-fill" title="Auto-apply"></i>{% endif %}
                                     </span>
-                                    <form method="post" action="{% url 'billing_discount_delete' org_slug=org.slug pk=d.pk %}" class="d-inline" onsubmit="return confirm('Remove this discount?')">
+                                    <form method="post" action="{% url 'billing_discount_delete' org_slug=org.slug pk=d.pk %}" class="d-inline" data-confirm="Remove this discount?">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-link p-0 text-danger" style="font-size:0.75rem;" title="Remove discount"><i class="bi bi-x"></i></button>
                                     </form>
@@ -71,7 +71,7 @@
                                     data-bs-target="#editPolicyModal{{ policy.pk }}">
                                 <i class="bi bi-pencil me-1"></i> Edit
                             </button>
-                            <form method="post" action="{% url 'billing_policy_delete' org_slug=org.slug pk=policy.pk %}" onsubmit="return confirm('Delete policy &quot;{{ policy.name }}&quot;? Members and classes using it will be unassigned.')">
+                            <form method="post" action="{% url 'billing_policy_delete' org_slug=org.slug pk=policy.pk %}" data-confirm="Delete policy “{{ policy.name }}”? Members and classes using it will be unassigned.">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash me-1"></i> Delete</button>
                             </form>
@@ -206,7 +206,7 @@
                         <td>{{ term.start_date|date:"d M Y" }}</td>
                         <td>{{ term.end_date|date:"d M Y" }}</td>
                         <td class="text-end">
-                            <form method="post" action="{% url 'billing_term_delete' org_slug=org.slug pk=term.pk %}" class="d-inline" onsubmit="return confirm('Delete this term?')">
+                            <form method="post" action="{% url 'billing_term_delete' org_slug=org.slug pk=term.pk %}" class="d-inline" data-confirm="Delete this term?">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
                             </form>

@@ -7,6 +7,7 @@
     <title>{% block title %}Dojo{% endblock %}</title>
     <link href="{% static 'vendor/bootstrap/bootstrap.min.css' %}" rel="stylesheet">
     <link href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/confirm.css' %}?v={{ dojo_version.commit|slice:':12'|default:'1' }}" rel="stylesheet">
     <link href="{% static 'vendor/inter/inter.css' %}" rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="{% static 'img/favicon/favicon.ico' %}">
     <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/favicon/favicon-32x32.png' %}">
@@ -102,6 +103,7 @@
 <body class="{% block body_class %}{% endblock %}">
     {% block body %}{% endblock %}
     <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'js/confirm.js' %}?v={{ dojo_version.commit|slice:':12'|default:'1' }}" defer></script>
     <script src="{% static 'vendor/htmx/htmx.min.js' %}"></script>
     {% if DOJO_DEBUG %}<script src="{% static 'js/dojo-diagnostics.js' %}"></script>{% endif %}
     <script>

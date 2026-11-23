@@ -61,7 +61,7 @@
                                         {% if not session.is_cancelled %}
                                         <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2"
                                                 style="font-size:0.7rem;"
-                                                onclick="return confirm('Cancel this grading session?')">
+                                                data-confirm="Cancel this grading session?">
                                             Cancel
                                         </button>
                                         {% else %}
