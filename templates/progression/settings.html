@@ -45,7 +45,7 @@
             {% csrf_token %}
             <button type="submit" class="btn btn-sm btn-outline-secondary"
                     title="Assign default grade to all active members who don't have one in this system"
-                    onclick="return confirm('Assign the default grade to all active members without a grade in {{ system.name }}?')">
+                    data-confirm="Assign the default grade to all active members without a grade in {{ system.name }}?">
                 <i class="bi bi-people me-1"></i> Apply to existing members
             </button>
         </form>
@@ -71,7 +71,7 @@
         <form method="post" action="{% url 'progression_system_delete' org_slug=org.slug pk=system.pk %}">
             {% csrf_token %}
             <button type="submit" class="btn btn-sm btn-outline-danger"
-                    onclick="return confirm('Delete system \"{{ system.name }}\"? This cannot be undone.')">
+                    data-confirm="Delete system “{{ system.name }}”? This cannot be undone.">
                 <i class="bi bi-trash"></i>
             </button>
         </form>
@@ -151,7 +151,7 @@
                             <form method="post" action="{% url 'progression_stage_delete' org_slug=org.slug system_pk=system.pk pk=stage.pk %}">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-sm btn-outline-danger"
-                                        onclick="return confirm('Delete \'{{ stage.name }}\'?')">
+                                        data-confirm="Delete “{{ stage.name }}”?">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </form>
@@ -275,7 +275,7 @@
         <form method="post" action="{% url 'syllabus_section_delete' org_slug=org.slug pk=section.pk %}">
             {% csrf_token %}
             <button type="submit" class="btn btn-sm btn-outline-danger"
-                    onclick="return confirm('Delete \'{{ section.name }}\'? Its items and links to stages will be removed too.')">
+                    data-confirm="Delete “{{ section.name }}”? Its items and links to stages will be removed too.">
                 <i class="bi bi-trash"></i>
             </button>
         </form>
@@ -312,7 +312,7 @@
         <form method="post" action="{% url 'syllabus_subsection_delete' org_slug=org.slug section_pk=section.pk pk=group.subsection.pk %}">
             {% csrf_token %}
             <button type="submit" class="btn btn-sm btn-link text-danger p-0" title="Delete sub-section"
-                    onclick="return confirm('Delete the \'{{ group.subsection.name }}\' sub-section? Its items are kept, just ungrouped.')">
+                    data-confirm="Delete the “{{ group.subsection.name }}” sub-section? Its items are kept, just ungrouped.">
                 <i class="bi bi-trash"></i>
             </button>
         </form>
@@ -351,7 +351,7 @@
                         <form method="post" action="{% url 'syllabus_item_delete' org_slug=org.slug section_pk=section.pk pk=item.pk %}">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-sm btn-outline-danger"
-                                    onclick="return confirm('Delete \'{{ item.name }}\'? Any recorded progress on it is lost.')">
+                                    data-confirm="Delete “{{ item.name }}”? Any recorded progress on it is lost.">
                                 <i class="bi bi-trash"></i>
                             </button>
                         </form>

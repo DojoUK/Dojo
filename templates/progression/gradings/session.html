@@ -60,7 +60,7 @@
             <form method="post" action="{% url 'grading_session_delete' org_slug=org.slug pk=grading.pk session_pk=session.pk %}" class="mt-3 pt-3 border-top">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-outline-danger"
-                        onclick="return confirm('Delete the {{ session.display_name|escapejs }} session?')">
+                        data-confirm="Delete the {{ session.display_name }} session?">
                     <i class="bi bi-trash me-1"></i> Delete session
                 </button>
             </form>
@@ -139,7 +139,7 @@
                     <td class="text-end pe-3 remove-cell">
                         {% if not candidate.progression_id %}
                         <button type="submit" form="remove-{{ candidate.pk }}" class="btn btn-sm btn-outline-secondary" title="Remove {{ candidate.member.register_name }}"
-                                onclick="return confirm('Remove {{ candidate.member.name|escapejs }} from this grading?')">
+                                data-confirm="Remove {{ candidate.member.name }} from this grading?">
                             <i class="bi bi-x-lg"></i>
                         </button>
                         {% endif %}

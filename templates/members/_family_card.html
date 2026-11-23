@@ -22,7 +22,7 @@
                     <a href="{% url 'member_detail' org_slug=org.slug pk=person.pk %}" class="small fw-semibold text-decoration-none">{{ person.name }}</a>
                     <div class="small text-muted">{% if person.billing_policy %}{{ person.billing_policy.name }}{% else %}No plan{% endif %}</div>
                 </div>
-                <form method="post" action="{% url 'member_family' org_slug=org.slug pk=member.pk %}" onsubmit="return confirm('Take {{ person.name|escapejs }} out of this family?');">
+                <form method="post" action="{% url 'member_family' org_slug=org.slug pk=member.pk %}" data-confirm="Take {{ person.name }} out of this family?">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="remove">
                     <input type="hidden" name="member_id" value="{{ person.pk }}">

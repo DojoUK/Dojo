@@ -47,7 +47,7 @@
                     <form method="post" class="mt-2">
                         {% csrf_token %}
                         <input type="hidden" name="pk" value="{{ entry.id }}">
-                        <button type="submit" name="action" value="delete" class="btn btn-outline-danger btn-sm" onclick="return confirm('Remove {{ entry.grade|escapejs }}?')">Remove</button>
+                        <button type="submit" name="action" value="delete" class="btn btn-outline-danger btn-sm" data-confirm="Remove {{ entry.grade }}?">Remove</button>
                     </form>
                 </details>
                 {% else %}

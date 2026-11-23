@@ -56,7 +56,7 @@
                         <label class="visually-hidden" for="leave-reason-{{ member.pk }}">Reason (optional)</label>
                         <textarea name="reason" id="leave-reason-{{ member.pk }}" class="form-control form-control-sm mb-2" rows="2" placeholder="Reason (optional)"></textarea>
                         <button type="submit" class="btn btn-outline-danger btn-sm"
-                                onclick="return confirm('Let {{ club.org.name|escapejs }} know {% if member.is_account_holder %}you\'re{% else %}{{ member.name|escapejs }} is{% endif %} planning to stop training?')">
+                                data-confirm="Let {{ club.org.name }} know {% if member.is_account_holder %}you’re{% else %}{{ member.name }} is{% endif %} planning to stop training?">
                             Tell {{ club.org.name }} {% if member.is_account_holder %}I'm{% else %}{{ member.name }} is{% endif %} leaving
                         </button>
                     </form>
