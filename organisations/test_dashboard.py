@@ -365,6 +365,11 @@ class OptionalPartsTests(DashboardTestBase):
         for key in ('club_rating', 'recent_reviews'):
             self.assertEqual(dashboard.WIDGETS_BY_KEY[key].available(self.org), HAS_NETWORK)
 
+    def test_dashboard_files_carry_the_version_so_browsers_refetch_them(self):
+        page = self.client.get(self.url('org_dashboard'))
+        self.assertContains(page, 'js/dashboard.js?v=')
+        self.assertContains(page, 'css/dashboard.css?v=')
+
     def test_stars_round_to_the_nearest_half(self):
         self.assertEqual(dashboard.star_icons(3.7), ['bi-star-fill'] * 3 + ['bi-star-half', 'bi-star'])
         self.assertEqual(dashboard.star_icons(None), ['bi-star'] * 5)

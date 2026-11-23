@@ -7,9 +7,10 @@
 
 {% block extra_head %}
 {{ block.super }}
-<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{# The version in the address makes browsers fetch the new files after each update. #}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v={{ dojo_version.commit|slice:':12'|default:'1' }}">
 <script src="{% static 'vendor/chartjs/chart.umd.min.js' %}" defer></script>
-<script src="{% static 'js/dashboard.js' %}" defer></script>
+<script src="{% static 'js/dashboard.js' %}?v={{ dojo_version.commit|slice:':12'|default:'1' }}" defer></script>
 {% endblock %}
 
 {% block page_actions %}
