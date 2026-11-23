@@ -21,7 +21,7 @@ class SignInPagesTests(TestCase):
                 self.assertContains(response, '--dojo-sidebar: #1A3C34;')
                 self.assertContains(response, 'Forest Judo')
                 self.assertContains(response, 'Powered by')
-                self.assertContains(response, 'img/dojo-wordmark.png')
+                self.assertContains(response, 'img/dojo-logo-white.svg')
 
     def test_two_step_pages_match(self):
         user = User.objects.create_user('coach', password='pw')
@@ -39,5 +39,5 @@ class SignInPagesTests(TestCase):
         self.assertNotContains(response, '--dojo-sidebar: #1A3C34;')
         self.assertNotContains(response, 'Forest Judo')
         self.assertNotContains(response, 'Powered by')
-        self.assertContains(response, 'img/dojo-wordmark.png')
+        self.assertContains(response, 'img/dojo-logo-white.svg')
         self.assertContains(response, 'Club &amp; class management')

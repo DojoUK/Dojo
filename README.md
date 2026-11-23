@@ -1,4 +1,4 @@
-# <img width="600" height="327" alt="Dojo" src="https://github.com/user-attachments/assets/e477db25-db4f-45b8-8df3-3902b4b8e4a9" />
+<h1><picture><source media="(prefers-color-scheme: dark)" srcset="static/img/dojo-full-logo-white.svg"><img width="500" alt="Dojo" src="static/img/dojo-full-logo.svg"></picture></h1>
 
 [![Licence: AGPL-3.0](https://img.shields.io/github/license/DojoUK/Dojo?label=licence&color=blue)](./LICENSE)
 [![Website](https://img.shields.io/github/actions/workflow/status/DojoUK/Dojo/pages.yml?branch=main&label=website)](https://github.com/DojoUK/Dojo/actions/workflows/pages.yml)
@@ -197,5 +197,9 @@ Please open an issue before starting any significant work, so we can discuss it 
 Dojo is licensed under the [GNU Affero General Public License v3.0](./LICENSE).
 
 You are free to self-host and modify Dojo. If you run a modified version as a service over a network, you must make your modifications available under the same licence.
+
+## Trade marks
+
+The Dojo name and logos are trade marks. They are not licensed under the AGPL-3.0, which allows this under section 7(e). You can use, change and share the code under the licence, but if you publish or run a modified version for others, please give it a different name and logo. Saying it is based on Dojo is fine.
 
 More about Dojo at [dojouk.github.io/Dojo](https://dojouk.github.io/Dojo/).
