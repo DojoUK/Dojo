@@ -1,10 +1,16 @@
 """
 The club dashboard: a grid of widgets that each club arranges for itself.
 
-The grid is made of 50px square cells. A layout is a list of
-{'key', 'x', 'y', 'w', 'h'} measured in cells, saved in
+The grid has 24 columns that stretch across whatever space the screen gives
+it, and rows that grow and shrink with the columns. A layout is a list of
+{'key', 'x', 'y', 'w', 'h'} in columns and rows, saved in
 Organisation.settings['dashboard']. A club without one gets the default
 layout, packed to fit the widgets it can use.
+
+On a narrow window, a tablet or a phone, the page (static/js/dashboard.js)
+widens any widget that would be squeezed below its min_px and lets the
+widgets flow onto more rows, so nothing has to scroll sideways. The saved
+layout is untouched; Customise always shows it as saved.
 
 Admins arrange the club's layout. Everyone else sees the same layout with
 the widgets they aren't allowed to see taken out and the rest moved up.
@@ -25,11 +31,12 @@ from django.db.models import Count, Max, Q, Sum
 from django.db.models.functions import TruncMonth
 from django.utils.functional import cached_property
 
-CELL = 50
-MAX_COLUMNS = 48          # 2,400px: wider than any screen the dashboard is used on.
+COLUMNS = 24
 MAX_ROWS = 400
-DEFAULT_COLUMNS = 20      # 1,000px: fits a laptop screen beside the sidebar.
 SETTINGS_KEY = 'dashboard'
+LAYOUT_VERSION = 2
+# Version 1 layouts were measured in fixed 50px cells and laid out for a screen about 20 cells wide.
+V1_COLUMNS = 20
 
 CATEGORIES = (
     ('numbers', 'Key numbers'),
@@ -48,7 +55,8 @@ class Widget:
     size: tuple                 # default (w, h) in cells
     min_size: tuple
     data: object = None         # fn(board) -> dict for the template
-    max_size: tuple = (MAX_COLUMNS, 24)
+    min_px: int = 200           # narrowest it reads well at; narrower screens widen it
+    max_size: tuple = (COLUMNS, 24)
     admin_only: bool = False
     capability: str = ''        # admins, or staff granted this, can see it
     features: tuple = ()        # every one must be switched on
@@ -85,7 +93,7 @@ class Widget:
             'key': self.key, 'title': self.title, 'description': self.description,
             'icon': self.icon, 'category': self.category,
             'w': self.size[0], 'h': self.size[1],
-            'minW': self.min_size[0], 'minH': self.min_size[1],
+            'minW': self.min_size[0], 'minH': self.min_size[1], 'minPx': self.min_px,
             'maxW': self.max_size[0], 'maxH': self.max_size[1],
         }
 
@@ -516,54 +524,54 @@ def revenue_trend(board):
 
 WIDGETS = (
     Widget('active_members', 'Active members', 'How many members are active, and how many joined this month.',
-           'bi-people', 'numbers', (5, 3), (4, 2), active_members, max_size=(12, 6)),
+           'bi-people', 'numbers', (6, 3), (3, 2), active_members, min_px=200, max_size=(COLUMNS, 6)),
     Widget('sessions_week', 'Sessions this week', 'Sessions in the next 7 days and attendance over the last 4 weeks.',
-           'bi-calendar-check', 'numbers', (5, 3), (4, 2), sessions_week, max_size=(12, 6)),
+           'bi-calendar-check', 'numbers', (6, 3), (3, 2), sessions_week, min_px=200, max_size=(COLUMNS, 6)),
     Widget('revenue_month', 'Revenue this month', 'Payments taken this month and what is still unpaid.',
-           'bi-currency-pound', 'numbers', (5, 3), (4, 2), revenue_month, max_size=(12, 6),
+           'bi-currency-pound', 'numbers', (6, 3), (3, 2), revenue_month, min_px=200, max_size=(COLUMNS, 6),
            admin_only=True, features=('billing',)),
     Widget('at_risk', 'Members at risk', 'Members not seen for 2 weeks, coming less often, or who have never come.',
-           'bi-exclamation-triangle', 'numbers', (5, 3), (4, 2), at_risk, max_size=(12, 6), admin_only=True),
+           'bi-exclamation-triangle', 'numbers', (6, 3), (3, 2), at_risk, min_px=200, max_size=(COLUMNS, 6), admin_only=True),
     Widget('outstanding_invoices', 'Unpaid invoices', 'Unpaid invoices, and how many are overdue.',
-           'bi-receipt', 'numbers', (5, 3), (4, 2), outstanding_invoices, max_size=(12, 6),
+           'bi-receipt', 'numbers', (6, 3), (3, 2), outstanding_invoices, min_px=200, max_size=(COLUMNS, 6),
            admin_only=True, features=('billing',)),
     Widget('attendance_rate', 'Attendance rate', 'Attendance over the last 4 weeks against the 4 weeks before.',
-           'bi-graph-up-arrow', 'numbers', (5, 3), (4, 2), attendance_rate, max_size=(12, 6)),
+           'bi-graph-up-arrow', 'numbers', (6, 3), (3, 2), attendance_rate, min_px=200, max_size=(COLUMNS, 6)),
     Widget('new_members', 'New members', 'Members who joined this month against last month.',
-           'bi-person-plus', 'numbers', (5, 3), (4, 2), new_members, max_size=(12, 6), admin_only=True),
+           'bi-person-plus', 'numbers', (6, 3), (3, 2), new_members, min_px=200, max_size=(COLUMNS, 6), admin_only=True),
     Widget('club_rating', 'Club rating', 'Your average rating from members on the Dojo network.',
-           'bi-star', 'numbers', (5, 3), (4, 2), club_rating, max_size=(12, 6),
+           'bi-star', 'numbers', (6, 3), (3, 2), club_rating, min_px=200, max_size=(COLUMNS, 6),
            needs_apps=('network',)),
 
     Widget('needs_attention', 'Needs attention', 'Applications, waivers, licences and staff checks that need action.',
-           'bi-bell', 'lists', (20, 5), (6, 2), needs_attention, admin_only=True),
+           'bi-bell', 'lists', (24, 5), (6, 2), needs_attention, min_px=360, admin_only=True),
     Widget('upcoming_sessions', 'Upcoming sessions', 'The next 7 days of sessions, with a button to take each register.',
-           'bi-clipboard-check', 'lists', (14, 8), (6, 4), upcoming_sessions),
+           'bi-clipboard-check', 'lists', (16, 8), (6, 4), upcoming_sessions, min_px=440),
     Widget('quick_actions', 'Quick actions', 'Shortcuts to the things you do most.',
-           'bi-lightning', 'lists', (6, 8), (4, 3), quick_actions),
+           'bi-lightning', 'lists', (8, 8), (4, 3), quick_actions, min_px=220),
     Widget('not_seen_list', 'Not seen lately', 'The members behind "Members at risk", with when each last trained.',
-           'bi-person-dash', 'lists', (8, 8), (5, 4), not_seen_list, admin_only=True),
+           'bi-person-dash', 'lists', (10, 8), (5, 4), not_seen_list, min_px=280, admin_only=True),
     Widget('applications_list', 'Applications', 'Membership applications waiting for review.',
-           'bi-inbox', 'lists', (8, 6), (5, 3), applications_list, admin_only=True, features=('applications',)),
+           'bi-inbox', 'lists', (10, 6), (5, 3), applications_list, min_px=260, admin_only=True, features=('applications',)),
     Widget('upcoming_gradings', 'Upcoming gradings', 'Grading sessions coming up, with how many are taking part.',
-           'bi-award', 'lists', (8, 6), (5, 3), upcoming_gradings, capability='manage_gradings',
+           'bi-award', 'lists', (10, 6), (5, 3), upcoming_gradings, min_px=300, capability='manage_gradings',
            features=('gradings',)),
     Widget('birthdays', 'Birthdays', 'Members with a birthday in the next two weeks.',
-           'bi-cake2', 'lists', (6, 6), (4, 3), birthdays, admin_only=True),
+           'bi-cake2', 'lists', (8, 6), (4, 3), birthdays, min_px=240, admin_only=True),
     Widget('recent_reviews', 'Latest reviews', 'The newest reviews of your club on the Dojo network.',
-           'bi-chat-square-quote', 'lists', (8, 7), (5, 4), recent_reviews,
+           'bi-chat-square-quote', 'lists', (10, 7), (5, 4), recent_reviews, min_px=280,
            needs_apps=('network',)),
     Widget('class_attendance', 'Busiest classes', 'Average members at each class over the last 4 weeks.',
-           'bi-bar-chart-steps', 'lists', (8, 7), (5, 4), class_attendance),
+           'bi-bar-chart-steps', 'lists', (10, 7), (5, 4), class_attendance, min_px=260),
     Widget('recent_payments', 'Recent payments', 'The latest payments recorded.',
-           'bi-cash-coin', 'lists', (8, 7), (5, 4), recent_payments, admin_only=True, features=('billing',)),
+           'bi-cash-coin', 'lists', (10, 7), (5, 4), recent_payments, min_px=280, admin_only=True, features=('billing',)),
 
     Widget('attendance_trend', 'Attendance trend', 'Members present each week for the last 12 weeks.',
-           'bi-bar-chart', 'charts', (10, 7), (6, 5), attendance_trend),
+           'bi-bar-chart', 'charts', (12, 7), (6, 5), attendance_trend, min_px=320),
     Widget('member_growth', 'New members by month', 'Members joining each month for the last year.',
-           'bi-graph-up', 'charts', (10, 7), (6, 5), member_growth, admin_only=True),
+           'bi-graph-up', 'charts', (12, 7), (6, 5), member_growth, min_px=320, admin_only=True),
     Widget('revenue_trend', 'Revenue by month', 'Payments taken each month for the last year.',
-           'bi-cash-stack', 'charts', (10, 7), (6, 5), revenue_trend, admin_only=True, features=('billing',)),
+           'bi-cash-stack', 'charts', (12, 7), (6, 5), revenue_trend, min_px=320, admin_only=True, features=('billing',)),
 )
 WIDGETS_BY_KEY = {w.key: w for w in WIDGETS}
 
@@ -623,9 +631,7 @@ def default_layout(org):
         if not widget.available(org):
             continue
         w, h = widget.size
-        if key == 'needs_attention':
-            w = DEFAULT_COLUMNS
-        x, y = first_fit(placed, w, h, DEFAULT_COLUMNS)
+        x, y = first_fit(placed, w, h, COLUMNS)
         placed.append({'key': key, 'x': x, 'y': y, 'w': w, 'h': h})
     return placed
 
@@ -644,8 +650,8 @@ def clean(raw, board):
         except (TypeError, ValueError):
             continue
         w, h = widget.clamp(w, h)
-        w = min(w, MAX_COLUMNS)
-        items.append({'key': widget.key, 'x': max(0, min(x, MAX_COLUMNS - w)),
+        w = min(w, COLUMNS)
+        items.append({'key': widget.key, 'x': max(0, min(x, COLUMNS - w)),
                       'y': max(0, min(y, MAX_ROWS)), 'w': w, 'h': h})
         seen.add(widget.key)
     return push_down(items)
@@ -653,7 +659,31 @@ def clean(raw, board):
 
 def saved_layout(org):
     stored = (org.settings or {}).get(SETTINGS_KEY)
-    return stored.get('widgets') if isinstance(stored, dict) else None
+    if not isinstance(stored, dict) or not isinstance(stored.get('widgets'), list):
+        return None
+    if stored.get('version', 1) < LAYOUT_VERSION:
+        return upgrade(stored['widgets'])
+    return stored['widgets']
+
+
+def upgrade(widgets):
+    """A version 1 layout (fixed 50px cells) stretched onto the 24 columns, keeping each widget's
+    place and share of the width. Widgets that sat side by side still do."""
+    def number(entry, key):
+        try:
+            return int(entry.get(key, 0))
+        except (TypeError, ValueError):
+            return 0
+
+    entries = [e for e in widgets if isinstance(e, dict)]
+    right = max((number(e, 'x') + number(e, 'w') for e in entries), default=0)
+    scale = COLUMNS / max(V1_COLUMNS, right)
+    upgraded = []
+    for entry in entries:
+        x, w = number(entry, 'x'), number(entry, 'w')
+        left, end = round(x * scale), round((x + w) * scale)
+        upgraded.append({**entry, 'x': left, 'w': max(1, end - left)})
+    return upgraded
 
 
 def layout_for(board):
@@ -669,7 +699,7 @@ def layout_for(board):
 
 def save_layout(org, raw, board):
     items = clean(raw, board)
-    org.settings = {**(org.settings or {}), SETTINGS_KEY: {'version': 1, 'widgets': items}}
+    org.settings = {**(org.settings or {}), SETTINGS_KEY: {'version': LAYOUT_VERSION, 'widgets': items}}
     org.save(update_fields=['settings'])
     return items
 

@@ -1,11 +1,20 @@
-/* The club dashboard: charts for every viewer, and moving, resizing, adding and
-   removing widgets for admins. Layouts are measured in 50px cells. */
+/* The club dashboard: fitting the grid to the space it has and charts for every
+   viewer, and moving, resizing, adding and removing widgets for admins.
+
+   Layouts are measured on a grid of 24 columns (organisations/dashboard.py) that
+   stretches across the space it has; rows grow and shrink with the columns. When
+   the space is too narrow for a widget (its data-min-px), the widgets in that row
+   are widened, shared evenly across the width, and flow onto more rows. That
+   happens only on screen: Customise always shows and edits the saved layout. */
 (function () {
     'use strict';
 
-    const CELL = 50;
     const grid = document.getElementById('dashGrid');
     if (!grid) return;
+    const COLUMNS = Number(grid.dataset.columns) || 24;
+    const ROW_MIN = 40;          // px: rows never get shorter than this...
+    const ROW_MAX = 64;          // ...or taller than this, however wide the screen
+    const EDIT_MIN_CELL = 20;    // px: narrower columns (phones) are too fiddly to drag about
 
     // ── Charts ──────────────────────────────────────────────────────────
     function cssVar(name, fallback) {
@@ -71,6 +80,115 @@
     if (typeof Chart !== 'undefined') initCharts(grid);
     else window.addEventListener('load', () => initCharts(grid));
 
+    // ── Fitting the grid to the space it has ────────────────────────────
+    let items = [];
+    let editing = false;
+    let afterArrange = () => {};     // the customising code below adds to this
+
+    const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), Math.max(lo, hi));
+    const overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+    const cellWidth = () => grid.clientWidth / COLUMNS;
+    const rowHeight = () => clamp(Math.round(cellWidth()), ROW_MIN, ROW_MAX);
+
+    function itemFrom(el) {
+        const d = el.dataset;
+        return {
+            el, key: d.key, title: d.title,
+            x: +d.x, y: +d.y, w: +d.w, h: +d.h,
+            minW: +d.minW, minH: +d.minH, maxW: +d.maxW, maxH: +d.maxH, minPx: +d.minPx || 0,
+        };
+    }
+
+    function readItems() {
+        items = Array.from(grid.querySelectorAll('.dash-item')).map(itemFrom);
+    }
+
+    function show(item, spot) {
+        item.el.style.gridArea = `${spot.y + 1} / ${spot.x + 1} / span ${spot.h} / span ${spot.w}`;
+        item.el.style.setProperty('--h', spot.h);
+    }
+
+    // The highest free spot at or below row `fromY`, trying column `preferX` first.
+    function findSpot(placed, w, h, fromY, preferX) {
+        for (let y = fromY; y < 1000; y++) {
+            const xs = [preferX];
+            for (let x = 0; x + w <= COLUMNS; x++) xs.push(x);
+            for (const x of xs) {
+                if (!placed.some((p) => overlaps({ x, y, w, h }, p))) return { x, y };
+            }
+        }
+        return { x: 0, y: fromY };
+    }
+
+    // Where each widget goes on this screen: the saved layout if every widget is at least its
+    // minimum width, otherwise the saved layout reflowed. Widgets that start on the same row
+    // stay together; in a row with a squeezed widget, they share the width evenly, as many to
+    // a row as fit, and the rows that follow move down to make room.
+    function flowed() {
+        const cell = cellWidth();
+        const sorted = items.slice().sort((a, b) => a.y - b.y || a.x - b.x);
+        const fits = (i) => i.w * cell >= i.minPx - 0.5;
+        if (sorted.every(fits)) return sorted.map((i) => ({ item: i, x: i.x, y: i.y, w: i.w, h: i.h }));
+
+        const runs = [];
+        sorted.forEach((i) => {
+            const run = runs[runs.length - 1];
+            if (run && run[0].y === i.y) run.push(i);
+            else runs.push([i]);
+        });
+        const placed = [];
+        let cursor = 0;
+        runs.forEach((run) => {
+            const squeezed = !run.every(fits);
+            let perRow = 0;
+            if (squeezed) {
+                const need = run.map((i) => Math.min(COLUMNS, Math.ceil(i.minPx / cell)));
+                const most = Math.max(1, Math.min(...need.map((n) => Math.floor(COLUMNS / n))));
+                perRow = Math.ceil(run.length / Math.ceil(run.length / most));
+            }
+            run.forEach((item, n) => {
+                let w = item.w;
+                if (perRow) {
+                    // Share the 24 columns between the widgets in this row, spare columns to the first.
+                    const base = Math.floor(COLUMNS / perRow);
+                    w = base + ((n % perRow) < COLUMNS - base * perRow ? 1 : 0);
+                }
+                const spot = findSpot(placed, w, item.h, cursor, perRow ? 0 : Math.min(item.x, COLUMNS - w));
+                placed.push({ item, x: spot.x, y: spot.y, w, h: item.h });
+                cursor = spot.y;
+            });
+        });
+        return placed;
+    }
+
+    function arrange() {
+        grid.style.setProperty('--row', `${rowHeight()}px`);
+        const spots = editing
+            ? items.map((i) => ({ item: i, x: i.x, y: i.y, w: i.w, h: i.h }))
+            : flowed();
+        spots.forEach((spot) => show(spot.item, spot));
+        grid.classList.toggle('dash-flowed', spots.some((s) => s.x !== s.item.x || s.y !== s.item.y || s.w !== s.item.w));
+        grid.classList.add('dash-ready');
+        afterArrange();
+    }
+
+    // Re-fit whenever the space changes width: a window resized, a tablet turned, the sidebar shown.
+    let lastWidth = 0;
+    let pending = false;
+    new ResizeObserver(() => {
+        if (grid.clientWidth === lastWidth || pending) return;
+        pending = true;
+        requestAnimationFrame(() => {
+            pending = false;
+            lastWidth = grid.clientWidth;
+            arrange();
+        });
+    }).observe(grid);
+
+    readItems();
+    lastWidth = grid.clientWidth;
+    arrange();
+
     // ── Customising (admins only) ───────────────────────────────────────
     const configEl = document.getElementById('dash-config');
     const customise = document.getElementById('dashCustomise');
@@ -85,34 +203,20 @@
     const saveButton = document.getElementById('dashSave');
     const csrf = document.querySelector('input[name=csrfmiddlewaretoken]').value;
 
-    let items = [];
-    let editing = false;
     let dirty = false;
 
-    const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), Math.max(lo, hi));
-    const overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-    const columns = () => Math.max(1, Math.floor(grid.clientWidth / CELL));
-    const widest = () => Math.max(columns(), ...items.map((i) => i.x + i.w));
-
-    function itemFrom(el) {
-        const d = el.dataset;
-        return {
-            el, key: d.key, title: d.title,
-            x: +d.x, y: +d.y, w: +d.w, h: +d.h,
-            minW: +d.minW, minH: +d.minH, maxW: +d.maxW, maxH: +d.maxH,
-        };
-    }
-
-    function readItems() {
-        items = Array.from(grid.querySelectorAll('.dash-item')).map(itemFrom);
-    }
-
-    function place(item) {
-        item.el.style.gridArea = `${item.y + 1} / ${item.x + 1} / span ${item.h} / span ${item.w}`;
-        item.el.style.setProperty('--h', item.h);
+    // Keeps a widget's saved place on the page, for saving and for Customise.
+    function record(item) {
         Object.assign(item.el.dataset, { x: item.x, y: item.y, w: item.w, h: item.h });
         const size = item.el.querySelector('.dash-size');
         if (size) size.textContent = `${item.w} × ${item.h}`;
+    }
+
+    // Customising needs room to drag: below that the button explains why it's off.
+    function updateCustomise() {
+        const roomy = cellWidth() >= EDIT_MIN_CELL;
+        customise.disabled = !roomy && !editing;
+        customise.title = roomy ? '' : 'Make the window wider to customise the dashboard';
     }
 
     // Keeps `moved` where it is and pushes anything it lands on further down.
@@ -129,17 +233,22 @@
 
     function grow() {
         const bottom = Math.max(0, ...items.map((i) => i.y + i.h));
-        grid.style.minHeight = editing ? `${(bottom + 6) * CELL}px` : '';
+        grid.style.minHeight = editing ? `${(bottom + 6) * rowHeight()}px` : '';
         emptyBoard.classList.toggle('d-none', items.length > 0 || editing);
     }
 
-    function redraw() {
-        items.forEach(place);
+    afterArrange = () => {
         grow();
+        updateCustomise();
+    };
+
+    function redraw() {
+        items.forEach(record);
+        arrange();
     }
 
     function firstFit(w, h) {
-        const cols = Math.max(columns(), w);
+        const cols = COLUMNS;
         for (let y = 0; y < 400; y++) {
             for (let x = 0; x + w <= cols; x++) {
                 const spot = { x, y, w, h };
@@ -170,7 +279,7 @@
             saveButton.disabled = true;
             buildCatalogue();
         }
-        grow();
+        arrange();      // Customise shows the saved layout; the view fits it to the screen
     }
 
     // ── Dragging and resizing ──────────────────────────────────────────
@@ -187,13 +296,15 @@
         const resizing = Boolean(e.target.closest('.dash-resize'));
         const start = { px: e.pageX, py: e.pageY, x: item.x, y: item.y, w: item.w, h: item.h };
         const snapshot = items.map((i) => ({ i, x: i.x, y: i.y }));
-        const maxColumns = widest();
+        const maxColumns = COLUMNS;
+        const cell = cellWidth();
+        const row = rowHeight();
         let changed = false;
         el.classList.add('dash-active');
 
         const onMove = (ev) => {
-            const dx = Math.round((ev.pageX - start.px) / CELL);
-            const dy = Math.round((ev.pageY - start.py) / CELL);
+            const dx = Math.round((ev.pageX - start.px) / cell);
+            const dy = Math.round((ev.pageY - start.py) / row);
             snapshot.forEach((s) => { s.i.x = s.x; s.i.y = s.y; });
             if (resizing) {
                 item.w = clamp(start.w + dx, item.minW, Math.min(item.maxW, maxColumns - item.x));
@@ -232,7 +343,7 @@
         const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
         if (!step) return;
         e.preventDefault();
-        const maxColumns = widest();
+        const maxColumns = COLUMNS;
         if (e.shiftKey) {
             item.w = clamp(item.w + step[0], item.minW, Math.min(item.maxW, maxColumns - item.x));
             item.h = clamp(item.h + step[1], item.minH, item.maxH);
@@ -361,8 +472,8 @@
                 return true;
             });
             dirty = false;
+            items.forEach(record);
             setEditing(false);
-            redraw();
         } catch (err) {
             saveButton.disabled = false;
             alertBar("The layout couldn't be saved. Check your connection and try again.");
@@ -408,6 +519,7 @@
     });
 
     customise.addEventListener('click', () => {
+        if (cellWidth() < EDIT_MIN_CELL) return;
         readItems();
         setEditing(true);
     });
@@ -428,5 +540,5 @@
         }
     });
 
-    readItems();
+    updateCustomise();
 })();

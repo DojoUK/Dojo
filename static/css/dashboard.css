@@ -1,14 +1,14 @@
-/* The club dashboard: widgets on a grid of 50px square cells (organisations/dashboard.py). */
+/* The club dashboard: widgets on a grid of 24 columns that stretch across the space there is
+   (organisations/dashboard.py). static/js/dashboard.js sets the row height to suit the
+   column width and reflows widgets that would be squeezed on narrow screens. */
 
 .dash-grid {
-    --cell: 50px;
+    --cols: 24;
+    --row: 50px;
     display: grid;
-    grid-template-columns: repeat(auto-fill, var(--cell));
-    grid-auto-columns: var(--cell);
-    grid-auto-rows: var(--cell);
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    grid-auto-rows: var(--row);
     position: relative;
-    overflow-x: auto;
-    overflow-y: hidden;
     margin: -6px;               /* the widgets' own 6px gutters line up with the page edge */
 }
 
@@ -43,7 +43,7 @@
 .dash-stat:has(.stretched-link):hover { filter: brightness(1.06); }
 
 /* Small tiles drop the note and shrink the number; big tiles grow it. */
-@container (max-height: 110px) {
+@container (max-height: 100px) {
     .dash-stat { padding: 8px 12px; }
     .dash-stat-note { display: none; }
     .dash-stat-value { font-size: 1.5rem; margin-top: 0; }
@@ -114,7 +114,7 @@
     background-image:
         linear-gradient(to right, var(--dojo-border) 1px, transparent 1px),
         linear-gradient(to bottom, var(--dojo-border) 1px, transparent 1px);
-    background-size: var(--cell) var(--cell);
+    background-size: calc(100% / var(--cols)) var(--row);
     border-radius: 4px;
 }
 .dash-editing .dash-item { cursor: grab; touch-action: none; user-select: none; }
@@ -181,10 +181,10 @@
 .dash-cat-row > i { font-size: 1.2rem; color: var(--dojo-muted); margin-top: 2px; }
 .dash-cat-row .btn { flex-shrink: 0; }
 
-/* ── Phones: one widget per row, in layout order, each its own height. ── */
+/* ── Phones, until the script has fitted the grid: one widget per row, in layout order. ── */
 @media (max-width: 767.98px) {
-    .dash-grid { display: flex; flex-direction: column; margin: 0 -6px; overflow: visible; }
-    .dash-item { grid-area: auto !important; height: calc(var(--h) * var(--cell)); }
+    .dash-grid:not(.dash-ready) { display: flex; flex-direction: column; margin: 0 -6px; }
+    .dash-grid:not(.dash-ready) .dash-item { grid-area: auto !important; height: calc(var(--h) * 50px); }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -2,7 +2,7 @@
 <section class="dash-item" data-key="{{ item.key }}" data-title="{{ item.widget.title }}"
          data-x="{{ item.x }}" data-y="{{ item.y }}" data-w="{{ item.w }}" data-h="{{ item.h }}"
          data-min-w="{{ item.widget.min_size.0 }}" data-min-h="{{ item.widget.min_size.1 }}"
-         data-max-w="{{ item.widget.max_size.0 }}" data-max-h="{{ item.widget.max_size.1 }}"
+         data-max-w="{{ item.widget.max_size.0 }}" data-max-h="{{ item.widget.max_size.1 }}" data-min-px="{{ item.widget.min_px }}"
          style="grid-area: {{ item.area }}; --h: {{ item.h }};" aria-label="{{ item.widget.title }}">
     <div class="dash-body">{% include item.widget.template %}</div>
     {% if can_customise %}
