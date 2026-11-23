@@ -80,7 +80,7 @@
                                 <form method="post" action="{% url 'class_unenrol' org_slug=org.slug pk=cls.pk member_pk=member.pk %}" class="d-inline">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-sm btn-outline-danger"
-                                            onclick="return confirm('Remove {{ member.register_name }} from this class?')">
+                                            data-confirm="Remove {{ member.register_name }} from this class?">
                                         Remove
                                     </button>
                                 </form>
@@ -294,7 +294,7 @@
                                         <input type="hidden" name="notify" value="1">
                                         <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2"
                                                 style="font-size:0.7rem;"
-                                                onclick="return confirm('Cancel this session and email enrolled members?')">
+                                                data-confirm="Cancel this session and email enrolled members?">
                                             Cancel
                                         </button>
                                         {% else %}

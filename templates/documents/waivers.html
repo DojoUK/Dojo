@@ -45,7 +45,7 @@
                                     <form method="post" action="{% url 'waiver_delete' org_slug=org.slug pk=w.pk %}">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-sm btn-outline-danger"
-                                                onclick="return confirm('Delete this template? Signed copies will remain, but the template will no longer appear on the signup form.')">
+                                                data-confirm="Delete this template? Signed copies will remain, but the template will no longer appear on the signup form.">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </form>

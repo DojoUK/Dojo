@@ -64,7 +64,7 @@
             {% for p in plans %}
             <form method="post" action="{% url 'portal_booking_action' token=member.token %}"
                   class="d-flex flex-wrap justify-content-between align-items-center gap-2 border rounded p-2"
-                  onsubmit="return confirm('{% if p.is_family_plan %}{{ p.name|escapejs }} is a family plan: it will be put on everyone in your family. Continue?{% else %}Switch {{ member.name|escapejs }} to {{ p.name|escapejs }}? This changes what is billed from the next invoice.{% endif %}');">
+                  data-confirm="{% if p.is_family_plan %}Switch to {{ p.name }}? It’s a family plan, so it will be put on everyone in your family.{% else %}Switch {{ member.name }} to {{ p.name }}? This changes what is billed from the next invoice.{% endif %}">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="choose_plan">
                 <input type="hidden" name="policy_id" value="{{ p.pk }}">

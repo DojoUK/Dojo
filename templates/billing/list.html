@@ -57,7 +57,7 @@
                 <form method="post" action="{% url 'invoice_chase_overdue' org_slug=org.slug %}" class="mt-2">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-sm btn-warning"
-                            onclick="return confirm('Send a reminder email to all {{ count_overdue }} overdue members?')">
+                            data-confirm="Send a reminder email to all {{ count_overdue }} overdue members?">
                         <i class="bi bi-envelope me-1"></i> Chase all
                     </button>
                 </form>

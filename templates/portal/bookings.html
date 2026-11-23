@@ -164,7 +164,7 @@
                     </div>
                 </div>
                 <form method="post" action="{% url 'portal_booking_action' token=member.token %}"
-                      onsubmit="return confirm('Leave {{ cm.assigned_class.name|escapejs }}?');">
+                      data-confirm="Leave {{ cm.assigned_class.name }}?">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="leave">
                     <input type="hidden" name="class_id" value="{{ cm.assigned_class.pk }}">

@@ -63,7 +63,7 @@
                         <button type="submit" class="btn btn-dark btn-sm">Save</button>
                         {% if not technique.syllabus_count %}
                         <button type="submit" name="action" value="delete" class="btn btn-outline-danger btn-sm"
-                                onclick="return confirm('Delete {{ technique.name|escapejs }}?')">Delete</button>
+                                data-confirm="Delete {{ technique.name }}?">Delete</button>
                         {% endif %}
                     </div>
                 </form>

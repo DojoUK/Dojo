@@ -114,7 +114,7 @@
                     <textarea name="text" id="reviewText" class="form-control mb-2" rows="4" maxlength="2000" placeholder="Coaching, atmosphere, facilities, how welcoming it is…">{{ my_review.text|default:'' }}</textarea>
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-dark btn-sm">{% if my_review %}Update review{% else %}Post review{% endif %}</button>
-                        {% if my_review %}<button type="submit" name="action" value="delete" class="btn btn-outline-danger btn-sm" formnovalidate onclick="return confirm('Remove your review?')">Remove</button>{% endif %}
+                        {% if my_review %}<button type="submit" name="action" value="delete" class="btn btn-outline-danger btn-sm" formnovalidate data-confirm="Remove your review?">Remove</button>{% endif %}
                     </div>
                 </form>
             </div></div>

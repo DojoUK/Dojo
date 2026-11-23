@@ -46,7 +46,7 @@
                         <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#editProductModal{{ product.pk }}">
                             <i class="bi bi-pencil"></i>
                         </button>
-                        <form method="post" action="{% url 'product_delete' org_slug=org.slug pk=product.pk %}" onsubmit="return confirm('Delete product &quot;{{ product.name }}&quot; and all its sizes?')">
+                        <form method="post" action="{% url 'product_delete' org_slug=org.slug pk=product.pk %}" data-confirm="Delete product “{{ product.name }}” and all its sizes?">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
                         </form>
@@ -96,7 +96,7 @@
                                 </td>
                                 <td class="small text-end">
                                     {% if can_edit %}
-                                    <form method="post" action="{% url 'variant_delete' org_slug=org.slug pk=variant.pk %}" class="d-inline" onsubmit="return confirm('Delete size &quot;{{ variant.size }}&quot;?')">
+                                    <form method="post" action="{% url 'variant_delete' org_slug=org.slug pk=variant.pk %}" class="d-inline" data-confirm="Delete size “{{ variant.size }}”?">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
                                     </form>

@@ -75,7 +75,7 @@
                         <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editExpenseModal{{ expense.pk }}">
                             <i class="bi bi-pencil"></i>
                         </button>
-                        <form method="post" action="{% url 'expense_delete' org_slug=org.slug pk=expense.pk %}" class="d-inline" onsubmit="return confirm('Delete this expense?')">
+                        <form method="post" action="{% url 'expense_delete' org_slug=org.slug pk=expense.pk %}" class="d-inline" data-confirm="Delete this expense?">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
                         </form>

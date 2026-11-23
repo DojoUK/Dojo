@@ -22,9 +22,9 @@
         {% if run.status == 'awaiting_review' %}
         <div class="d-flex gap-2">
             <form method="post">{% csrf_token %}<input type="hidden" name="action" value="cancel">
-                <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Delete these invoices without sending them?')">Cancel</button></form>
+                <button type="submit" class="btn btn-outline-danger btn-sm" data-confirm="Delete these invoices without sending them?">Cancel</button></form>
             <form method="post">{% csrf_token %}<input type="hidden" name="action" value="send">
-                <button type="submit" class="btn btn-dark btn-sm" onclick="return confirm('Send {{ run.invoice_count }} invoices to members now?')"><i class="bi bi-send me-1"></i> Send all</button></form>
+                <button type="submit" class="btn btn-dark btn-sm" data-confirm="Send {{ run.invoice_count }} invoices to members now?"><i class="bi bi-send me-1"></i> Send all</button></form>
         </div>
         {% endif %}
     </div>

@@ -64,7 +64,7 @@
                                 <form method="post" action="{% url 'grading_session_unenrol' org_slug=org.slug pk=grading.pk session_pk=session.pk member_pk=member.pk %}" class="d-inline">
                                     {% csrf_token %}
                                     <button type="submit" class="btn btn-sm btn-outline-danger"
-                                            onclick="return confirm('Remove {{ member.register_name }} from this session?')">
+                                            data-confirm="Remove {{ member.register_name }} from this session?">
                                         Remove
                                     </button>
                                 </form>

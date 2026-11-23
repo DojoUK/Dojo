@@ -124,7 +124,7 @@
                             <input type="hidden" name="action" value="delete">
                             <input type="hidden" name="field_pk" value="{{ field.pk }}">
                             <button type="submit" class="btn btn-sm btn-outline-danger"
-                                    onclick="return confirm('Delete field \'{{ field.name }}\'? Existing values will be lost.')">
+                                    data-confirm="Delete field “{{ field.name }}”? Existing values will be lost.">
                                 Delete
                             </button>
                         </form>

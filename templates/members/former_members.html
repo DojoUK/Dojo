@@ -69,7 +69,7 @@
                         <form method="post" action="{% url 'member_archive' org_slug=org.slug pk=member.pk %}">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-sm btn-outline-success" title="Reactivate member"
-                                    onclick="return confirm('Reactivate {{ member.name }}?')">
+                                    data-confirm="Reactivate {{ member.name }}?">
                                 <i class="bi bi-person-check"></i>
                             </button>
                         </form>
@@ -77,7 +77,7 @@
                         <form method="post" action="{% url 'member_erase' org_slug=org.slug pk=member.pk %}">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Erase personal data (right to erasure)"
-                                    onclick="return confirm('Permanently erase {{ member.name }}\'s personal data? This cannot be undone.')">
+                                    data-confirm="Permanently erase {{ member.name }}’s personal data? This cannot be undone.">
                                 <i class="bi bi-shield-x"></i>
                             </button>
                         </form>
