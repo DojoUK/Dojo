@@ -13,7 +13,8 @@
     <link href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}" rel="stylesheet">
     <link href="{% static 'css/confirm.css' %}?v={{ dojo_version.commit|slice:':12'|default:'1' }}" rel="stylesheet">
     <link href="{% static 'css/portal.css' %}" rel="stylesheet">
-    <link rel="icon" type="image/x-icon" href="{% static 'img/favicon/favicon.ico' %}">
+    <link rel="icon" href="{% static 'img/favicon/favicon.ico' %}" sizes="32x32">
+    <link rel="icon" type="image/svg+xml" href="{% static 'img/favicon/favicon.svg' %}">
     <link rel="apple-touch-icon" href="{% static 'img/favicon/apple-touch-icon.png' %}">
     <style>
         /* Dojo's own colours: the network pages belong to no single club. */
@@ -21,7 +22,7 @@
             --p-brand: #1E3A5F; --p-on-brand: #ffffff;
             --p-accent: #2563EB; --p-accent-hover: #1d4ed8; --p-on-accent: #ffffff; --p-on-accent-hover: #ffffff;
         }
-        .n-wordmark { height: 22px; filter: brightness(0) invert(1); opacity: .95; }
+        .n-wordmark { height: 20px; opacity: .95; }
         .n-auth { max-width: 440px; }
         .p-bar .n-user { color: var(--p-on-accent); opacity: .85; font-size: .875rem; white-space: nowrap; }
         .p-bar .n-user button { color: inherit; }
@@ -33,7 +34,7 @@
 <header class="p-hero">
     <div class="p-wrap {% block wrap_class %}{% endblock %}">
         <a class="p-brand text-reset text-decoration-none" href="{{ finder_url }}" aria-label="Dojo club finder">
-            <img src="{% static 'img/dojo-wordmark.png' %}" alt="Dojo" class="n-wordmark">
+            <img src="{% static 'img/dojo-logo-white.svg' %}" alt="Dojo" class="n-wordmark">
         </a>
         <div class="p-title-row"><h1 class="p-title">{% block page_title %}{% endblock %}</h1></div>
         {% block page_subtitle %}{% endblock %}
