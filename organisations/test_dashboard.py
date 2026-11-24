@@ -108,7 +108,7 @@ class LayoutTests(DashboardTestBase):
             'rubbish',
         ], self.board())
         self.assertEqual(layout, [
-            {'key': 'active_members', 'x': 0, 'y': 0, 'w': 3, 'h': 6},
+            {'key': 'active_members', 'x': 0, 'y': 0, 'w': 6, 'h': 6},
             {'key': 'upcoming_sessions', 'x': dashboard.COLUMNS - 14, 'y': 0, 'w': 14, 'h': 8},
         ])
 
@@ -329,12 +329,15 @@ class WidgetTests(DashboardTestBase):
 
     def test_widget_endpoint_renders_one_widget_in_place(self):
         self.add_data()
-        response = self.client.get(self.url('org_dashboard_widget', key='attendance_trend') + '?x=3&y=12&w=2&h=99')
+        response = self.client.get(self.url('org_dashboard_widget', key='attendance_trend')
+                                   + '?x=3&y=12&w=2&h=99&tx=1&ty=20&tw=12&th=7')
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'data-key="attendance_trend"')
-        self.assertContains(response, 'data-x="3" data-y="12" data-w="6" data-h="24"')   # clamped to its limits
-        self.assertContains(response, 'data-min-px="320"')
-        self.assertContains(response, 'grid-area: 13 / 4 / span 24 / span 6')
+        self.assertContains(response, 'data-x="3" data-y="12" data-w="9" data-h="24"')   # clamped to its limits
+        self.assertContains(response, 'data-tablet-x="0" data-tablet-y="20" data-tablet-w="12" data-tablet-h="7"')
+        self.assertContains(response, 'data-min-w="9"')
+        self.assertContains(response, 'data-tablet-min-w="8"')
+        self.assertContains(response, 'grid-area: 13 / 4 / span 24 / span 9')
         self.assertContains(response, 'data-chart=')
 
     def test_widget_endpoint_refuses_unknown_and_switched_off_widgets(self):
@@ -358,6 +361,130 @@ class WidgetTests(DashboardTestBase):
         self.org.save()
         data = dashboard.needs_attention(self.board())
         self.assertTrue(data['all_clear'], data)
+
+
+class ScreenSizeTests(DashboardTestBase):
+    """Each kind of screen has its own arrangement, and every widget stays readable at each."""
+
+    def test_minimum_widths_keep_every_widget_readable_on_the_narrowest_screen_of_each_size(self):
+        for widget in dashboard.WIDGETS:
+            for size in ('wide', 'tablet'):
+                with self.subTest(widget=widget.key, size=size):
+                    narrowest = dashboard.MIN_CELL_PX[size] * widget.min_w(size)
+                    self.assertGreaterEqual(narrowest, widget.min_px)
+                    self.assertLessEqual(widget.min_w(size), widget.default_w(size))
+                    self.assertLessEqual(widget.max_w(size), dashboard.SIZE_COLUMNS[size])
+
+    def test_an_11_inch_ipad_held_sideways_gets_the_computer_layout(self):
+        # 1180px (iPad Air) less the 240px sidebar and 56px of padding, plus the grid's 12px gutters.
+        self.assertGreaterEqual(1180 - 240 - 56 + 12, dashboard.WIDE_FROM_PX)
+        self.assertLess(834 - 240 - 56 + 12, dashboard.WIDE_FROM_PX)        # upright: the tablet layout
+        self.assertGreaterEqual(834 - 240 - 56 + 12, dashboard.TABLET_FROM_PX)
+
+    def test_the_default_tablet_layout(self):
+        tablet = {i['key']: (i['x'], i['y'], i['w'], i['h'])
+                  for i in dashboard.tablet_from_wide(dashboard.default_layout(self.org))}
+        self.assertEqual(tablet, {
+            # Four tiles, two to a row.
+            'active_members': (0, 0, 6, 3), 'sessions_week': (6, 0, 6, 3),
+            'revenue_month': (0, 3, 6, 3), 'at_risk': (6, 3, 6, 3),
+            'needs_attention': (0, 6, 12, 5),
+            # Too wide to share a row on a tablet, so one under the other.
+            'upcoming_sessions': (0, 11, 12, 8), 'quick_actions': (0, 19, 12, 8),
+        })
+
+    def test_widgets_that_fit_side_by_side_stay_side_by_side(self):
+        wide = [{'key': 'birthdays', 'x': 0, 'y': 0, 'w': 8, 'h': 6},
+                {'key': 'quick_actions', 'x': 12, 'y': 0, 'w': 12, 'h': 8}]
+        self.assertEqual(dashboard.tablet_from_wide(wide), [
+            {'key': 'birthdays', 'x': 0, 'y': 0, 'w': 6, 'h': 6},
+            {'key': 'quick_actions', 'x': 6, 'y': 0, 'w': 6, 'h': 8},
+        ])
+
+    def test_any_tablet_layout_worked_out_fits_and_never_overlaps(self):
+        placed = []
+        for widget in dashboard.WIDGETS:
+            x, y = dashboard.first_fit(placed, widget.size[0], widget.size[1], dashboard.COLUMNS)
+            placed.append({'key': widget.key, 'x': x, 'y': y, 'w': widget.size[0], 'h': widget.size[1]})
+        tablet = dashboard.tablet_from_wide(placed)
+        self.assertEqual(sorted(i['key'] for i in tablet), sorted(i['key'] for i in placed))
+        for item in tablet:
+            widget = dashboard.WIDGETS_BY_KEY[item['key']]
+            self.assertLessEqual(item['x'] + item['w'], dashboard.TABLET_COLUMNS)
+            self.assertGreaterEqual(item['w'], widget.min_w('tablet'))
+        for n, a in enumerate(tablet):
+            for b in tablet[n + 1:]:
+                self.assertFalse(dashboard.overlaps(a, b), (a, b))
+
+    def test_until_arranged_on_a_tablet_the_tablet_layout_follows_the_wide_one(self):
+        response = self.save([{'key': 'quick_actions', 'x': 0, 'y': 0, 'w': 8, 'h': 8},
+                              {'key': 'birthdays', 'x': 8, 'y': 0, 'w': 8, 'h': 6}])
+        self.assertFalse(response.json()['tabletCustom'])
+        self.assertEqual([(i['key'], i['x'], i['w']) for i in response.json()['tablet']],
+                         [('quick_actions', 0, 6), ('birthdays', 6, 6)])
+        self.org.refresh_from_db()
+        self.assertNotIn('tablet', self.org.settings['dashboard'])
+        self.assertEqual(self.org.settings['dashboard']['version'], 3)
+
+    def test_a_tablet_layout_arranged_on_a_tablet_is_kept(self):
+        wide = [{'key': 'quick_actions', 'x': 0, 'y': 0, 'w': 8, 'h': 8},
+                {'key': 'birthdays', 'x': 8, 'y': 0, 'w': 8, 'h': 6}]
+        tablet = [{'key': 'birthdays', 'x': 0, 'y': 0, 'w': 12, 'h': 6},
+                  {'key': 'quick_actions', 'x': 0, 'y': 6, 'w': 3, 'h': 8}]       # too narrow: widened
+        response = self.client.post(self.url('org_dashboard_layout'), json.dumps({'widgets': wide, 'tablet': tablet}),
+                                    content_type='application/json')
+        self.assertTrue(response.json()['tabletCustom'])
+        self.assertEqual(response.json()['tablet'], [
+            {'key': 'birthdays', 'x': 0, 'y': 0, 'w': 12, 'h': 6},
+            {'key': 'quick_actions', 'x': 0, 'y': 6, 'w': 6, 'h': 8},
+        ])
+        # Moving things on a computer afterwards leaves the tablet arrangement alone...
+        self.client.post(self.url('org_dashboard_layout'), json.dumps({
+            'widgets': [dict(wide[1], x=0), dict(wide[0], x=8)], 'tablet': response.json()['tablet']}),
+            content_type='application/json')
+        self.org.refresh_from_db()
+        layouts = dashboard.layouts_for(self.board())
+        self.assertEqual(layouts['tablet'][0], {'key': 'birthdays', 'x': 0, 'y': 0, 'w': 12, 'h': 6})
+
+    def test_a_kept_tablet_layout_gains_and_loses_widgets_with_the_wide_one(self):
+        self.org.settings['dashboard'] = {'version': 3, 'widgets': [
+            {'key': 'quick_actions', 'x': 0, 'y': 0, 'w': 8, 'h': 8},
+            {'key': 'attendance_trend', 'x': 8, 'y': 0, 'w': 12, 'h': 7},
+        ], 'tablet': [
+            {'key': 'quick_actions', 'x': 0, 'y': 0, 'w': 12, 'h': 8},
+            {'key': 'birthdays', 'x': 0, 'y': 8, 'w': 12, 'h': 6},       # no longer on the dashboard
+        ]}
+        self.org.save()
+        tablet = dashboard.layouts_for(self.board())['tablet']
+        self.assertEqual([(i['key'], i['x'], i['y'], i['w']) for i in tablet],
+                         [('quick_actions', 0, 0, 12), ('attendance_trend', 0, 8, 8)])
+
+    def test_reset_forgets_the_tablet_layout_too(self):
+        self.org.settings['dashboard'] = {'version': 3, 'widgets': [], 'tablet': []}
+        self.org.save()
+        self.client.post(self.url('org_dashboard_layout'), json.dumps({'reset': True}), content_type='application/json')
+        self.org.refresh_from_db()
+        self.assertNotIn('dashboard', self.org.settings)
+
+    def test_version_2_layouts_still_load(self):
+        self.org.settings['dashboard'] = {'version': 2, 'widgets': [{'key': 'quick_actions', 'x': 4, 'y': 0, 'w': 8, 'h': 8}]}
+        self.org.save()
+        layouts = dashboard.layouts_for(self.board())
+        self.assertEqual(layouts['wide'], [{'key': 'quick_actions', 'x': 4, 'y': 0, 'w': 8, 'h': 8}])
+        self.assertEqual(layouts['tablet'], [{'key': 'quick_actions', 'x': 2, 'y': 0, 'w': 6, 'h': 8}])
+
+    def test_a_coach_gets_a_tablet_layout_of_their_own_widgets(self):
+        layouts = dashboard.layouts_for(self.board(self.coach, self.coach_om))
+        self.assertEqual(sorted(i['key'] for i in layouts['tablet']),
+                         ['active_members', 'quick_actions', 'sessions_week', 'upcoming_sessions'])
+
+    def test_the_page_carries_both_arrangements(self):
+        page = self.client.get(self.url('org_dashboard'))
+        self.assertContains(page, 'data-wide-from="880"')
+        self.assertContains(page, 'data-tablet-columns="12"')
+        self.assertContains(page, 'data-key="active_members" data-title="Active members"')
+        self.assertContains(page, 'data-tablet-x="0" data-tablet-y="0" data-tablet-w="6" data-tablet-h="3"')
+        self.assertFalse(page.context['dash_config']['tabletCustom'])
 
 
 class OptionalPartsTests(DashboardTestBase):

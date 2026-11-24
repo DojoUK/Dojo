@@ -1,8 +1,10 @@
 {# One widget on the grid. `item` is a layout entry with its widget and grid area. #}
 <section class="dash-item" data-key="{{ item.key }}" data-title="{{ item.widget.title }}"
          data-x="{{ item.x }}" data-y="{{ item.y }}" data-w="{{ item.w }}" data-h="{{ item.h }}"
-         data-min-w="{{ item.widget.min_size.0 }}" data-min-h="{{ item.widget.min_size.1 }}"
-         data-max-w="{{ item.widget.max_size.0 }}" data-max-h="{{ item.widget.max_size.1 }}" data-min-px="{{ item.widget.min_px }}"
+         data-tablet-x="{{ item.tablet.x }}" data-tablet-y="{{ item.tablet.y }}" data-tablet-w="{{ item.tablet.w }}" data-tablet-h="{{ item.tablet.h }}"
+         data-min-w="{{ item.limits.minW }}" data-max-w="{{ item.limits.maxW }}"
+         data-tablet-min-w="{{ item.limits.tabletMinW }}" data-tablet-max-w="{{ item.limits.tabletMaxW }}"
+         data-min-h="{{ item.limits.minH }}" data-max-h="{{ item.limits.maxH }}" data-min-px="{{ item.widget.min_px }}"
          style="grid-area: {{ item.area }}; --h: {{ item.h }};" aria-label="{{ item.widget.title }}">
     <div class="dash-body">{% include item.widget.template %}</div>
     {% if can_customise %}

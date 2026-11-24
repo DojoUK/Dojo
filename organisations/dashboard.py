@@ -1,16 +1,21 @@
 """
 The club dashboard: a grid of widgets that each club arranges for itself.
 
-The grid has 24 columns that stretch across whatever space the screen gives
-it, and rows that grow and shrink with the columns. A layout is a list of
-{'key', 'x', 'y', 'w', 'h'} in columns and rows, saved in
-Organisation.settings['dashboard']. A club without one gets the default
-layout, packed to fit the widgets it can use.
+Each kind of screen has its own arrangement of the same widgets:
 
-On a narrow window, a tablet or a phone, the page (static/js/dashboard.js)
-widens any widget that would be squeezed below its min_px and lets the
-widgets flow onto more rows, so nothing has to scroll sideways. The saved
-layout is untouched; Customise always shows it as saved.
+- 'wide', for computers and tablets held sideways: 24 columns, from WIDE_FROM_PX.
+- 'tablet', for tablets held upright and narrow windows: 12 columns, from TABLET_FROM_PX.
+- phones, narrower than that: one widget per row in the wide layout's order (no arranging).
+
+Columns stretch across the space there is, and rows grow and shrink with them, so cells stay
+roughly square. A layout is a list of {'key', 'x', 'y', 'w', 'h'} in columns and rows, saved in
+Organisation.settings['dashboard'] as 'widgets' (wide) and, once someone has arranged it on a
+tablet, 'tablet'. Until then the tablet layout is worked out from the wide one (tablet_from_wide).
+
+Every widget has a narrowest width it reads well at (min_px). Each size's minimum width in columns
+comes from that and the narrowest screen of that size, so a layout always fits as arranged: what
+Customise shows is what everyone sees. A club without a layout gets the default, packed to fit the
+widgets it can use.
 
 Admins arrange the club's layout. Everyone else sees the same layout with
 the widgets they aren't allowed to see taken out and the rest moved up.
@@ -25,16 +30,23 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
 import json
+import math
 
 from django.apps import apps
 from django.db.models import Count, Max, Q, Sum
 from django.db.models.functions import TruncMonth
 from django.utils.functional import cached_property
 
-COLUMNS = 24
+COLUMNS = 24                # the wide layout
+TABLET_COLUMNS = 12
+WIDE_FROM_PX = 880          # grid width: an 11" iPad held sideways (beside the sidebar) is wide
+TABLET_FROM_PX = 480        # below this, phones: one widget per row
+# Each size's narrowest cell, which sets how many columns a widget needs to stay readable.
+MIN_CELL_PX = {'wide': WIDE_FROM_PX / COLUMNS, 'tablet': TABLET_FROM_PX / TABLET_COLUMNS}
+SIZE_COLUMNS = {'wide': COLUMNS, 'tablet': TABLET_COLUMNS}
 MAX_ROWS = 400
 SETTINGS_KEY = 'dashboard'
-LAYOUT_VERSION = 2
+LAYOUT_VERSION = 3
 # Version 1 layouts were measured in fixed 50px cells and laid out for a screen about 20 cells wide.
 V1_COLUMNS = 20
 
@@ -84,17 +96,37 @@ class Widget:
             return False
         return True
 
-    def clamp(self, w, h):
-        return (max(self.min_size[0], min(self.max_size[0], w)),
+    def min_w(self, size='wide'):
+        """Fewest columns, so it's never narrower than min_px on the narrowest screen of this size."""
+        own = self.min_size[0] if size == 'wide' else math.ceil(self.min_size[0] / 2)
+        return min(SIZE_COLUMNS[size], max(own, math.ceil(self.min_px / MIN_CELL_PX[size])))
+
+    def max_w(self, size='wide'):
+        own = self.max_size[0] if size == 'wide' else math.ceil(self.max_size[0] / 2)
+        return max(self.min_w(size), min(SIZE_COLUMNS[size], own))
+
+    def default_w(self, size='wide'):
+        w = self.size[0] if size == 'wide' else math.ceil(self.size[0] / 2)
+        return max(self.min_w(size), min(self.max_w(size), w))
+
+    def clamp(self, w, h, size='wide'):
+        return (max(self.min_w(size), min(self.max_w(size), w)),
                 max(self.min_size[1], min(self.max_size[1], h)))
+
+    def limits(self):
+        """What the page needs to arrange it at each size."""
+        return {
+            'minW': self.min_w(), 'maxW': self.max_w(),
+            'tabletMinW': self.min_w('tablet'), 'tabletMaxW': self.max_w('tablet'),
+            'minH': self.min_size[1], 'maxH': self.max_size[1],
+        }
 
     def catalogue_entry(self):
         return {
             'key': self.key, 'title': self.title, 'description': self.description,
             'icon': self.icon, 'category': self.category,
-            'w': self.size[0], 'h': self.size[1],
-            'minW': self.min_size[0], 'minH': self.min_size[1], 'minPx': self.min_px,
-            'maxW': self.max_size[0], 'maxH': self.max_size[1],
+            'w': self.default_w(), 'h': self.size[1], 'tabletW': self.default_w('tablet'),
+            'minPx': self.min_px, **self.limits(),
         }
 
 
@@ -636,8 +668,9 @@ def default_layout(org):
     return placed
 
 
-def clean(raw, board):
+def clean(raw, board, size='wide'):
     """A layout made safe to keep: known widgets this person can see, each once, in range, not overlapping."""
+    columns = SIZE_COLUMNS[size]
     items, seen = [], set()
     for entry in raw if isinstance(raw, list) else []:
         if not isinstance(entry, dict):
@@ -649,9 +682,8 @@ def clean(raw, board):
             x, y, w, h = (int(entry.get(k, 0)) for k in ('x', 'y', 'w', 'h'))
         except (TypeError, ValueError):
             continue
-        w, h = widget.clamp(w, h)
-        w = min(w, COLUMNS)
-        items.append({'key': widget.key, 'x': max(0, min(x, COLUMNS - w)),
+        w, h = widget.clamp(w, h, size)
+        items.append({'key': widget.key, 'x': max(0, min(x, columns - w)),
                       'y': max(0, min(y, MAX_ROWS)), 'w': w, 'h': h})
         seen.add(widget.key)
     return push_down(items)
@@ -661,9 +693,17 @@ def saved_layout(org):
     stored = (org.settings or {}).get(SETTINGS_KEY)
     if not isinstance(stored, dict) or not isinstance(stored.get('widgets'), list):
         return None
-    if stored.get('version', 1) < LAYOUT_VERSION:
+    if stored.get('version', 1) < 2:
         return upgrade(stored['widgets'])
     return stored['widgets']
+
+
+def saved_tablet_layout(org):
+    """The tablet arrangement someone made on a tablet, or None while it follows the wide one."""
+    stored = (org.settings or {}).get(SETTINGS_KEY)
+    if isinstance(stored, dict) and isinstance(stored.get('tablet'), list):
+        return stored['tablet']
+    return None
 
 
 def upgrade(widgets):
@@ -687,7 +727,7 @@ def upgrade(widgets):
 
 
 def layout_for(board):
-    """The layout this person sees: the club's (or the default), less the widgets they can't see."""
+    """The wide layout this person sees: the club's (or the default), less the widgets they can't see."""
     raw = saved_layout(board.org)
     if raw is None:
         raw = default_layout(board.org)
@@ -697,9 +737,80 @@ def layout_for(board):
     return items
 
 
-def save_layout(org, raw, board):
+def tablet_from_wide(wide):
+    """
+    A tablet arrangement of a wide layout. Widgets keep their order. Each takes half its wide width
+    (at least its tablet minimum). Widgets that started on the same row stay side by side if they
+    fit in 12 columns; if not, they share the width evenly, as many to a row as fit.
+    """
+    runs = []
+    for item in sorted(wide, key=lambda i: (i['y'], i['x'])):
+        if runs and runs[-1][0]['y'] == item['y']:
+            runs[-1].append(item)
+        else:
+            runs.append([item])
+    placed, cursor = [], 0
+    for run in runs:
+        widgets = [WIDGETS_BY_KEY[i['key']] for i in run]
+        want = [w.clamp(math.ceil(i['w'] / 2), i['h'], 'tablet')[0] for w, i in zip(widgets, run)]
+        per_row = 0
+        if sum(want) > TABLET_COLUMNS:
+            most = max(1, min(TABLET_COLUMNS // w.min_w('tablet') for w in widgets))
+            per_row = math.ceil(len(run) / math.ceil(len(run) / most))
+        for n, (item, w) in enumerate(zip(run, want)):
+            if per_row:
+                base = TABLET_COLUMNS // per_row
+                w = base + (1 if n % per_row < TABLET_COLUMNS - base * per_row else 0)
+                prefer = 0
+            else:
+                prefer = min(round(item['x'] / 2), TABLET_COLUMNS - w)
+            x, y = _spot(placed, w, item['h'], cursor, prefer, TABLET_COLUMNS)
+            placed.append({'key': item['key'], 'x': x, 'y': y, 'w': w, 'h': item['h']})
+            cursor = y
+    return placed
+
+
+def _spot(placed, w, h, from_y, prefer_x, columns):
+    """The highest free spot at or below row from_y, trying column prefer_x first."""
+    for y in range(from_y, MAX_ROWS):
+        for x in [prefer_x, *range(columns - w + 1)]:
+            if not any(overlaps({'x': x, 'y': y, 'w': w, 'h': h}, p) for p in placed):
+                return x, y
+    return 0, from_y
+
+
+def fit_tablet(raw, wide, board):
+    """A saved tablet layout matched to the wide one's widgets: any it lacks go underneath."""
+    keys = {i['key'] for i in wide}
+    items = [i for i in clean(raw, board, 'tablet') if i['key'] in keys]
+    if len(items) < len([e for e in raw if isinstance(e, dict)]):
+        items = compact(items)
+    have = {i['key'] for i in items}
+    for item in sorted(wide, key=lambda i: (i['y'], i['x'])):
+        if item['key'] not in have:
+            widget = WIDGETS_BY_KEY[item['key']]
+            w, h = widget.clamp(math.ceil(item['w'] / 2), item['h'], 'tablet')
+            x, y = first_fit(items, w, h, TABLET_COLUMNS)
+            items.append({'key': item['key'], 'x': x, 'y': y, 'w': w, 'h': h})
+    return items
+
+
+def layouts_for(board):
+    """{'wide': [...], 'tablet': [...], 'tablet_custom': bool} for this person."""
+    wide = layout_for(board)
+    raw = saved_tablet_layout(board.org)
+    if raw is None:
+        return {'wide': wide, 'tablet': tablet_from_wide(wide), 'tablet_custom': False}
+    return {'wide': wide, 'tablet': fit_tablet(raw, wide, board), 'tablet_custom': True}
+
+
+def save_layout(org, raw, board, tablet=None):
+    """Saves the wide layout and, if given, the tablet one (None: the tablet follows the wide layout)."""
     items = clean(raw, board)
-    org.settings = {**(org.settings or {}), SETTINGS_KEY: {'version': LAYOUT_VERSION, 'widgets': items}}
+    stored = {'version': LAYOUT_VERSION, 'widgets': items}
+    if isinstance(tablet, list):
+        stored['tablet'] = fit_tablet(tablet, items, board)
+    org.settings = {**(org.settings or {}), SETTINGS_KEY: stored}
     org.save(update_fields=['settings'])
     return items
 

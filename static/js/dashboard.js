@@ -1,20 +1,26 @@
-/* The club dashboard: fitting the grid to the space it has and charts for every
-   viewer, and moving, resizing, adding and removing widgets for admins.
+/* The club dashboard: fitting the grid to the screen and drawing charts for everyone, and
+   moving, resizing, adding and removing widgets for admins.
 
-   Layouts are measured on a grid of 24 columns (organisations/dashboard.py) that
-   stretches across the space it has; rows grow and shrink with the columns. When
-   the space is too narrow for a widget (its data-min-px), the widgets in that row
-   are widened, shared evenly across the width, and flow onto more rows. That
-   happens only on screen: Customise always shows and edits the saved layout. */
+   Each kind of screen has its own arrangement of the same widgets (organisations/dashboard.py):
+   - wide, for computers and tablets held sideways: 24 columns;
+   - tablet, for tablets held upright and narrow windows: 12 columns;
+   - phone: one widget per row, in the wide layout's order.
+   Which one shows depends on the width the grid has, and changes as a window is resized or a
+   tablet turned. Columns stretch to fill the width and rows follow them, so cells stay roughly
+   square. Every widget is at least as wide as it reads well at the narrowest screen of each size,
+   so a layout always shows exactly as arranged: Customise edits what you see. */
 (function () {
     'use strict';
 
     const grid = document.getElementById('dashGrid');
     if (!grid) return;
-    const COLUMNS = Number(grid.dataset.columns) || 24;
+    const SIZES = {
+        wide: { columns: Number(grid.dataset.columns) || 24, from: Number(grid.dataset.wideFrom) || 880 },
+        tablet: { columns: Number(grid.dataset.tabletColumns) || 12, from: Number(grid.dataset.tabletFrom) || 480 },
+    };
     const ROW_MIN = 40;          // px: rows never get shorter than this...
     const ROW_MAX = 64;          // ...or taller than this, however wide the screen
-    const EDIT_MIN_CELL = 20;    // px: narrower columns (phones) are too fiddly to drag about
+    const PHONE_ROW = 44;
 
     // ── Charts ──────────────────────────────────────────────────────────
     function cssVar(name, fallback) {
@@ -80,96 +86,69 @@
     if (typeof Chart !== 'undefined') initCharts(grid);
     else window.addEventListener('load', () => initCharts(grid));
 
-    // ── Fitting the grid to the space it has ────────────────────────────
+    // ── Fitting the grid to the screen ──────────────────────────────────
     let items = [];
     let editing = false;
     let afterArrange = () => {};     // the customising code below adds to this
 
     const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), Math.max(lo, hi));
     const overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-    const cellWidth = () => grid.clientWidth / COLUMNS;
-    const rowHeight = () => clamp(Math.round(cellWidth()), ROW_MIN, ROW_MAX);
+
+    function sizeNow() {
+        const width = grid.clientWidth;
+        if (width >= SIZES.wide.from) return 'wide';
+        return width >= SIZES.tablet.from ? 'tablet' : 'phone';
+    }
+    const columns = (size) => (size === 'phone' ? 1 : SIZES[size].columns);
+    const cellWidth = (size) => grid.clientWidth / columns(size);
+    const rowHeight = (size) => (size === 'phone' ? PHONE_ROW : clamp(Math.round(cellWidth(size)), ROW_MIN, ROW_MAX));
 
     function itemFrom(el) {
         const d = el.dataset;
-        return {
-            el, key: d.key, title: d.title,
-            x: +d.x, y: +d.y, w: +d.w, h: +d.h,
-            minW: +d.minW, minH: +d.minH, maxW: +d.maxW, maxH: +d.maxH, minPx: +d.minPx || 0,
+        const item = {
+            el, key: d.key, title: d.title, minH: +d.minH, maxH: +d.maxH,
+            limits: {
+                wide: { minW: +d.minW, maxW: +d.maxW },
+                tablet: { minW: +d.tabletMinW, maxW: +d.tabletMaxW },
+            },
+            pos: {
+                wide: { x: +d.x, y: +d.y, w: +d.w, h: +d.h },
+                tablet: { x: +d.tabletX, y: +d.tabletY, w: +d.tabletW, h: +d.tabletH },
+            },
         };
+        Object.values(item.pos).forEach((p) => { p.item = item; });
+        return item;
     }
 
     function readItems() {
         items = Array.from(grid.querySelectorAll('.dash-item')).map(itemFrom);
     }
 
+    // The widgets' places at one size, each knowing its widget: [{x, y, w, h, item}].
+    const placesAt = (size) => items.map((i) => i.pos[size]);
+
     function show(item, spot) {
         item.el.style.gridArea = `${spot.y + 1} / ${spot.x + 1} / span ${spot.h} / span ${spot.w}`;
         item.el.style.setProperty('--h', spot.h);
     }
 
-    // The highest free spot at or below row `fromY`, trying column `preferX` first.
-    function findSpot(placed, w, h, fromY, preferX) {
-        for (let y = fromY; y < 1000; y++) {
-            const xs = [preferX];
-            for (let x = 0; x + w <= COLUMNS; x++) xs.push(x);
-            for (const x of xs) {
-                if (!placed.some((p) => overlaps({ x, y, w, h }, p))) return { x, y };
-            }
-        }
-        return { x: 0, y: fromY };
-    }
-
-    // Where each widget goes on this screen: the saved layout if every widget is at least its
-    // minimum width, otherwise the saved layout reflowed. Widgets that start on the same row
-    // stay together; in a row with a squeezed widget, they share the width evenly, as many to
-    // a row as fit, and the rows that follow move down to make room.
-    function flowed() {
-        const cell = cellWidth();
-        const sorted = items.slice().sort((a, b) => a.y - b.y || a.x - b.x);
-        const fits = (i) => i.w * cell >= i.minPx - 0.5;
-        if (sorted.every(fits)) return sorted.map((i) => ({ item: i, x: i.x, y: i.y, w: i.w, h: i.h }));
-
-        const runs = [];
-        sorted.forEach((i) => {
-            const run = runs[runs.length - 1];
-            if (run && run[0].y === i.y) run.push(i);
-            else runs.push([i]);
-        });
-        const placed = [];
-        let cursor = 0;
-        runs.forEach((run) => {
-            const squeezed = !run.every(fits);
-            let perRow = 0;
-            if (squeezed) {
-                const need = run.map((i) => Math.min(COLUMNS, Math.ceil(i.minPx / cell)));
-                const most = Math.max(1, Math.min(...need.map((n) => Math.floor(COLUMNS / n))));
-                perRow = Math.ceil(run.length / Math.ceil(run.length / most));
-            }
-            run.forEach((item, n) => {
-                let w = item.w;
-                if (perRow) {
-                    // Share the 24 columns between the widgets in this row, spare columns to the first.
-                    const base = Math.floor(COLUMNS / perRow);
-                    w = base + ((n % perRow) < COLUMNS - base * perRow ? 1 : 0);
-                }
-                const spot = findSpot(placed, w, item.h, cursor, perRow ? 0 : Math.min(item.x, COLUMNS - w));
-                placed.push({ item, x: spot.x, y: spot.y, w, h: item.h });
-                cursor = spot.y;
-            });
-        });
-        return placed;
-    }
-
     function arrange() {
-        grid.style.setProperty('--row', `${rowHeight()}px`);
-        const spots = editing
-            ? items.map((i) => ({ item: i, x: i.x, y: i.y, w: i.w, h: i.h }))
-            : flowed();
-        spots.forEach((spot) => show(spot.item, spot));
-        grid.classList.toggle('dash-flowed', spots.some((s) => s.x !== s.item.x || s.y !== s.item.y || s.w !== s.item.w));
+        const size = sizeNow();
+        grid.dataset.size = size;
+        grid.style.setProperty('--cols', columns(size));
+        grid.style.setProperty('--row', `${rowHeight(size)}px`);
+        if (size === 'phone') {
+            // One widget per row, in the wide layout's reading order.
+            let y = 0;
+            items.slice().sort((a, b) => a.pos.wide.y - b.pos.wide.y || a.pos.wide.x - b.pos.wide.x).forEach((item) => {
+                show(item, { x: 0, y, w: 1, h: item.pos.wide.h });
+                y += item.pos.wide.h;
+            });
+        } else {
+            items.forEach((item) => show(item, item.pos[size]));
+        }
         grid.classList.add('dash-ready');
-        afterArrange();
+        afterArrange(size);
     }
 
     // Re-fit whenever the space changes width: a window resized, a tablet turned, the sidebar shown.
@@ -197,6 +176,7 @@
     const config = JSON.parse(configEl.textContent);
     const viewBar = document.getElementById('dashViewBar');
     const editBar = document.getElementById('dashEditBar');
+    const editSize = document.getElementById('dashEditSize');
     const emptyBoard = document.getElementById('dashEmpty');
     const catalogueBody = document.getElementById('dashCatalogueBody');
     const catalogueEl = document.getElementById('dashCatalogue');
@@ -204,42 +184,51 @@
     const csrf = document.querySelector('input[name=csrfmiddlewaretoken]').value;
 
     let dirty = false;
+    let tabletCustom = Boolean(config.tabletCustom);   // the tablet layout has been arranged on a tablet
+    const edited = new Set();                          // sizes arranged since Customise was pressed
 
-    // Keeps a widget's saved place on the page, for saving and for Customise.
+    // Keeps a widget's places on the page, for saving and for Cancel.
     function record(item) {
-        Object.assign(item.el.dataset, { x: item.x, y: item.y, w: item.w, h: item.h });
-        const size = item.el.querySelector('.dash-size');
-        if (size) size.textContent = `${item.w} × ${item.h}`;
+        const d = item.el.dataset;
+        const { wide, tablet } = item.pos;
+        Object.assign(d, { x: wide.x, y: wide.y, w: wide.w, h: wide.h,
+                           tabletX: tablet.x, tabletY: tablet.y, tabletW: tablet.w, tabletH: tablet.h });
     }
 
-    // Customising needs room to drag: below that the button explains why it's off.
-    function updateCustomise() {
-        const roomy = cellWidth() >= EDIT_MIN_CELL;
+    function showSize(size) {
+        const label = item => item.el.querySelector('.dash-size');
+        items.forEach((item) => {
+            const p = item.pos[size === 'phone' ? 'wide' : size];
+            const el = label(item);
+            if (el) el.textContent = `${p.w} × ${p.h}`;
+        });
+        if (editSize) {
+            editSize.textContent = size === 'tablet' ? 'Arranging for tablets' : 'Arranging for computers';
+            editSize.title = size === 'tablet'
+                ? 'Tablets held upright and narrow windows have their own layout. Turn the tablet or widen the window to arrange the computer layout.'
+                : 'Computers and tablets held sideways share this layout. Tablets held upright have their own.';
+        }
+    }
+
+    // Phones are too narrow to drag widgets about.
+    function updateCustomise(size) {
+        const roomy = size !== 'phone';
         customise.disabled = !roomy && !editing;
-        customise.title = roomy ? '' : 'Make the window wider to customise the dashboard';
+        customise.title = roomy ? '' : 'Use a tablet or computer to customise the dashboard';
+        if (editing && !roomy) setEditing(false);
     }
 
-    // Keeps `moved` where it is and pushes anything it lands on further down.
-    function resolve(moved) {
-        const placed = moved ? [moved] : [];
-        items.filter((i) => i !== moved)
-            .sort((a, b) => a.y - b.y || a.x - b.x)
-            .forEach((item) => {
-                let hit;
-                while ((hit = placed.find((p) => overlaps(p, item)))) item.y = hit.y + hit.h;
-                placed.push(item);
-            });
-    }
-
-    function grow() {
-        const bottom = Math.max(0, ...items.map((i) => i.y + i.h));
-        grid.style.minHeight = editing ? `${(bottom + 6) * rowHeight()}px` : '';
+    function grow(size) {
+        const places = placesAt(size === 'phone' ? 'wide' : size);
+        const bottom = Math.max(0, ...places.map((p) => p.y + p.h));
+        grid.style.minHeight = editing ? `${(bottom + 6) * rowHeight(size)}px` : '';
         emptyBoard.classList.toggle('d-none', items.length > 0 || editing);
     }
 
-    afterArrange = () => {
-        grow();
-        updateCustomise();
+    afterArrange = (size) => {
+        grow(size);
+        updateCustomise(size);
+        if (editing) showSize(size);
     };
 
     function redraw() {
@@ -247,19 +236,31 @@
         arrange();
     }
 
-    function firstFit(w, h) {
-        const cols = COLUMNS;
+    // Keeps `moved` where it is and pushes anything it lands on further down.
+    function resolve(places, moved) {
+        const placed = moved ? [moved] : [];
+        places.filter((p) => p !== moved)
+            .sort((a, b) => a.y - b.y || a.x - b.x)
+            .forEach((p) => {
+                let hit;
+                while ((hit = placed.find((q) => overlaps(q, p)))) p.y = hit.y + hit.h;
+                placed.push(p);
+            });
+    }
+
+    function firstFit(places, w, h, cols) {
         for (let y = 0; y < 400; y++) {
             for (let x = 0; x + w <= cols; x++) {
                 const spot = { x, y, w, h };
-                if (!items.some((i) => overlaps(spot, i))) return { x, y };
+                if (!places.some((p) => overlaps(spot, p))) return { x, y };
             }
         }
-        return { x: 0, y: Math.max(0, ...items.map((i) => i.y + i.h)) };
+        return { x: 0, y: Math.max(0, ...places.map((p) => p.y + p.h)) };
     }
 
-    function markDirty() {
+    function markDirty(size) {
         dirty = true;
+        if (size) edited.add(size);
         saveButton.disabled = false;
     }
 
@@ -276,15 +277,18 @@
         });
         if (on) {
             dirty = false;
+            edited.clear();
             saveButton.disabled = true;
             buildCatalogue();
         }
-        arrange();      // Customise shows the saved layout; the view fits it to the screen
+        arrange();
     }
 
     // ── Dragging and resizing ──────────────────────────────────────────
     grid.addEventListener('pointerdown', (e) => {
         if (!editing || e.button !== 0) return;
+        const size = sizeNow();
+        if (size === 'phone') return;
         const el = e.target.closest('.dash-item');
         if (!el || e.target.closest('.dash-remove')) return;
         const item = items.find((i) => i.el === el);
@@ -293,27 +297,30 @@
         el.focus({ preventScroll: true });
         el.setPointerCapture(e.pointerId);
 
+        const p = item.pos[size];
+        const limits = item.limits[size];
+        const cols = columns(size);
         const resizing = Boolean(e.target.closest('.dash-resize'));
-        const start = { px: e.pageX, py: e.pageY, x: item.x, y: item.y, w: item.w, h: item.h };
-        const snapshot = items.map((i) => ({ i, x: i.x, y: i.y }));
-        const maxColumns = COLUMNS;
-        const cell = cellWidth();
-        const row = rowHeight();
+        const start = { px: e.pageX, py: e.pageY, x: p.x, y: p.y, w: p.w, h: p.h };
+        const places = placesAt(size);
+        const snapshot = places.map((q) => ({ q, x: q.x, y: q.y }));
+        const cell = cellWidth(size);
+        const row = rowHeight(size);
         let changed = false;
         el.classList.add('dash-active');
 
         const onMove = (ev) => {
             const dx = Math.round((ev.pageX - start.px) / cell);
             const dy = Math.round((ev.pageY - start.py) / row);
-            snapshot.forEach((s) => { s.i.x = s.x; s.i.y = s.y; });
+            snapshot.forEach((s) => { s.q.x = s.x; s.q.y = s.y; });
             if (resizing) {
-                item.w = clamp(start.w + dx, item.minW, Math.min(item.maxW, maxColumns - item.x));
-                item.h = clamp(start.h + dy, item.minH, item.maxH);
+                p.w = clamp(start.w + dx, limits.minW, Math.min(limits.maxW, cols - p.x));
+                p.h = clamp(start.h + dy, item.minH, item.maxH);
             } else {
-                item.x = clamp(start.x + dx, 0, maxColumns - item.w);
-                item.y = Math.max(0, start.y + dy);
+                p.x = clamp(start.x + dx, 0, cols - p.w);
+                p.y = Math.max(0, start.y + dy);
             }
-            resolve(item);
+            resolve(places, p);
             redraw();
             changed = changed || dx !== 0 || dy !== 0;
         };
@@ -322,7 +329,7 @@
             el.removeEventListener('pointerup', onUp);
             el.removeEventListener('pointercancel', onUp);
             el.classList.remove('dash-active');
-            if (changed) markDirty();
+            if (changed) markDirty(size);
         };
         el.addEventListener('pointermove', onMove);
         el.addEventListener('pointerup', onUp);
@@ -341,27 +348,31 @@
             return;
         }
         const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
-        if (!step) return;
+        const size = sizeNow();
+        if (!step || size === 'phone') return;
         e.preventDefault();
-        const maxColumns = COLUMNS;
+        const p = item.pos[size];
+        const limits = item.limits[size];
+        const cols = columns(size);
         if (e.shiftKey) {
-            item.w = clamp(item.w + step[0], item.minW, Math.min(item.maxW, maxColumns - item.x));
-            item.h = clamp(item.h + step[1], item.minH, item.maxH);
+            p.w = clamp(p.w + step[0], limits.minW, Math.min(limits.maxW, cols - p.x));
+            p.h = clamp(p.h + step[1], item.minH, item.maxH);
         } else {
-            item.x = clamp(item.x + step[0], 0, maxColumns - item.w);
-            item.y = Math.max(0, item.y + step[1]);
+            p.x = clamp(p.x + step[0], 0, cols - p.w);
+            p.y = Math.max(0, p.y + step[1]);
         }
-        resolve(item);
+        resolve(placesAt(size), p);
         redraw();
-        markDirty();
+        markDirty(size);
     });
 
     // ── Removing and adding ────────────────────────────────────────────
+    // A widget is on both layouts: adding or removing it changes both.
     function remove(item) {
         const next = item.el.nextElementSibling || item.el.previousElementSibling;
         item.el.remove();
         items = items.filter((i) => i !== item);
-        grow();
+        arrange();
         buildCatalogue();
         markDirty();
         if (next && next.classList.contains('dash-item')) next.focus({ preventScroll: true });
@@ -377,9 +388,11 @@
     async function add(entry, button) {
         button.disabled = true;
         button.textContent = 'Adding…';
-        const spot = firstFit(entry.w, entry.h);
+        const wide = firstFit(placesAt('wide'), entry.w, entry.h, SIZES.wide.columns);
+        const tablet = firstFit(placesAt('tablet'), entry.tabletW, entry.h, SIZES.tablet.columns);
         const url = config.widgetUrl.replace('__key__', entry.key)
-            + `?x=${spot.x}&y=${spot.y}&w=${entry.w}&h=${entry.h}`;
+            + `?x=${wide.x}&y=${wide.y}&w=${entry.w}&h=${entry.h}`
+            + `&tx=${tablet.x}&ty=${tablet.y}&tw=${entry.tabletW}&th=${entry.h}`;
         try {
             const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
             if (!response.ok) throw new Error(response.status);
@@ -391,7 +404,6 @@
             grid.appendChild(el);
             const item = itemFrom(el);
             items.push(item);
-            resolve(item);
             redraw();
             initCharts(el);
             markDirty();
@@ -458,19 +470,34 @@
         return response.json();
     }
 
+    const placesToSave = (size) => items.map((i) => {
+        const { x, y, w, h } = i.pos[size];
+        return { key: i.key, x, y, w, h };
+    });
+
     saveButton.addEventListener('click', async () => {
         saveButton.disabled = true;
         const label = saveButton.innerHTML;
         saveButton.textContent = 'Saving…';
+        // The tablet layout is kept once it has been arranged on a tablet; until then it follows
+        // the wide one, and the server works it out.
+        const keepTablet = tabletCustom || edited.has('tablet');
         try {
-            const result = await post({ widgets: items.map(({ key, x, y, w, h }) => ({ key, x, y, w, h })) });
-            const byKey = Object.fromEntries(result.widgets.map((w) => [w.key, w]));
+            const result = await post({
+                widgets: placesToSave('wide'),
+                tablet: keepTablet ? placesToSave('tablet') : null,
+            });
+            const wide = Object.fromEntries(result.widgets.map((w) => [w.key, w]));
+            const tablet = Object.fromEntries(result.tablet.map((w) => [w.key, w]));
             items = items.filter((i) => {
-                const saved = byKey[i.key];
-                if (!saved) { i.el.remove(); return false; }
-                Object.assign(i, saved);
+                if (!wide[i.key]) { i.el.remove(); return false; }
+                ['x', 'y', 'w', 'h'].forEach((k) => {
+                    i.pos.wide[k] = wide[i.key][k];
+                    if (tablet[i.key]) i.pos.tablet[k] = tablet[i.key][k];
+                });
                 return true;
             });
+            tabletCustom = Boolean(result.tabletCustom);
             dirty = false;
             items.forEach(record);
             setEditing(false);
@@ -507,19 +534,21 @@
         }
     });
 
-    // Moves every widget up as far as it will go, closing the gaps left by removed or moved widgets.
+    // Moves every widget up as far as it will go in the layout being arranged, closing the gaps.
     document.getElementById('dashTidy').addEventListener('click', () => {
+        const size = sizeNow();
+        if (size === 'phone') return;
         const placed = [];
-        items.slice().sort((a, b) => a.y - b.y || a.x - b.x).forEach((item) => {
-            while (item.y > 0 && !placed.some((p) => overlaps({ ...item, y: item.y - 1 }, p))) item.y -= 1;
-            placed.push(item);
+        placesAt(size).sort((a, b) => a.y - b.y || a.x - b.x).forEach((p) => {
+            while (p.y > 0 && !placed.some((q) => overlaps({ x: p.x, y: p.y - 1, w: p.w, h: p.h }, q))) p.y -= 1;
+            placed.push(p);
         });
         redraw();
-        markDirty();
+        markDirty(size);
     });
 
     customise.addEventListener('click', () => {
-        if (cellWidth() < EDIT_MIN_CELL) return;
+        if (sizeNow() === 'phone') return;
         readItems();
         setEditing(true);
     });
@@ -527,7 +556,7 @@
     document.getElementById('dashCancel').addEventListener('click', () => {
         if (dirty) {
             dirty = false;
-            window.location.reload();     // puts back the saved layout, and any removed widgets' content
+            window.location.reload();     // puts back the saved layouts, and any removed widgets' content
         } else {
             setEditing(false);
         }
@@ -540,5 +569,5 @@
         }
     });
 
-    updateCustomise();
+    updateCustomise(sizeNow());
 })();

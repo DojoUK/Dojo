@@ -22,16 +22,20 @@ class DashboardView(OrgMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         board = dashboard.Board(self.org, self.request.user, self.org_membership)
+        layouts = dashboard.layouts_for(board)
+        tablet = {i['key']: i for i in layouts['tablet']}
         widgets = []
-        for item in sorted(dashboard.layout_for(board), key=lambda i: (i['y'], i['x'])):
+        for item in sorted(layouts['wide'], key=lambda i: (i['y'], i['x'])):
             widget = dashboard.WIDGETS_BY_KEY[item['key']]
             context.update(dashboard.render_data(widget, board))
-            widgets.append({**item, 'widget': widget, 'area': dashboard.grid_area(item)})
+            widgets.append(frame_item(widget, item, tablet[item['key']]))
 
         single_session_setup = dashboard.single_session_setup(self.org) if board.is_admin else []
         context.update({
             'widgets': widgets,
             'dash_columns': dashboard.COLUMNS,
+            'dash_sizes': {'wideFrom': dashboard.WIDE_FROM_PX, 'tabletFrom': dashboard.TABLET_FROM_PX,
+                           'tabletColumns': dashboard.TABLET_COLUMNS},
             'today': board.today,
             'is_admin': board.is_admin,
             'can_customise': board.is_admin,
@@ -44,6 +48,7 @@ class DashboardView(OrgMixin, TemplateView):
                 'widgetUrl': reverse('org_dashboard_widget', kwargs={'org_slug': self.org.slug, 'key': '__key__'}),
                 'categories': dashboard.CATEGORIES,
                 'catalogue': dashboard.catalogue(board),
+                'tabletCustom': layouts['tablet_custom'],
             }
         return context
 
@@ -74,6 +79,12 @@ class DashboardView(OrgMixin, TemplateView):
         }
 
 
+def frame_item(widget, wide, tablet):
+    """What org/widgets/_frame.html needs: the widget, its place at each size and its limits."""
+    return {**wide, 'widget': widget, 'area': dashboard.grid_area(wide), 'tablet': tablet,
+            'limits': widget.limits()}
+
+
 class DashboardLayoutView(OrgAdminMixin, View):
     """Saves the club's dashboard layout (JSON {"widgets": [...]}), or resets it ({"reset": true})."""
 
@@ -90,11 +101,16 @@ class DashboardLayoutView(OrgAdminMixin, View):
             return JsonResponse({'widgets': dashboard.layout_for(board), 'reset': True})
         if not isinstance(body.get('widgets'), list):
             return JsonResponse({'error': 'That layout could not be read.'}, status=400)
-        return JsonResponse({'widgets': dashboard.save_layout(self.org, body['widgets'], board)})
+        tablet = body.get('tablet') if isinstance(body.get('tablet'), list) else None
+        dashboard.save_layout(self.org, body['widgets'], board, tablet)
+        layouts = dashboard.layouts_for(board)
+        return JsonResponse({'widgets': layouts['wide'], 'tablet': layouts['tablet'],
+                             'tabletCustom': layouts['tablet_custom']})
 
 
 class DashboardWidgetView(OrgAdminMixin, View):
-    """One widget, ready to drop onto the grid while customising. ?x=&y=&w=&h= place it."""
+    """One widget, ready to drop onto the grid while customising. ?x=&y=&w=&h= place it in the wide
+    layout and ?tx=&ty=&tw=&th= in the tablet one."""
 
     def get(self, request, org_slug, key):
         board = dashboard.Board(self.org, request.user, self.org_membership)
@@ -108,13 +124,17 @@ class DashboardWidgetView(OrgAdminMixin, View):
             except (TypeError, ValueError):
                 return default
 
-        w, h = widget.clamp(number('w', widget.size[0]), number('h', widget.size[1]))
-        item = {'key': key, 'w': w, 'h': h,
-                'x': max(0, min(number('x', 0), dashboard.COLUMNS - w)),
-                'y': max(0, min(number('y', 0), dashboard.MAX_ROWS))}
+        def place(prefix, size, default_w):
+            w, h = widget.clamp(number(prefix + 'w', default_w), number(prefix + 'h', widget.size[1]), size)
+            return {'key': key, 'w': w, 'h': h,
+                    'x': max(0, min(number(prefix + 'x', 0), dashboard.SIZE_COLUMNS[size] - w)),
+                    'y': max(0, min(number(prefix + 'y', 0), dashboard.MAX_ROWS))}
+
+        wide = place('', 'wide', widget.default_w())
+        tablet = place('t', 'tablet', widget.default_w('tablet'))
         return render(request, 'org/widgets/_frame.html', {
             **dashboard.render_data(widget, board),
-            'item': {**item, 'widget': widget, 'area': dashboard.grid_area(item)},
+            'item': frame_item(widget, wide, tablet),
             'org': self.org,
             'org_membership': self.org_membership,
             'is_admin': board.is_admin,
