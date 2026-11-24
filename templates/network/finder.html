@@ -21,7 +21,9 @@
 @media (min-width: 992px) {
     .n-results { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); align-items: start; }
     .n-results.no-map { grid-template-columns: minmax(0, 1fr); }
-    #n-map { position: sticky; top: 4.5rem; height: calc(100vh - 6.5rem); min-height: 24rem; order: 2; }
+    /* The wrapper sticks, not the map: Google Maps sets the map itself to position: relative. */
+    .n-map-wrap { position: sticky; top: 4.5rem; order: 2; }
+    #n-map { height: calc(100vh - 6.5rem); min-height: 24rem; }
 }
 .n-club { display: flex; gap: .875rem; align-items: flex-start; padding: .9rem 1.25rem; position: relative; }
 .n-club + .n-club::before { content: ""; position: absolute; top: 0; left: 1.25rem; right: 0; border-top: 1px solid var(--p-separator); }
@@ -66,7 +68,7 @@
 </div>
 
 <div class="n-results{% if not maps_key %} no-map{% endif %}">
-    {% if maps_key %}<div id="n-map" role="region" aria-label="Map of clubs"></div>{% endif %}
+    {% if maps_key %}<div class="n-map-wrap"><div id="n-map" role="region" aria-label="Map of clubs"></div></div>{% endif %}
     <div>
         <div class="p-section"><h2 id="n-count">Clubs</h2></div>
         <div class="card" id="n-list" aria-live="polite"></div>

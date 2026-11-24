@@ -23,6 +23,13 @@
             --p-accent: #2563EB; --p-accent-hover: #1d4ed8; --p-on-accent: #ffffff; --p-on-accent-hover: #ffffff;
         }
         .n-wordmark { height: 20px; opacity: .95; }
+        /* A compact header: the logo, then the page title with its subtitle beside it on one line. */
+        .p-hero { padding: calc(env(safe-area-inset-top) + .625rem) 0 .75rem; }
+        .p-hero .p-wrap { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: .75rem; row-gap: .125rem; }
+        .p-hero .p-brand { flex: 0 0 100%; min-height: 1.5rem; }
+        .p-hero .p-title-row { margin: .375rem 0 0; }
+        .p-hero .p-title { font-size: 1.625rem; }
+        .p-hero .p-subtitle { font-size: .9375rem; }
         .n-auth { max-width: 440px; }
         .p-bar .n-user { color: var(--p-on-accent); opacity: .85; font-size: .875rem; white-space: nowrap; }
         .p-bar .n-user button { color: inherit; }
