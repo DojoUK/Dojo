@@ -28,7 +28,8 @@
 </div>
 {% if can_customise %}
 <div class="d-none gap-2 align-items-center" id="dashEditBar">
-    <span class="small text-muted d-none d-xl-inline">Drag to move · drag the corner to resize</span>
+    <span class="badge rounded-pill text-bg-light border fw-semibold" id="dashEditSize"></span>
+    <span class="small text-muted d-none d-xxl-inline">Drag to move · drag the corner to resize</span>
     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="offcanvas" data-bs-target="#dashCatalogue" aria-controls="dashCatalogue">
         <i class="bi bi-plus-lg me-1"></i>Add widget
     </button>
@@ -96,7 +97,7 @@
 </script>
 {% endif %}
 
-<div class="dash-grid" id="dashGrid" data-columns="{{ dash_columns }}">
+<div class="dash-grid" id="dashGrid" data-columns="{{ dash_columns }}" data-wide-from="{{ dash_sizes.wideFrom }}" data-tablet-from="{{ dash_sizes.tabletFrom }}" data-tablet-columns="{{ dash_sizes.tabletColumns }}">
     {% for item in widgets %}
     {% include 'org/widgets/_frame.html' %}
     {% endfor %}
