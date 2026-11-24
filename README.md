@@ -204,6 +204,6 @@ The Dojo name and logos are trade marks. They are not licensed under the AGPL-3.
 
 ## Credits
 
-The Dojo logo and brand design are by [Ben Labedz](https://benlabedz.xyz/), who kindly donated his work.
+The Dojo logo was designed by [Ben Labedz](https://benlabedz.xyz/), who kindly donated his work.
 
 More about Dojo at [dojouk.github.io/Dojo](https://dojouk.github.io/Dojo/).
