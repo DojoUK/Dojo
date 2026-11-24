@@ -202,4 +202,8 @@ You are free to self-host and modify Dojo. If you run a modified version as a se
 
 The Dojo name and logos are trade marks. They are not licensed under the AGPL-3.0, which allows this under section 7(e). You can use, change and share the code under the licence, but if you publish or run a modified version for others, please give it a different name and logo. Saying it is based on Dojo is fine.
 
+## Credits
+
+The Dojo logo and brand design are by [Ben Labedz](https://benlabedz.xyz/), who kindly donated his work.
+
 More about Dojo at [dojouk.github.io/Dojo](https://dojouk.github.io/Dojo/).
