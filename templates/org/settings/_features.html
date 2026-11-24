@@ -42,5 +42,21 @@
         </div>
     </div>
     <div class="form-text">Change the wording in Settings → Email → Customise emails → Session reminder.</div>
+
+    <hr class="my-4">
+    <h6 class="mb-1">Birthday and “we miss you” emails</h6>
+    <p class="form-text mt-0">Friendly emails that keep members in touch. Both are off until you switch them on; members can switch them off in their portal.</p>
+    <input type="hidden" name="occasional_emails_shown" value="1">
+    <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" role="switch" name="birthday_emails" value="1" id="birthday-emails" {% if org.birthday_emails %}checked{% endif %}>
+        <label class="form-check-label small" for="birthday-emails">Email members on their birthday</label>
+    </div>
+    <label class="form-label small fw-semibold mt-3" for="win-back-days">Email members who stop training</label>
+    <select name="win_back_days" id="win-back-days" class="form-select form-select-sm" style="max-width:360px;">
+        {% for days in org.WIN_BACK_DAYS_CHOICES %}
+        <option value="{{ days }}" {% if days == org.win_back_days %}selected{% endif %}>{% if days %}After {{ days }} days without training{% else %}Don't send{% endif %}</option>
+        {% endfor %}
+    </select>
+    <div class="form-text">Sent once per absence, to members who haven't told you they're leaving. Change the wording in Settings → Email → Customise emails → Birthday and We miss you.</div>
     <button type="submit" class="btn btn-dark btn-sm mt-3">Save features</button>
 </form>

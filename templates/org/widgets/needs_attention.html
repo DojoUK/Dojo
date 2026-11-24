@@ -28,6 +28,19 @@
         <a href="{% url 'member_list' org_slug=org.slug %}?waiver=unsigned" class="btn btn-sm btn-danger">View</a>
     </div>
     {% endif %}
+    {% if payments_failed %}
+    <div class="dash-alert dash-alert-danger">
+        <i class="bi bi-credit-card-2-front-fill"></i>
+        <span><strong>{{ payments_failed }} automatic payment{{ payments_failed|pluralize }}</strong> failed. The member{{ payments_failed|pluralize }} {{ payments_failed|pluralize:"has,have" }} been emailed a link to pay.</span>
+        <a href="{% url 'invoice_list' org_slug=org.slug %}?status=autopay_failed" class="btn btn-sm btn-danger">View</a>
+    </div>
+    {% endif %}
+    {% if cards_expiring %}
+    <div class="dash-alert dash-alert-warning">
+        <i class="bi bi-credit-card"></i>
+        <span><strong>{{ cards_expiring }} saved card{{ cards_expiring|pluralize }}</strong> expired or expiring in the next 30 days. Members are emailed to update them.</span>
+    </div>
+    {% endif %}
     {% if pending_applications %}
     <div class="dash-alert dash-alert-warning">
         <i class="bi bi-person-plus-fill"></i>

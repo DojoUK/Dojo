@@ -46,6 +46,9 @@ class Member(NameParts, models.Model):
     is_active = models.BooleanField(default=True)
     # Reminder emails before sessions (classes/reminders.py); the member can switch them off in their portal.
     session_reminders = models.BooleanField('email reminders before sessions', default=True)
+    # Birthday and "we miss you" emails (members/occasional.py), when the club sends them; the member
+    # can switch them off in their portal.
+    occasional_emails = models.BooleanField('birthday and "we miss you" emails', default=True)
     token = models.CharField(max_length=64, unique=True, default=generate_token)
     token_created_at = models.DateTimeField(default=timezone.now, help_text='When the current portal token was issued — used to auto-rotate stale links')
     joined_date = models.DateField(null=True, blank=True)
@@ -272,6 +275,27 @@ def current_plans(member):
         return [member.billing_policy]
     from billing.models import BillingPolicy
     return list(BillingPolicy.objects.filter(classes__enrolments__member=member).distinct().order_by('name'))
+
+
+class OccasionalEmail(models.Model):
+    """A birthday or "we miss you" email sent to a member, so each one goes once (members/occasional.py)."""
+    class Kind(models.TextChoices):
+        BIRTHDAY = 'birthday', 'Birthday'
+        WIN_BACK = 'win_back', 'We miss you'
+
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='occasional_emails_sent')
+    kind = models.CharField(max_length=20, choices=Kind.choices)
+    # The year, for a birthday; the date of the last session before the absence, for "we miss you".
+    occasion = models.CharField(max_length=20)
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['member', 'kind', 'occasion'], name='one_occasional_email_per_occasion'),
+        ]
+
+    def __str__(self):
+        return f'{self.get_kind_display()} email to {self.member} ({self.occasion})'
 
 
 class MemberLeavingRequest(models.Model):

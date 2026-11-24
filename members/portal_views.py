@@ -226,6 +226,9 @@ class PortalMyDetailsView(View):
         if request.POST.get('reminders_shown'):
             member.session_reminders = request.POST.get('session_reminders') == '1'
             member.save(update_fields=['session_reminders'])
+        if request.POST.get('occasional_shown'):
+            member.occasional_emails = request.POST.get('occasional_emails') == '1'
+            member.save(update_fields=['occasional_emails'])
 
         if _account_holder(member):
             # Their details are kept in their Dojo account; only club-specific choices are saved here.

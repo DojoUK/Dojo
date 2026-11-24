@@ -30,7 +30,7 @@ _EXAMPLE_SUMMARY = {
     'week': '16–22 November 2026', 'sessions': 12, 'registers_missing': 1, 'attended': 148, 'attended_change': 9,
     'active_members': 86, 'new_members': 3, 'billing': True, 'paid': 1240, 'overdue_count': 4, 'overdue_total': 180,
     'not_seen': 6, 'slowing': 4, 'never': 2, 'not_seen_names': ['Ann Lee', 'Ben Cole', 'Cara Dunn'],
-    'applications': 2, 'leaving': 1, 'staff_checks_expiring': 1,
+    'applications': 2, 'leaving': 1, 'staff_checks_expiring': 1, 'payments_failed': 1, 'cards_expiring': 2,
     'not_seen_url': 'https://example.com/org/your-club/members/not-seen/', 'dashboard_url': 'https://example.com/org/your-club/',
 }
 

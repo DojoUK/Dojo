@@ -396,6 +396,11 @@ def needs_attention(board):
         'staff_expired': staff_expired,
         'staff_check_names': ' or '.join(label for _, label in staff_checks),
     }
+    if org.has_feature('billing'):
+        from billing.autopay import needing_attention
+        failed, expiring = needing_attention(org, today)
+        data['payments_failed'] = failed.count()
+        data['cards_expiring'] = expiring.count()
     data['all_clear'] = not any(v for k, v in data.items() if k != 'staff_check_names')
     return data
 
@@ -500,6 +505,17 @@ def class_attendance(board):
     return {'class_rows': rows}
 
 
+def payments_attention(board):
+    """Automatic payments that failed, and saved cards that have expired or expire within 30 days."""
+    from billing.autopay import needing_attention
+    failed, expiring = needing_attention(board.org, board.today)
+    expiring = list(expiring[:20])
+    for autopay in expiring:
+        autopay.state = autopay.expiry_state(board.today)
+    return {'failed_payments': list(failed[:20]), 'failed_count': failed.count(),
+            'expiring_cards': expiring, 'expiring_count': len(expiring)}
+
+
 def recent_payments(board):
     from billing.models import Payment
     payments = Payment.objects.filter(invoice__organisation=board.org).select_related('invoice__member')
@@ -595,6 +611,10 @@ WIDGETS = (
            needs_apps=('network',)),
     Widget('class_attendance', 'Busiest classes', 'Average members at each class over the last 4 weeks.',
            'bi-bar-chart-steps', 'lists', (10, 7), (5, 4), class_attendance, min_px=260),
+    Widget('payments_attention', 'Payments needing attention',
+           'Automatic payments that failed, and members\' saved cards that expire soon.',
+           'bi-credit-card', 'lists', (10, 7), (5, 4), payments_attention, min_px=300,
+           admin_only=True, features=('billing',)),
     Widget('recent_payments', 'Recent payments', 'The latest payments recorded.',
            'bi-cash-coin', 'lists', (10, 7), (5, 4), recent_payments, min_px=280, admin_only=True, features=('billing',)),
 

@@ -69,7 +69,11 @@ def build(org, today=None):
                   timezone.make_aware(datetime.combine(end + timedelta(days=1), time.min)))
         overdue = Invoice.objects.filter(organisation=org).filter(
             Q(status='overdue') | Q(status='unpaid', due_date__lt=today))
+        from billing.autopay import needing_attention
+        failed, expiring = needing_attention(org, today)
         summary.update(
+            payments_failed=failed.count(),
+            cards_expiring=expiring.count(),
             paid=Payment.objects.filter(invoice__organisation=org, paid_at__gte=window[0], paid_at__lt=window[1])
             .aggregate(total=Sum('amount'))['total'] or 0,
             overdue_count=overdue.count(),
@@ -88,6 +92,10 @@ def summary_text(s):
         lines.append(f"Paid last week: £{s['paid']:.2f} · overdue: {s['overdue_count']} invoices, £{s['overdue_total']:.2f}")
     if s['applications']:
         lines.append(f"Applications waiting: {s['applications']}")
+    if s.get('payments_failed'):
+        lines.append(f"Automatic payments failed: {s['payments_failed']}")
+    if s.get('cards_expiring'):
+        lines.append(f"Saved cards expired or expiring in 30 days: {s['cards_expiring']}")
     if s['leaving']:
         lines.append(f"Members asking to leave: {s['leaving']}")
     if s['staff_checks_expiring']:

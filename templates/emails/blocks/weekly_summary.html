@@ -17,6 +17,8 @@
       <li>Not seen in 3 weeks: <strong>{{ not_seen }}</strong> · coming less often: <strong>{{ slowing }}</strong> · never come: <strong>{{ never }}</strong>{% if not_seen_names %} ({{ not_seen_names|join:", " }}{% if not_seen|add:slowing > not_seen_names|length %} and others{% endif %}){% endif %}</li>
       {% if applications %}<li>Applications waiting: <strong>{{ applications }}</strong></li>{% endif %}
       {% if leaving %}<li>Members asking to leave: <strong>{{ leaving }}</strong></li>{% endif %}
+      {% if payments_failed %}<li>Automatic payments that failed: <strong>{{ payments_failed }}</strong></li>{% endif %}
+      {% if cards_expiring %}<li>Saved cards expired or expiring in the next 30 days: <strong>{{ cards_expiring }}</strong></li>{% endif %}
       {% if staff_checks_expiring %}<li>Staff checks expiring in the next 30 days: <strong>{{ staff_checks_expiring }}</strong></li>{% endif %}
     </ul>
     <p style="margin:10px 0 0;"><a href="{{ not_seen_url }}" style="color:#2563eb;">Open Not seen lately</a> · <a href="{{ dashboard_url }}" style="color:#2563eb;">Go to your dashboard</a></p>

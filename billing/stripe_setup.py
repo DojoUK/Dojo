@@ -4,7 +4,7 @@ from django.urls import reverse
 
 # Card payments, saved cards and Direct Debits for automatic payment, and their results.
 WEBHOOK_EVENTS = ['checkout.session.completed', 'checkout.session.expired', 'payment_intent.succeeded',
-                  'payment_intent.payment_failed']
+                  'payment_intent.payment_failed', 'payment_method.automatically_updated']
 
 
 def webhook_url(org):

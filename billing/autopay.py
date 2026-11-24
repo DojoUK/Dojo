@@ -7,11 +7,18 @@ Invoices are marked `due` when they're created and collected by the scheduler
 (`run_scheduler`) within a minute. Cards succeed or fail straight away; Direct
 Debits take about three working days, and Stripe reports the result to the
 club's webhook.
+
+Cards expire, so Dojo keeps each saved card's expiry date. Stripe's card updater
+reports cards that banks have replaced (payment_method.automatically_updated),
+and warn_expiring_cards() emails members whose card is about to run out.
 """
+import calendar
 import logging
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 
 from . import payments
@@ -85,6 +92,18 @@ def _label(payment_method):
     return f"{field(card, 'brand', 'card').title()} ending {field(card, 'last4', '????')}"
 
 
+def _expiry(payment_method):
+    """The last day a card works (the end of its expiry month), or None for anything else."""
+    if field(payment_method, 'type') != 'card':
+        return None
+    card = field(payment_method, 'card')
+    try:
+        year, month = int(field(card, 'exp_year')), int(field(card, 'exp_month'))
+        return date(year, month, calendar.monthrange(year, month)[1])
+    except (TypeError, ValueError):
+        return None
+
+
 def save_from_setup_intent(org, setup_intent):
     """Store the payment method from a completed Stripe setup. Returns the AutoPay, or None."""
     from members.models import Member
@@ -103,6 +122,8 @@ def save_from_setup_intent(org, setup_intent):
         'method_type': field(payment_method, 'type'),
         'label': _label(payment_method),
         'active': True,
+        'expires_on': _expiry(payment_method),
+        'expiry_warned_for': None,
     })
     # Only invoices made from now on are collected automatically, plus the one the member was paying
     # when they set this up. Older unpaid invoices aren't charged without them asking.
@@ -260,3 +281,99 @@ def payment_intent_failed(org, intent):
     if invoice is not None:
         error = field(field(intent, 'last_payment_error'), 'message', 'The payment didn\'t go through.')
         _fail(invoice, error)
+
+
+def payment_method_updated(org, payment_method):
+    """Webhook: Stripe's card updater has new details for a card (a bank sent a replacement), or the
+    card was edited. The saved card keeps working, so just record its new label and expiry."""
+    from .models import AutoPay
+    AutoPay.objects.filter(member__organisation=org, payment_method_id=field(payment_method, 'id')).update(
+        label=_label(payment_method), expires_on=_expiry(payment_method), expiry_warned_for=None)
+
+
+# ── Expiring cards ────────────────────────────────────────────────────────────
+
+WARN_FROM_HOUR = 9
+
+
+def _fill_in_expiry(autopay, keys):
+    """Fetch the expiry of a card saved before Dojo kept it. Returns True if it was found."""
+    import stripe
+
+    from .models import AutoPay
+    try:
+        payment_method = stripe.PaymentMethod.retrieve(autopay.payment_method_id, api_key=keys.secret)
+    except stripe.error.StripeError:
+        return False
+    autopay.expires_on = _expiry(payment_method)
+    AutoPay.objects.filter(pk=autopay.pk).update(expires_on=autopay.expires_on)
+    return autopay.expires_on is not None
+
+
+def _expiry_text(autopay, today):
+    month = f'{autopay.expires_on:%B %Y}'
+    if autopay.expires_on < today:
+        return f'expired at the end of {month}', 'has expired'
+    return f'expires at the end of {month}', 'expires soon'
+
+
+def warn_expiring_cards(now=None, fill_in_limit=25):
+    """
+    Email each member whose saved card expires within AutoPay.EXPIRY_WARNING_DAYS (or has expired),
+    once per card, with a link to update it. Cards saved before Dojo kept expiry dates are looked up
+    in Stripe a few at a time. Returns how many members were emailed.
+    """
+    from django.conf import settings
+    from django.urls import reverse
+
+    from mailer import compose
+
+    from .models import AutoPay
+    now = timezone.localtime(now or timezone.now())
+    if now.hour < WARN_FROM_HOUR:
+        return 0
+    today = now.date()
+    cards = (AutoPay.objects.filter(active=True, method_type='card', member__is_active=True)
+             .select_related('member__organisation'))
+    for autopay in cards.filter(expires_on__isnull=True)[:fill_in_limit]:
+        keys = payments.stripe_keys(autopay.member.organisation)
+        if keys is not None:
+            _fill_in_expiry(autopay, keys)
+
+    warned = 0
+    due = cards.filter(expires_on__lte=today + timedelta(days=AutoPay.EXPIRY_WARNING_DAYS)).exclude(
+        expiry_warned_for=F('expires_on'))
+    for autopay in due:
+        member, org = autopay.member, autopay.member.organisation
+        recipient = _recipient_email(member)
+        if not recipient or not enabled(org):
+            continue
+        # Claim it first, so two schedulers can't both email the same member.
+        if not AutoPay.objects.filter(pk=autopay.pk).exclude(expiry_warned_for=autopay.expires_on).update(
+                expiry_warned_for=autopay.expires_on):
+            continue
+        expiry, expiry_short = _expiry_text(autopay, today)
+        link = settings.SITE_URL.rstrip('/') + reverse('member_portal', kwargs={'token': member.token}) + '#paying'
+        try:
+            compose.send(org, 'card_expiring', [recipient],
+                         {**compose.member_values(member, to_guardian=recipient != member.email),
+                          'card': autopay.label, 'expiry': expiry, 'expiry_short': expiry_short,
+                          'update_link': link})
+        except Exception:
+            log.exception('Could not email member %s about their expiring card', member.pk)
+            AutoPay.objects.filter(pk=autopay.pk).update(expiry_warned_for=None)   # try again next run
+            continue
+        warned += 1
+    return warned
+
+
+def needing_attention(org, today=None):
+    """(failed invoices, cards expiring or expired) for the club's dashboard."""
+    from .models import AutoPay, Invoice
+    today = today or timezone.localdate()
+    failed = (Invoice.objects.filter(organisation=org, status='unpaid', autopay_status='failed')
+              .select_related('member').order_by('-due_date'))
+    expiring = (AutoPay.objects.filter(member__organisation=org, member__is_active=True, active=True,
+                                       expires_on__lte=today + timedelta(days=AutoPay.EXPIRY_WARNING_DAYS))
+                .select_related('member').order_by('expires_on'))
+    return failed, expiring

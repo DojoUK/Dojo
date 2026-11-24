@@ -65,6 +65,10 @@ class StripeWebhookView(View):
             from .autopay import payment_intent_failed
             payment_intent_failed(self.organisation, obj)
 
+        elif event_type == 'payment_method.automatically_updated' and self.organisation is not None:
+            from .autopay import payment_method_updated
+            payment_method_updated(self.organisation, obj)
+
         elif event_type in ('customer.subscription.created', 'customer.subscription.updated'):
             self._handle_subscription_updated(obj)
 

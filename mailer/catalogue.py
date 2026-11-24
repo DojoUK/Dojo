@@ -358,4 +358,81 @@ The full list of members not seen lately is attached, and on the Not seen lately
     ),
 )
 
+EMAIL_TYPES += (
+    EmailType(
+        'birthday', 'Birthday',
+        'On a member\'s birthday, if the club sends birthday emails (Settings → Features). Members can '
+        'switch them off in their portal.',
+        'Happy birthday, {first_name}!',
+        """{greeting},
+
+Happy birthday to {first_name} from everyone at **{club_name}**! We hope it's a brilliant day.
+
+See you on the mat soon,
+**{club_name}**
+
+Don't want birthday emails? You can [switch them off in your member portal]({settings_link}).""",
+        fields=(
+            ('age', 'How old they are today'),
+            ('portal_link', 'Link to the member portal'),
+            ('settings_link', 'Link to switch these emails off in the member portal'),
+        ),
+        example={'age': '12', 'portal_link': 'https://example.com/p/…',
+                 'settings_link': 'https://example.com/p/…/details/#club-emails'},
+    ),
+    EmailType(
+        'win_back', 'We miss you',
+        'Once, when a member hasn\'t trained for the number of days the club chooses (Settings → Features). '
+        'Members can switch these off in their portal.',
+        'We miss you at {club_name}',
+        """{greeting},
+
+We haven't seen {first_name} at {club_name} since {last_seen}, and we wanted to check everything's OK.
+
+Whenever you're ready to come back, you'll be very welcome. You can see the timetable and book from your member portal:
+
+{portal_button}
+
+If something's making it hard to train, just reply to this email. We'd love to help.
+
+**{club_name}**
+
+You can [switch off emails like this in your member portal]({settings_link}).""",
+        fields=(
+            ('last_seen', 'The day of their last session, e.g. "Saturday 3 October"'),
+            ('class_name', 'The class they last came to'),
+            ('days_away', 'How many days since they last trained'),
+            ('portal_link', 'Link to the member portal'),
+            ('settings_link', 'Link to switch these emails off in the member portal'),
+        ),
+        blocks=(('portal_button', 'A "Go to member portal" button with the link underneath'),),
+        example={'last_seen': 'Saturday 3 October', 'class_name': 'Juniors', 'days_away': '30',
+                 'portal_link': 'https://example.com/p/…',
+                 'settings_link': 'https://example.com/p/…/details/#club-emails'},
+    ),
+    EmailType(
+        'card_expiring', 'Card expiring',
+        'About a month before the card a member pays automatically with expires, and again if it has '
+        'expired without being replaced.',
+        'Your card for {club_name} {expiry_short}',
+        """{greeting},
+
+The {card} you pay {club_name} with automatically {expiry}. To keep your payments going without a hitch, please add your new card details:
+
+[button: Update your card]({update_link})
+
+It only takes a minute, and nothing changes about what you pay.
+
+**{club_name}**""",
+        fields=(
+            ('card', 'The saved card, e.g. "Visa ending 4242"'),
+            ('expiry', '"expires at the end of January 2027" or "expired at the end of October 2026"'),
+            ('expiry_short', '"expires soon" or "has expired"'),
+            ('update_link', 'Link to update the card in the member portal'),
+        ),
+        example={'card': 'Visa ending 4242', 'expiry': 'expires at the end of January 2027',
+                 'expiry_short': 'expires soon', 'update_link': 'https://example.com/p/…#paying'},
+    ),
+)
+
 BY_KEY = {email_type.key: email_type for email_type in EMAIL_TYPES}
