@@ -25,6 +25,11 @@ def maps_key():
     return getattr(settings, 'GOOGLE_MAPS_API_KEY', '') or ''
 
 
+def maps_map_id():
+    """The Map ID the club maps use: Dojo's logo pins (Google's advanced markers) only show on a map with one."""
+    return getattr(settings, 'GOOGLE_MAPS_MAP_ID', '') or 'DEMO_MAP_ID'
+
+
 def geocode(address):
     """(latitude, longitude) for an address, or None if Google can't place it (or there's no key)."""
     key = maps_key()

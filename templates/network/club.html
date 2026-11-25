@@ -66,11 +66,11 @@
         <script>
         window.dojoClubMap = function () {
             var at = {lat: {{ org.latitude|stringformat:'s' }}, lng: {{ org.longitude|stringformat:'s' }}};
-            var map = new google.maps.Map(document.getElementById('n-club-map'), {center: at, zoom: 15, streetViewControl: false, mapTypeControl: false});
-            new google.maps.Marker({map: map, position: at, title: "{{ org.name|escapejs }}"});
+            var map = new google.maps.Map(document.getElementById('n-club-map'), {center: at, zoom: 15, streetViewControl: false, mapTypeControl: false, mapId: "{{ maps_map_id|escapejs }}"});
+            new google.maps.marker.AdvancedMarkerElement({map: map, position: at, title: "{{ org.name|escapejs }}", content: dojoPin()});
         };
         </script>
-        <script async src="https://maps.googleapis.com/maps/api/js?key={{ maps_key|urlencode }}&callback=dojoClubMap&loading=async"></script>
+        <script async src="https://maps.googleapis.com/maps/api/js?key={{ maps_key|urlencode }}&callback=dojoClubMap&loading=async&libraries=marker"></script>
         {% endif %}
     </section>
 </div>
