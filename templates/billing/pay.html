@@ -33,12 +33,12 @@
                 {% elif balance_due == 0 %}
                 <div class="alert alert-success small mb-0"><i class="bi bi-check-circle me-1"></i> This invoice is paid. Thank you!</div>
                 {% elif invoice.autopay_status == 'processing' %}
-                <div class="alert alert-info small mb-0"><i class="bi bi-hourglass-split me-1"></i> This is being collected by Direct Debit from your {{ autopay.label }}. It usually takes about 3 working days. Nothing else to do.</div>
+                <div class="alert alert-info small mb-0"><i class="bi bi-hourglass-split me-1"></i> This is being paid by Direct Debit{% if autopay %} from your {{ autopay.label }}{% endif %}. It usually takes about 3 working days. Nothing else to do.</div>
                 {% elif invoice.autopay_status == 'due' or invoice.autopay_status == 'collecting' %}
                 <div class="alert alert-info small mb-0"><i class="bi bi-arrow-repeat me-1"></i> This will be collected automatically from your {{ autopay.label }} in the next few minutes.</div>
                 {% else %}
                 {% if invoice.autopay_status == 'failed' %}
-                <div class="alert alert-danger small"><i class="bi bi-exclamation-triangle me-1"></i> We couldn't take this automatically: {{ invoice.autopay_error }} Please pay below.</div>
+                <div class="alert alert-danger small"><i class="bi bi-exclamation-triangle me-1"></i> We couldn't take this payment: {{ invoice.autopay_error }} Please pay below.</div>
                 {% endif %}
                 {% if just_paid %}
                 <div class="alert alert-info small"><i class="bi bi-hourglass-split me-1"></i> Thanks! Your payment is being confirmed. This page will show "Paid" shortly.</div>
@@ -52,9 +52,9 @@
                 <form method="post" action="{% url 'invoice_pay_card' token=token %}" class="mb-3">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-dark w-100 py-2">
-                        <i class="bi bi-credit-card me-1"></i> Pay £{{ balance_due|floatformat:2 }} by card
+                        <i class="bi bi-credit-card me-1"></i> Pay £{{ balance_due|floatformat:2 }} {% if 'Direct Debit' in online_methods_text %}online{% else %}by card{% endif %}
                     </button>
-                    <div class="form-text text-center">Card, Apple Pay or Google Pay, through Stripe.</div>
+                    <div class="form-text text-center">{{ online_methods_text|default:"Card, Apple Pay or Google Pay" }}, through Stripe.</div>
                 </form>
                 {% endif %}
 

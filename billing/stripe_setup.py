@@ -2,9 +2,51 @@
 from django.conf import settings
 from django.urls import reverse
 
-# Card payments, saved cards and Direct Debits for automatic payment, and their results.
+# Card payments, saved cards and Direct Debits for automatic payment, and their results. Direct Debits
+# paid at Checkout clear (or fail) days later: checkout.session.async_payment_succeeded / _failed.
 WEBHOOK_EVENTS = ['checkout.session.completed', 'checkout.session.expired', 'payment_intent.succeeded',
-                  'payment_intent.payment_failed']
+                  'payment_intent.payment_failed', 'payment_method.automatically_updated',
+                  'checkout.session.async_payment_succeeded', 'checkout.session.async_payment_failed']
+
+
+# The ways to pay Dojo tells clubs and members about, in this order: (Stripe's name, ours).
+PAYMENT_METHODS = (('card', 'Card'), ('apple_pay', 'Apple Pay'), ('google_pay', 'Google Pay'),
+                   ('bacs_debit', 'Bacs Direct Debit'))
+
+
+def payment_methods(secret_key):
+    """
+    Which PAYMENT_METHODS the club's Stripe account offers at checkout, from its default payment
+    method configuration (Stripe → Settings → Payment methods): a list of (key, label, state), where
+    state is 'on', 'pending' (switched on, but Stripe hasn't activated it yet) or 'off'. Methods
+    Stripe doesn't offer in the account's country are left out. None if Stripe can't say.
+    """
+    import stripe
+
+    from .payments import field
+    try:
+        configs = list(stripe.PaymentMethodConfiguration.list(api_key=secret_key, limit=20).auto_paging_iter())
+    except stripe.error.StripeError:
+        return None
+    config = (next((c for c in configs if field(c, 'is_default') and field(c, 'active')), None)
+              or next((c for c in configs if field(c, 'active')), None))
+    if config is None:
+        return None
+    rows = []
+    for key, label in PAYMENT_METHODS:
+        method = field(config, key)
+        if method is None:
+            continue
+        switched_on = field(field(method, 'display_preference'), 'value') == 'on'
+        rows.append((key, label, 'on' if field(method, 'available') else 'pending' if switched_on else 'off'))
+    return rows
+
+
+def methods_text(keys):
+    """'Card, Apple Pay or Google Pay': the methods that are on, for the pay page. '' if there are none."""
+    labels = [label for key, label in PAYMENT_METHODS if key in keys]
+    labels = ['Direct Debit' if label == 'Bacs Direct Debit' else label for label in labels]
+    return ' or '.join([', '.join(labels[:-1]), labels[-1]]) if len(labels) > 1 else ''.join(labels)
 
 
 def webhook_url(org):

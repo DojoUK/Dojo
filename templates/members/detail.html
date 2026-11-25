@@ -639,6 +639,8 @@
                             {% endif %}
                             {% if member.subscription_status == 'active' %}
                             <span class="badge bg-success-subtle text-success">Subscription active</span>
+                            {% elif member.subscription_status == 'incomplete' %}
+                            <span class="badge bg-info-subtle text-info-emphasis" title="The first Direct Debit takes about 3 working days to clear">Subscription starting</span>
                             {% elif member.subscription_status == 'cancelling' %}
                             <span class="badge bg-warning-subtle text-warning">Subscription ending</span>
                             {% elif member.subscription_status == 'past_due' %}

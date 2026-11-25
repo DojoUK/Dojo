@@ -80,6 +80,7 @@
                     <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>Paid</option>
                     <option value="overdue" {% if status_filter == 'overdue' %}selected{% endif %}>Overdue</option>
                     <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                    <option value="autopay_failed" {% if status_filter == 'autopay_failed' %}selected{% endif %}>Automatic payment failed</option>
                 </select>
                 <button type="submit" class="btn btn-sm btn-outline-secondary">Filter</button>
                 {% if q or status_filter %}<a href="{% url 'invoice_list' org_slug=org.slug %}" class="btn btn-sm btn-outline-secondary">Clear</a>{% endif %}

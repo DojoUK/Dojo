@@ -1,0 +1,28 @@
+{% extends 'org/widgets/_card.html' %}
+{% block icon %}bi-credit-card{% endblock %}{% block title %}Payments needing attention{% endblock %}
+{% block action %}{% if failed_count %}<a href="{% url 'invoice_list' org_slug=org.slug %}?status=autopay_failed" class="small text-nowrap">See all</a>{% endif %}{% endblock %}
+{% block body %}
+{% if failed_payments or expiring_cards %}
+<div class="list-group list-group-flush small">
+    {% for invoice in failed_payments %}
+    <a href="{% url 'invoice_detail' org_slug=org.slug pk=invoice.pk %}" class="list-group-item list-group-item-action py-2">
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-danger-subtle text-danger-emphasis">Failed</span>
+            <span class="text-truncate flex-grow-1 fw-semibold">{{ invoice.member.register_name|default:invoice.member.name }}</span>
+            <span class="text-nowrap">£{{ invoice.amount|floatformat:2 }}</span>
+        </div>
+        {% if invoice.autopay_error %}<div class="text-muted text-truncate mt-1">{{ invoice.autopay_error }}</div>{% endif %}
+    </a>
+    {% endfor %}
+    {% for autopay in expiring_cards %}
+    <a href="{% url 'member_detail' org_slug=org.slug pk=autopay.member_id %}" class="list-group-item list-group-item-action d-flex align-items-center gap-2 py-2">
+        <span class="badge {% if autopay.state == 'expired' %}bg-danger-subtle text-danger-emphasis{% else %}bg-warning-subtle text-warning-emphasis{% endif %}">{% if autopay.state == 'expired' %}Expired{% else %}Expiring{% endif %}</span>
+        <span class="text-truncate flex-grow-1">{{ autopay.member.register_name|default:autopay.member.name }}</span>
+        <span class="text-muted text-nowrap">{{ autopay.label }} · {{ autopay.expires_on|date:"M Y" }}</span>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="dash-empty"><i class="bi bi-check2-circle text-success"></i>No failed payments or expiring cards.</div>
+{% endif %}
+{% endblock %}

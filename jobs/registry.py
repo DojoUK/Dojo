@@ -32,6 +32,16 @@ def _send_weekly_summaries():
     return send_due()
 
 
+def _send_occasional_emails():
+    from members.occasional import send_due
+    return send_due()
+
+
+def _warn_expiring_cards():
+    from billing.autopay import warn_expiring_cards
+    return warn_expiring_cards()
+
+
 JOBS = (
     ('collect_automatic_payments', 60, _collect_automatic_payments),
     # Both are safe to repeat: a period's invoices are made once, and reminders respect their repeat gap.
@@ -40,6 +50,9 @@ JOBS = (
     ('send_session_reminders', 10 * 60, _send_session_reminders),
     ('send_review_prompts', 60 * 60, _send_review_prompts),
     ('send_weekly_summaries', 30 * 60, _send_weekly_summaries),
+    # Each email goes once (a record is claimed first), so running these hourly is safe.
+    ('send_occasional_emails', 60 * 60, _send_occasional_emails),
+    ('warn_expiring_cards', 60 * 60, _warn_expiring_cards),
 )
 
 

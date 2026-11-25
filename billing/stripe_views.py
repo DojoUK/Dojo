@@ -54,6 +54,12 @@ class StripeWebhookView(View):
         elif event_type == 'checkout.session.completed':
             self._handle_checkout_completed(obj)
 
+        elif event_type == 'checkout.session.async_payment_succeeded':
+            self._handle_async_payment(obj, succeeded=True)
+
+        elif event_type == 'checkout.session.async_payment_failed':
+            self._handle_async_payment(obj, succeeded=False)
+
         elif event_type == 'checkout.session.expired':
             self._handle_checkout_expired(obj)
 
@@ -64,6 +70,10 @@ class StripeWebhookView(View):
         elif event_type == 'payment_intent.payment_failed' and self.organisation is not None:
             from .autopay import payment_intent_failed
             payment_intent_failed(self.organisation, obj)
+
+        elif event_type == 'payment_method.automatically_updated' and self.organisation is not None:
+            from .autopay import payment_method_updated
+            payment_method_updated(self.organisation, obj)
 
         elif event_type in ('customer.subscription.created', 'customer.subscription.updated'):
             self._handle_subscription_updated(obj)
@@ -89,40 +99,63 @@ class StripeWebhookView(View):
                                                    expand=['payment_method'])
         save_from_setup_intent(self.organisation, setup_intent)
 
-    def _handle_checkout_completed(self, session):
-        try:
-            invoice_pk = session.metadata['invoice_pk']
-        except (AttributeError, KeyError, TypeError):
-            invoice_pk = None
+    def _checkout_invoice(self, session):
+        """The Dojo invoice a Checkout session is paying, or None."""
+        invoice_pk = str(field(field(session, 'metadata'), 'invoice_pk', ''))
+        if not invoice_pk.isdigit():
+            return None
+        invoices = Invoice.objects.filter(pk=invoice_pk)
+        if self.organisation is not None:
+            invoices = invoices.filter(organisation=self.organisation)
+        return invoices.first()
 
-        if invoice_pk:
-            invoices = Invoice.objects.all()
-            if self.organisation is not None:
-                invoices = invoices.filter(organisation=self.organisation)
-            try:
-                invoice = invoices.get(pk=invoice_pk)
-                if invoice.status != 'paid':
-                    amount_total = getattr(session, 'amount_total', None)
-                    Payment.objects.create(
-                        invoice=invoice,
-                        amount=(Decimal(amount_total) / 100) if amount_total is not None else invoice.balance_due,
-                        method=Payment.Method.STRIPE,
-                        stripe_payment_id=getattr(session, 'payment_intent', ''),
-                        notes=f"Stripe Checkout session {session.id}",
-                        paid_at=timezone.now(),
-                    )
-                    invoice.status = 'paid'
-                    invoice.save(update_fields=['status'])
-                if invoice.status == 'paid':
-                    # A single session booked by a member with no plan is confirmed only now.
-                    from classes.booking import confirm_paid
-                    confirm_paid(invoice)
-            except Invoice.DoesNotExist:
-                pass
+    def _handle_checkout_completed(self, session):
+        invoice = self._checkout_invoice(session)
+        if invoice is not None:
+            if field(session, 'payment_status', 'paid') == 'unpaid':
+                # Paid by Direct Debit: Stripe has the mandate, and reports the result in about 3 working
+                # days (checkout.session.async_payment_succeeded or _failed). Until then it isn't paid.
+                Invoice.objects.filter(pk=invoice.pk, status='unpaid').update(autopay_status='processing',
+                                                                              autopay_error='')
+            else:
+                self._record_checkout_payment(invoice, session)
 
         # If this was a subscription checkout, store subscription_id on member
-        if getattr(session, 'mode', None) == 'subscription' and getattr(session, 'subscription', None):
+        if field(session, 'mode') == 'subscription' and field(session, 'subscription'):
             self._store_subscription_on_member(session)
+
+    def _record_checkout_payment(self, invoice, session):
+        if invoice.status != 'paid':
+            amount_total = field(session, 'amount_total')
+            Payment.objects.create(
+                invoice=invoice,
+                amount=(Decimal(amount_total) / 100) if amount_total is not None else invoice.balance_due,
+                method=Payment.Method.STRIPE,
+                stripe_payment_id=field(session, 'payment_intent', ''),
+                notes=f"Stripe Checkout session {field(session, 'id')}",
+                paid_at=timezone.now(),
+            )
+            invoice.status = 'paid'
+            invoice.autopay_status = 'paid' if invoice.autopay_status == 'processing' else invoice.autopay_status
+            invoice.save(update_fields=['status', 'autopay_status'])
+        if invoice.status == 'paid':
+            # A single session booked by a member with no plan is confirmed only now.
+            from classes.booking import confirm_paid
+            confirm_paid(invoice)
+
+    def _handle_async_payment(self, session, succeeded):
+        """A Direct Debit started at Stripe Checkout has cleared, or failed."""
+        invoice = self._checkout_invoice(session)
+        if invoice is not None:
+            if succeeded:
+                self._record_checkout_payment(invoice, session)
+            elif invoice.status == 'unpaid':
+                from .autopay import payment_failed
+                payment_failed(invoice, 'The Direct Debit didn\'t go through. Your bank may have more details.')
+        if field(session, 'mode') == 'subscription' and field(session, 'subscription'):
+            from members.models import Member
+            Member.objects.filter(stripe_subscription_id=field(session, 'subscription')).update(
+                subscription_status='active' if succeeded else 'incomplete')
 
     def _handle_checkout_expired(self, session):
         """A checkout page timed out unpaid: let go of the single session held for it."""
@@ -144,7 +177,8 @@ class StripeWebhookView(View):
             member_pk = session.metadata['member_pk']
             member = Member.objects.get(pk=member_pk)
             member.stripe_subscription_id = session.subscription
-            member.subscription_status = 'active'
+            # A Direct Debit takes about 3 working days: active once it clears (_handle_async_payment).
+            member.subscription_status = 'incomplete' if field(session, 'payment_status', 'paid') == 'unpaid' else 'active'
             member.save(update_fields=['stripe_subscription_id', 'subscription_status'])
         except (AttributeError, KeyError, TypeError, Member.DoesNotExist):
             pass

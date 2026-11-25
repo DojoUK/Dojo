@@ -222,6 +222,23 @@ class Organisation(models.Model):
         value = (self.settings or {}).get('session_reminder_scope', 'booked')
         return value if value in dict(self.SESSION_REMINDER_SCOPES) else 'booked'
 
+    # Birthday and "we miss you" emails to members (members/occasional.py). Both are off until a club
+    # switches them on in Settings → Features. "We miss you" goes after this many days without training.
+    WIN_BACK_DAYS_CHOICES = (0, 21, 30, 45, 60, 90)
+
+    @property
+    def birthday_emails(self):
+        return (self.settings or {}).get('birthday_emails') is True
+
+    @property
+    def win_back_days(self):
+        value = (self.settings or {}).get('win_back_days', 0)
+        return value if value in self.WIN_BACK_DAYS_CHOICES and not isinstance(value, bool) else 0
+
+    @property
+    def sends_occasional_emails(self):
+        return self.birthday_emails or bool(self.win_back_days)
+
     @property
     def booking_cutoff_hours(self):
         """How many hours before a session starts members can no longer book or cancel it themselves."""

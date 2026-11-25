@@ -720,6 +720,15 @@ class OrgSettingsView(OrgAdminMixin, View):
                    'stripe_webhook_url': webhook_url(self.org), 'scheduler_running': is_running()}
         if payment_settings and payment_settings.accept_card and self.request.GET.get('check_stripe'):
             context['stripe_check'] = check_connection(payment_settings.stripe_secret_key)
+            if context['stripe_check'][0]:
+                from billing.stripe_setup import payment_methods
+                methods = payment_methods(payment_settings.stripe_secret_key)
+                context['stripe_methods'] = methods
+                if methods is not None:
+                    # Remembered so the pay page names the methods members will find on Stripe's page.
+                    payment_settings.set_secrets({**payment_settings.get_secrets(),
+                                                  'stripe_methods': ' '.join(k for k, _, state in methods if state == 'on')})
+                    payment_settings.save(update_fields=['secrets'])
         return context
 
     def _email_context(self):
@@ -808,6 +817,15 @@ class OrgSettingsView(OrgAdminMixin, View):
                     self.org.settings = {**(self.org.settings or {}), 'session_reminder_hours': hours,
                                          'session_reminder_scope': scope}
                     update_fields.append('settings')
+            if request.POST.get('occasional_emails_shown'):
+                try:
+                    days = int(request.POST.get('win_back_days', 0))
+                except ValueError:
+                    days = 0
+                self.org.settings = {**(self.org.settings or {}),
+                                     'birthday_emails': request.POST.get('birthday_emails') == '1',
+                                     'win_back_days': days if days in Organisation.WIN_BACK_DAYS_CHOICES else 0}
+                update_fields.append('settings')
             price_raw = request.POST.get('single_session_price')
             if price_raw is not None:
                 from decimal import Decimal, InvalidOperation

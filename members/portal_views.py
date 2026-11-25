@@ -226,6 +226,9 @@ class PortalMyDetailsView(View):
         if request.POST.get('reminders_shown'):
             member.session_reminders = request.POST.get('session_reminders') == '1'
             member.save(update_fields=['session_reminders'])
+        if request.POST.get('occasional_shown'):
+            member.occasional_emails = request.POST.get('occasional_emails') == '1'
+            member.save(update_fields=['occasional_emails'])
 
         if _account_holder(member):
             # Their details are kept in their Dojo account; only club-specific choices are saved here.
@@ -945,7 +948,8 @@ class CreateSubscriptionView(View):
         session = stripe.checkout.Session.create(
             api_key=keys.secret,
             customer=customer_id,
-            payment_method_types=['card'],
+            # The methods switched on in the club's Stripe dashboard: card, Apple Pay, Google Pay, Bacs
+            # Direct Debit. (Stripe API versions from 2026-09-30 refuse a payment_method_types list.)
             line_items=[{
                 'price_data': {
                     'currency': 'gbp',

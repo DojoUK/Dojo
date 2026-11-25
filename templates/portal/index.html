@@ -145,7 +145,7 @@
 
     {# 4. How you pay. #}
     {% if autopay_enabled or subscription_enabled %}
-    <section class="p-group">
+    <section class="p-group" id="paying">
         <div class="p-section"><h2>Paying</h2></div>
         {% if autopay_enabled %}
         <div class="card{% if subscription_enabled %} mb-3{% endif %}">
@@ -155,6 +155,9 @@
                     {% if autopay %}
                     <div class="p-row-title">Paying automatically</div>
                     <div class="p-row-sub">Invoices are taken from your {{ autopay.label }} when they're issued.</div>
+                    {% with state=autopay.expiry_state %}{% if state %}
+                    <div class="p-row-sub text-danger fw-semibold mt-1"><i class="bi bi-exclamation-circle me-1"></i>{% if state == 'expired' %}This card expired at the end of {{ autopay.expires_on|date:"F Y" }}. Change it so your payments can be taken.{% else %}This card expires at the end of {{ autopay.expires_on|date:"F Y" }}. Change it to keep paying automatically.{% endif %}</div>
+                    {% endif %}{% endwith %}
                     {% else %}
                     <div class="p-row-title">{% if autopay_expected %}{{ org.name }} asks members to pay automatically{% else %}Pay automatically{% endif %}</div>
                     <div class="p-row-sub">Save a card or set up a Direct Debit once, and invoices are paid when they're issued.</div>
@@ -186,7 +189,13 @@
                 <span class="p-icon is-green"><i class="bi bi-check-lg"></i></span>
                 <div class="p-row-main">
                     <div class="p-row-title">Autopay active</div>
-                    <div class="p-row-sub">£{{ member.monthly_fee|floatformat:2 }}/month — card charged automatically each month.</div>
+                    <div class="p-row-sub">£{{ member.monthly_fee|floatformat:2 }}/month — taken automatically each month.</div>
+                </div>
+                {% elif member.subscription_status == 'incomplete' %}
+                <span class="p-icon is-accent"><i class="bi bi-hourglass-split"></i></span>
+                <div class="p-row-main">
+                    <div class="p-row-title">Autopay starting</div>
+                    <div class="p-row-sub">Your first Direct Debit payment usually takes about 3 working days to clear. Nothing else to do.</div>
                 </div>
                 {% elif member.subscription_status == 'cancelling' %}
                 <span class="p-icon is-orange"><i class="bi bi-clock-fill"></i></span>
@@ -209,7 +218,12 @@
                 {% endif %}
             </div>
             <div class="card-footer d-flex flex-wrap gap-2 justify-content-end">
-                {% if member.has_active_subscription or member.subscription_status == 'cancelling' %}
+                {% if member.subscription_status == 'incomplete' %}
+                <form method="post" action="{% url 'portal_billing_portal' token=member.token %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">Manage payment method</button>
+                </form>
+                {% elif member.has_active_subscription or member.subscription_status == 'cancelling' %}
                 {% if not member.subscription_status == 'cancelling' %}
                 <form method="post" action="{% url 'portal_cancel_subscription' token=member.token %}" class="me-auto">
                     {% csrf_token %}

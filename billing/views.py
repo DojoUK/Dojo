@@ -67,6 +67,8 @@ class InvoiceListView(InvoiceAccessMixin, ListView):
         if status == 'overdue':
             # Overdue isn't a stored status: it's an unpaid invoice past its due date (Invoice.is_overdue).
             qs = qs.filter(status=Invoice.Status.UNPAID, due_date__lt=date.today())
+        elif status == 'autopay_failed':
+            qs = qs.filter(status=Invoice.Status.UNPAID, autopay_status='failed')
         elif status in ('unpaid', 'paid', 'cancelled'):
             qs = qs.filter(status=status)
         q = self.request.GET.get('q', '').strip()

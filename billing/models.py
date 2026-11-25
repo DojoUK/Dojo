@@ -394,7 +394,7 @@ class PaymentSettings(models.Model):
 
     @property
     def stripe_webhook_needs_update(self):
-        """True when the webhook was set up before Dojo listened for automatic payment results."""
+        """True when the webhook was set up before Dojo listened for all the events it uses now."""
         from .stripe_setup import WEBHOOK_EVENTS
         secrets = self.get_secrets()
         return bool(secrets.get('stripe_webhook_secret')) and secrets.get('stripe_webhook_events', '').split() != WEBHOOK_EVENTS
@@ -413,9 +413,27 @@ class AutoPay(models.Model):
     label = models.CharField(max_length=100, help_text='e.g. Visa ending 4242')
     active = models.BooleanField(default=True)
     set_up_at = models.DateTimeField(auto_now=True)
+    # Cards only: the last day the card works (the end of its expiry month), and the expiry date the
+    # member was last warned about, so each card is warned about once (billing.autopay.warn_expiring_cards).
+    expires_on = models.DateField(null=True, blank=True)
+    expiry_warned_for = models.DateField(null=True, blank=True)
+
+    EXPIRY_WARNING_DAYS = 30
 
     def __str__(self):
         return f'{self.member}: {self.label}'
+
+    def expiry_state(self, today=None):
+        """'expired', 'soon' (within EXPIRY_WARNING_DAYS) or '' for a card that's fine or isn't a card."""
+        if self.expires_on is None:
+            return ''
+        from datetime import timedelta
+
+        from django.utils import timezone
+        today = today or timezone.localdate()
+        if self.expires_on < today:
+            return 'expired'
+        return 'soon' if self.expires_on <= today + timedelta(days=self.EXPIRY_WARNING_DAYS) else ''
 
 
 class InvoiceSchedule(models.Model):

@@ -88,10 +88,18 @@ def options_for(invoice):
         'pay_url': pay_url(invoice),
         'payment_reference': invoice.payment_reference,
         'card_payments': stripe_keys(org) is not None and org.has_feature('billing'),
+        'online_methods_text': online_methods_text(payment_settings),
         'bank_transfer': bank,
         'cash_payments': bool(payment_settings and payment_settings.accept_cash),
         'payment_instructions': payment_settings.instructions if payment_settings else '',
     }
+
+
+def online_methods_text(payment_settings):
+    """How members can pay through Stripe, as the club's last Stripe check found it ('' if never checked)."""
+    from .stripe_setup import methods_text
+    stored = payment_settings.get_secrets().get('stripe_methods', '') if payment_settings else ''
+    return methods_text(stored.split())
 
 
 def _pence(amount):
@@ -142,11 +150,15 @@ def checkout_line_items(invoice):
     return lines
 
 
-def start_checkout(invoice, success_url, cancel_url, minutes=32, metadata=None):
+def start_checkout(invoice, success_url, cancel_url, minutes=32, metadata=None, instant_only=False):
     """
     Open a Stripe Checkout page for what's left to pay on `invoice` and return its URL.
     The page expires after `minutes` (Stripe's minimum is 30). Raises stripe.error.StripeError
     if Stripe refuses, and ValueError if the club hasn't set up card payments.
+
+    Members see the payment methods the club has switched on in its Stripe dashboard. `instant_only`
+    leaves out Bacs Direct Debit, which takes about 3 working days to clear: for payments that must
+    be confirmed straight away, like booking a single session.
     """
     import time
 
@@ -169,6 +181,7 @@ def start_checkout(invoice, success_url, cancel_url, minutes=32, metadata=None):
         expires_at=int(time.time()) + minutes * 60,
         metadata=meta,
         payment_intent_data={'metadata': meta},
+        **({'excluded_payment_method_types': ['bacs_debit']} if instant_only else {}),
     )
     return session.url
 
