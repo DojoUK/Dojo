@@ -13,6 +13,9 @@ from .models import Invoice, Payment
 from .payments import field
 
 
+# A member disputed a payment with their bank (a chargeback), and its progress: see billing/disputes.py.
+DISPUTE_EVENTS = ('charge.dispute.created', 'charge.dispute.updated', 'charge.dispute.closed')
+
 class StripeWebhookView(View):
     @method_decorator(csrf_exempt)
     def dispatch(self, *args, **kwargs):
@@ -74,6 +77,10 @@ class StripeWebhookView(View):
         elif event_type == 'payment_method.automatically_updated' and self.organisation is not None:
             from .autopay import payment_method_updated
             payment_method_updated(self.organisation, obj)
+
+        elif event_type in DISPUTE_EVENTS:
+            from .disputes import record_dispute
+            record_dispute(self.organisation, obj)
 
         elif event_type in ('customer.subscription.created', 'customer.subscription.updated'):
             self._handle_subscription_updated(obj)

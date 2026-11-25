@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Expense, Invoice, InvoiceItem, Payment, BillingPolicy, OrgTerm, PolicyDiscount, MemberDiscount
+from .models import (BillingPolicy, Expense, Invoice, InvoiceItem, MemberDiscount, OrgTerm, Payment, PaymentDispute,
+                     PolicyDiscount)
 
 
 class PaymentInline(admin.TabularInline):
@@ -21,6 +22,14 @@ class InvoiceAdmin(admin.ModelAdmin):
     search_fields = ('member__name',)
     date_hierarchy = 'due_date'
     inlines = [InvoiceItemInline, PaymentInline]
+
+
+@admin.register(PaymentDispute)
+class PaymentDisputeAdmin(admin.ModelAdmin):
+    list_display = ('stripe_dispute_id', 'organisation', 'invoice', 'amount', 'status', 'evidence_due_by')
+    list_filter = ('organisation', 'status')
+    search_fields = ('stripe_dispute_id', 'payment_intent', 'invoice__member__name')
+    readonly_fields = ('stripe_dispute_id', 'payment_intent', 'chargeback_payment')
 
 
 @admin.register(Payment)
