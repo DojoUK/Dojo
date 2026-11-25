@@ -10,9 +10,22 @@
     <div class="small fw-semibold mb-1">Stripe {% if payment_settings.stripe_test_mode %}<span class="badge bg-warning-subtle text-warning-emphasis ms-1">Test mode</span>{% endif %}</div>
     {% if stripe_check %}
     <p class="small mb-2">{% if stripe_check.0 %}<i class="bi bi-check-circle-fill text-success me-1"></i>{% else %}<i class="bi bi-x-circle-fill text-danger me-1"></i>{% endif %}{{ stripe_check.1 }}</p>
+    {% if stripe_methods %}
+    <div class="small mb-1" id="stripe-methods">
+        <span class="text-muted me-1">Members can pay by:</span>
+        {% for key, label, state in stripe_methods %}
+        {% if state == 'on' %}<span class="badge bg-success-subtle text-success me-1"><i class="bi bi-check-lg"></i> {{ label }}</span>
+        {% elif state == 'pending' %}<span class="badge bg-warning-subtle text-warning-emphasis me-1" title="Switched on in Stripe, but Stripe hasn't activated it on your account yet"><i class="bi bi-hourglass-split"></i> {{ label }}: waiting for Stripe</span>
+        {% else %}<span class="badge bg-secondary-subtle text-secondary me-1"><i class="bi bi-x-lg"></i> {{ label }}: off</span>{% endif %}
+        {% endfor %}
+    </div>
+    <p class="form-text mt-0 mb-2">Switch these on or off in <a href="https://dashboard.stripe.com/settings/payment_methods" target="_blank" rel="noopener">Stripe → Settings → Payment methods</a>. Apple Pay and Google Pay appear on phones and browsers that support them. Bacs Direct Debit may need Stripe to check your account first, and takes about 3 working days to clear; it isn't offered when booking a single session, which must be paid straight away.</p>
+    {% elif stripe_check.0 %}
+    <p class="form-text mt-0 mb-2">Dojo couldn't read which payment methods are switched on. You can see them in <a href="https://dashboard.stripe.com/settings/payment_methods" target="_blank" rel="noopener">Stripe → Settings → Payment methods</a>.</p>
+    {% endif %}
     {% endif %}
     {% if payment_settings.stripe_webhook_needs_update %}
-    <div class="alert alert-warning py-2 small">Your webhook was set up before Dojo listened for everything it uses now. Press <strong>Set up webhook automatically</strong> again so Dojo hears when Direct Debits clear or fail, and when a bank replaces a member's card.</div>
+    <div class="alert alert-warning py-2 small">Dojo now listens for more payment results from Stripe: when a Direct Debit clears or fails, and when a bank replaces a member's card. Press <strong>Set up webhook automatically</strong> again so your webhook includes them.</div>
     {% endif %}
     {% if payment_settings.auto_pay != 'off' and not scheduler_running %}
     <div class="alert alert-warning py-2 small">Automatic payments are collected by Dojo's <code>scheduler</code> container, which hasn't run in the last 10 minutes. Start it with <code>docker compose up -d scheduler</code>.</div>

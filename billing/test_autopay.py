@@ -176,7 +176,7 @@ class CollectionTests(AutoPayTestCase):
         self.assertEqual((invoice.status, invoice.autopay_status), ('unpaid', 'failed'))
         self.assertEqual(invoice.autopay_error, 'Your card was declined.')
         html = mail.outbox[-1].alternatives[0][0]
-        self.assertIn("We couldn't take this payment automatically: Your card was declined.", html)
+        self.assertIn("We couldn't take this payment: Your card was declined.", html)
         self.assertIn(payments.pay_url(invoice), html)
 
     def test_bank_wants_approval(self):

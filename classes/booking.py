@@ -441,6 +441,7 @@ def start_payment(booking, back_url):
         return payments.start_checkout(
             booking.invoice, success_url=f'{back_url}?paid=1', cancel_url=back_url, minutes=CHECKOUT_MINUTES,
             metadata={'session_booking': str(booking.pk)},
+            instant_only=True,   # the place is held only while the member pays, so no Direct Debit
         )
     except (stripe.error.StripeError, ValueError):
         _drop_pending(booking)

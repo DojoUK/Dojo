@@ -180,7 +180,8 @@ def _record_payment(invoice, amount, payment_intent_id):
         invoice.save(update_fields=['status', 'autopay_status', 'autopay_error'])
 
 
-def _fail(invoice, message):
+def payment_failed(invoice, message):
+    """An automatic payment, or a Direct Debit started at Checkout, didn't go through: record it and tell the member."""
     from .models import Invoice
     Invoice.objects.filter(pk=invoice.pk).update(autopay_status='failed', autopay_error=message[:255])
     invoice.refresh_from_db()
@@ -225,10 +226,10 @@ def collect(invoice):
     try:
         intent = stripe.PaymentIntent.create(**params)
     except stripe.error.CardError as error:
-        _fail(invoice, error.user_message or 'The card was declined.')
+        payment_failed(invoice, error.user_message or 'The card was declined.')
         return
     except stripe.error.StripeError as error:
-        _fail(invoice, f'Stripe couldn\'t take the payment: {error.user_message or error}')
+        payment_failed(invoice, f'Stripe couldn\'t take the payment: {error.user_message or error}')
         return
     intent_id, status = field(intent, 'id'), field(intent, 'status')
     Invoice.objects.filter(pk=invoice.pk).update(autopay_payment_intent=intent_id)
@@ -237,7 +238,7 @@ def collect(invoice):
     elif status == 'processing':
         Invoice.objects.filter(pk=invoice.pk).update(autopay_status='processing')
     else:
-        _fail(invoice, 'Your bank asked for the payment to be confirmed, so it couldn\'t be taken automatically.')
+        payment_failed(invoice, 'Your bank asked for the payment to be confirmed, so it couldn\'t be taken automatically.')
 
 
 def collect_due(limit=50):
@@ -280,7 +281,7 @@ def payment_intent_failed(org, intent):
                                      autopay_status='processing').first()
     if invoice is not None:
         error = field(field(intent, 'last_payment_error'), 'message', 'The payment didn\'t go through.')
-        _fail(invoice, error)
+        payment_failed(invoice, error)
 
 
 def payment_method_updated(org, payment_method):

@@ -84,7 +84,7 @@ def invoice_blocks(invoice, values, overdue=False, autopay_failed='', autopay_la
                'autopay_failed': autopay_failed, 'autopay_label': autopay_label,
                'portal_url': values.get('portal_link'), 'button_colour': '#dc2626' if overdue else None}
     if autopay_failed:
-        pay_text = f"We couldn't take this payment automatically: {autopay_failed}\nHow to pay: {values['pay_link']}"
+        pay_text = f"We couldn't take this payment: {autopay_failed}\nHow to pay: {values['pay_link']}"
     elif autopay_label and invoice.balance_due:
         pay_text = f'Nothing to do: this will be collected automatically from your {autopay_label}.'
     elif not invoice.balance_due:

@@ -948,7 +948,8 @@ class CreateSubscriptionView(View):
         session = stripe.checkout.Session.create(
             api_key=keys.secret,
             customer=customer_id,
-            payment_method_types=['card'],
+            # The methods switched on in the club's Stripe dashboard: card, Apple Pay, Google Pay, Bacs
+            # Direct Debit. (Stripe API versions from 2026-09-30 refuse a payment_method_types list.)
             line_items=[{
                 'price_data': {
                     'currency': 'gbp',

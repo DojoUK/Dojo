@@ -189,7 +189,13 @@
                 <span class="p-icon is-green"><i class="bi bi-check-lg"></i></span>
                 <div class="p-row-main">
                     <div class="p-row-title">Autopay active</div>
-                    <div class="p-row-sub">£{{ member.monthly_fee|floatformat:2 }}/month — card charged automatically each month.</div>
+                    <div class="p-row-sub">£{{ member.monthly_fee|floatformat:2 }}/month — taken automatically each month.</div>
+                </div>
+                {% elif member.subscription_status == 'incomplete' %}
+                <span class="p-icon is-accent"><i class="bi bi-hourglass-split"></i></span>
+                <div class="p-row-main">
+                    <div class="p-row-title">Autopay starting</div>
+                    <div class="p-row-sub">Your first Direct Debit payment usually takes about 3 working days to clear. Nothing else to do.</div>
                 </div>
                 {% elif member.subscription_status == 'cancelling' %}
                 <span class="p-icon is-orange"><i class="bi bi-clock-fill"></i></span>
@@ -212,7 +218,12 @@
                 {% endif %}
             </div>
             <div class="card-footer d-flex flex-wrap gap-2 justify-content-end">
-                {% if member.has_active_subscription or member.subscription_status == 'cancelling' %}
+                {% if member.subscription_status == 'incomplete' %}
+                <form method="post" action="{% url 'portal_billing_portal' token=member.token %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">Manage payment method</button>
+                </form>
+                {% elif member.has_active_subscription or member.subscription_status == 'cancelling' %}
                 {% if not member.subscription_status == 'cancelling' %}
                 <form method="post" action="{% url 'portal_cancel_subscription' token=member.token %}" class="me-auto">
                     {% csrf_token %}
