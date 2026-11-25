@@ -2,8 +2,18 @@
 {% block icon %}bi-credit-card{% endblock %}{% block title %}Payments needing attention{% endblock %}
 {% block action %}{% if failed_count %}<a href="{% url 'invoice_list' org_slug=org.slug %}?status=autopay_failed" class="small text-nowrap">See all</a>{% endif %}{% endblock %}
 {% block body %}
-{% if failed_payments or expiring_cards %}
+{% if disputes or failed_payments or expiring_cards %}
 <div class="list-group list-group-flush small">
+    {% for dispute in disputes %}
+    <a href="{{ dispute.stripe_url }}" target="_blank" rel="noopener" class="list-group-item list-group-item-action py-2" title="Open the dispute on Stripe">
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-danger-subtle text-danger-emphasis">{% if dispute.is_enquiry %}Bank enquiry{% else %}Disputed{% endif %}</span>
+            <span class="text-truncate flex-grow-1 fw-semibold">{% if dispute.member %}{{ dispute.member.register_name|default:dispute.member.name }}{% else %}A Stripe payment{% endif %}</span>
+            <span class="text-nowrap">£{{ dispute.amount|floatformat:2 }}</span>
+        </div>
+        <div class="text-muted text-truncate mt-1">{% if dispute.needs_response %}<span class="text-danger fw-semibold">Respond{% if dispute.evidence_due_by %} by {{ dispute.evidence_due_by|date:"j M" }}{% endif %}</span>{% else %}{{ dispute.status_text }}{% endif %} · {{ dispute.reason_text }}</div>
+    </a>
+    {% endfor %}
     {% for invoice in failed_payments %}
     <a href="{% url 'invoice_detail' org_slug=org.slug pk=invoice.pk %}" class="list-group-item list-group-item-action py-2">
         <div class="d-flex align-items-center gap-2">
@@ -23,6 +33,6 @@
     {% endfor %}
 </div>
 {% else %}
-<div class="dash-empty"><i class="bi bi-check2-circle text-success"></i>No failed payments or expiring cards.</div>
+<div class="dash-empty"><i class="bi bi-check2-circle text-success"></i>No disputes, failed payments or expiring cards.</div>
 {% endif %}
 {% endblock %}

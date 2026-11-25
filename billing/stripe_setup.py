@@ -4,9 +4,11 @@ from django.urls import reverse
 
 # Card payments, saved cards and Direct Debits for automatic payment, and their results. Direct Debits
 # paid at Checkout clear (or fail) days later: checkout.session.async_payment_succeeded / _failed.
+# Chargebacks: charge.dispute.*.
 WEBHOOK_EVENTS = ['checkout.session.completed', 'checkout.session.expired', 'payment_intent.succeeded',
                   'payment_intent.payment_failed', 'payment_method.automatically_updated',
-                  'checkout.session.async_payment_succeeded', 'checkout.session.async_payment_failed']
+                  'checkout.session.async_payment_succeeded', 'checkout.session.async_payment_failed',
+                  'charge.dispute.created', 'charge.dispute.updated', 'charge.dispute.closed']
 
 
 # The ways to pay Dojo tells clubs and members about, in this order: (Stripe's name, ours).

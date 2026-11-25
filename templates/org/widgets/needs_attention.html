@@ -28,6 +28,13 @@
         <a href="{% url 'member_list' org_slug=org.slug %}?waiver=unsigned" class="btn btn-sm btn-danger">View</a>
     </div>
     {% endif %}
+    {% if disputes_to_answer %}
+    <div class="dash-alert dash-alert-danger">
+        <i class="bi bi-shield-exclamation"></i>
+        <span><strong>{{ disputes_to_answer }} disputed payment{{ disputes_to_answer|pluralize }}</strong> need{{ disputes_to_answer|pluralize:"s," }} a response on Stripe before the deadline, or the bank usually sides with the member.</span>
+        <a href="https://dashboard.stripe.com/disputes" target="_blank" rel="noopener" class="btn btn-sm btn-danger">Open Stripe</a>
+    </div>
+    {% endif %}
     {% if payments_failed %}
     <div class="dash-alert dash-alert-danger">
         <i class="bi bi-credit-card-2-front-fill"></i>

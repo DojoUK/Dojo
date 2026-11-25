@@ -25,7 +25,7 @@
     {% endif %}
     {% endif %}
     {% if payment_settings.stripe_webhook_needs_update %}
-    <div class="alert alert-warning py-2 small">Dojo now listens for more payment results from Stripe: when a Direct Debit clears or fails, and when a bank replaces a member's card. Press <strong>Set up webhook automatically</strong> again so your webhook includes them.</div>
+    <div class="alert alert-warning py-2 small">Dojo now listens for more payment results from Stripe: when a Direct Debit clears or fails, when a bank replaces a member's card, and when a member disputes a payment. Press <strong>Set up webhook automatically</strong> again so your webhook includes them.</div>
     {% endif %}
     {% if payment_settings.auto_pay != 'off' and not scheduler_running %}
     <div class="alert alert-warning py-2 small">Automatic payments are collected by Dojo's <code>scheduler</code> container, which hasn't run in the last 10 minutes. Start it with <code>docker compose up -d scheduler</code>.</div>

@@ -346,6 +346,79 @@ class Payment(models.Model):
         ordering = ['-paid_at']
 
 
+class PaymentDispute(models.Model):
+    """
+    A chargeback: a member asked their bank to reverse a Stripe payment. Stripe takes the money (and
+    its dispute fee) from the club's balance while the club sends evidence on Stripe's dashboard,
+    then the bank decides. Kept up to date from Stripe's charge.dispute.* webhook events.
+    """
+    STATUS_TEXT = {
+        'warning_needs_response': 'Bank enquiry: needs a response', 'warning_under_review': 'Bank enquiry: with the bank',
+        'warning_closed': 'Bank enquiry closed', 'needs_response': 'Needs a response',
+        'under_review': 'With the bank', 'won': 'Won', 'lost': 'Lost', 'prevented': 'Prevented',
+    }
+    REASON_TEXT = {
+        'fraudulent': "Says they didn't make the payment", 'unrecognized': "Doesn't recognise the payment",
+        'duplicate': 'Says they were charged twice', 'subscription_canceled': 'Says they had cancelled',
+        'product_not_received': "Says they didn't get what they paid for",
+        'product_unacceptable': "Unhappy with what they paid for",
+        'credit_not_processed': 'Says they were promised a refund', 'general': 'No reason given',
+    }
+    NEEDS_RESPONSE = ('needs_response', 'warning_needs_response')
+    OPEN = NEEDS_RESPONSE + ('under_review', 'warning_under_review')
+
+    organisation = models.ForeignKey(Organisation, on_delete=models.CASCADE, related_name='payment_disputes')
+    invoice = models.ForeignKey(Invoice, on_delete=models.SET_NULL, null=True, blank=True, related_name='disputes')
+    payment = models.ForeignKey('Payment', on_delete=models.SET_NULL, null=True, blank=True, related_name='disputes')
+    stripe_dispute_id = models.CharField(max_length=255, unique=True)
+    payment_intent = models.CharField(max_length=255, blank=True)
+    amount = models.DecimalField(max_digits=8, decimal_places=2)
+    reason = models.CharField(max_length=40, blank=True)
+    status = models.CharField(max_length=30)
+    evidence_due_by = models.DateTimeField(null=True, blank=True)
+    livemode = models.BooleanField(default=False)
+    opened_at = models.DateTimeField(default=timezone.now)
+    closed_at = models.DateTimeField(null=True, blank=True)
+    # A lost dispute: the money went back to the member, recorded against the invoice as a minus payment.
+    chargeback_payment = models.OneToOneField('Payment', on_delete=models.SET_NULL, null=True, blank=True,
+                                              related_name='chargeback_for')
+
+    class Meta:
+        ordering = ['-opened_at']
+
+    def __str__(self):
+        return f'Dispute {self.stripe_dispute_id}: £{self.amount} ({self.status})'
+
+    @property
+    def is_open(self):
+        return self.status in self.OPEN
+
+    @property
+    def needs_response(self):
+        return self.status in self.NEEDS_RESPONSE
+
+    @property
+    def is_enquiry(self):
+        return self.status.startswith('warning_')
+
+    @property
+    def status_text(self):
+        return self.STATUS_TEXT.get(self.status, self.status.replace('_', ' ').capitalize())
+
+    @property
+    def reason_text(self):
+        return self.REASON_TEXT.get(self.reason, self.reason.replace('_', ' ').capitalize())
+
+    @property
+    def member(self):
+        return self.invoice.member if self.invoice_id else None
+
+    @property
+    def stripe_url(self):
+        """Where the club answers it: the dispute on Stripe's dashboard."""
+        return f"https://dashboard.stripe.com/{'' if self.livemode else 'test/'}disputes/{self.stripe_dispute_id}"
+
+
 class PaymentSettings(models.Model):
     """How members can pay: chosen in the setup wizard, changed in Settings → Payments."""
     organisation = models.OneToOneField(Organisation, on_delete=models.CASCADE, related_name='payment_settings')

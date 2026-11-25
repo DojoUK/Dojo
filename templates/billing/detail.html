@@ -105,6 +105,17 @@
                         {% if invoice.autopay_status == 'failed' and invoice.status != 'paid' %}<div class="text-danger mt-1" style="font-size:0.75rem;">{{ invoice.autopay_error }} The member was emailed the invoice to pay another way.</div>{% endif %}
                     </dd>
 
+                    {% for dispute in invoice.disputes.all %}
+                    <dt class="col-sm-4 text-muted fw-normal small">{% if dispute.is_enquiry %}Bank enquiry{% else %}Disputed{% endif %}</dt>
+                    <dd class="col-sm-8 small">
+                        <span class="badge {% if dispute.status == 'won' or dispute.status == 'warning_closed' %}bg-success-subtle text-success{% elif dispute.is_open %}bg-danger-subtle text-danger-emphasis{% else %}bg-secondary-subtle text-secondary{% endif %}">{{ dispute.status_text }}</span>
+                        £{{ dispute.amount|floatformat:2 }} · {{ dispute.reason_text }}
+                        {% if dispute.needs_response and dispute.evidence_due_by %}<div class="text-danger mt-1" style="font-size:0.75rem;">Respond by {{ dispute.evidence_due_by|date:"j M Y" }}, or the bank usually sides with the member.</div>{% endif %}
+                        {% if dispute.status == 'lost' %}<div class="text-muted mt-1" style="font-size:0.75rem;">The money went back to the member's bank, so this invoice is due again. It won't be collected automatically.</div>{% endif %}
+                        <div class="mt-1"><a href="{{ dispute.stripe_url }}" target="_blank" rel="noopener">{% if dispute.needs_response %}Respond on Stripe{% else %}See it on Stripe{% endif %} <i class="bi bi-box-arrow-up-right"></i></a></div>
+                    </dd>
+                    {% endfor %}
+
                     {% if invoice.status == 'cancelled' %}
                     <dt class="col-sm-4 text-muted fw-normal small">Cancelled</dt>
                     <dd class="col-sm-8 small">
