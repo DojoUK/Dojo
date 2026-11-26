@@ -696,8 +696,8 @@ class OrgSettingsView(OrgAdminMixin, View):
     # (key, label, Bootstrap icon, help) for each settings tab; templates/org/settings/_<key>.html.
     SECTIONS = (
         ('general', 'General', 'building', 'Your club\'s name and contact details.'),
-        ('location', 'Location', 'geo-alt', 'Where your club trains and what it teaches. Members use this to find '
-                                            'you in the Dojo club finder.'),
+        ('location', 'Location', 'geo-alt', 'Where your club trains, what it teaches and what it\'s about. Members '
+                                            'use this to find you in the Dojo club finder.'),
         ('appearance', 'Appearance', 'palette', 'Colours and logo for your club\'s Dojo.'),
         ('features', 'Features', 'toggles', 'Switch off anything your club doesn\'t use and it disappears from Dojo. '
                                             'Nothing is deleted: switch a feature back on and its data is still there.'),
@@ -786,6 +786,25 @@ class OrgSettingsView(OrgAdminMixin, View):
     def get(self, request, org_slug):
         from django.shortcuts import render
         return render(request, self.template_name, self._context())
+
+    def _save_logo(self, request):
+        """A logo uploaded (or removed) with this form; an error message if the upload can't be used."""
+        if 'logo' in request.FILES:
+            from .branding import image_luminance, validate_logo
+            upload = request.FILES['logo']
+            error = validate_logo(upload)
+            if error:
+                return error
+            if self.org.logo:
+                self.org.logo.delete(save=False)
+            self.org.logo = upload
+            self.org.settings = {**(self.org.settings or {}), 'logo_luminance': round(image_luminance(upload), 3)}
+            self.org.save(update_fields=['logo', 'settings'])
+        elif request.POST.get('remove_logo'):
+            self.org.logo.delete(save=False)
+            self.org.settings = {k: v for k, v in (self.org.settings or {}).items() if k != 'logo_luminance'}
+            self.org.save(update_fields=['logo', 'settings'])
+        return None
 
     def post(self, request, org_slug):
         action = request.POST.get('action', 'general')
@@ -901,6 +920,22 @@ class OrgSettingsView(OrgAdminMixin, View):
                                           'Send a test email to check.')
             return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#email")
 
+        if action == 'club_page':
+            # The club's page in the Dojo club finder: what it's about, and its logo.
+            about = request.POST.get('about', '').replace('\r\n', '\n').strip()
+            if len(about) > Organisation.ABOUT_MAX_LENGTH:
+                messages.error(request, f'Keep the description to {Organisation.ABOUT_MAX_LENGTH:,} characters '
+                                        f'(it\'s {len(about):,}).')
+                return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#location")
+            self.org.about = about
+            self.org.save(update_fields=['about'])
+            error = self._save_logo(request)
+            if error:
+                messages.error(request, error)
+            else:
+                messages.success(request, 'Club page saved.')
+            return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#location")
+
         if action == 'location':
             from . import location
             values, errors = location.from_post(request.POST, listed_default=self.org.listed_in_finder)
@@ -969,22 +1004,10 @@ class OrgSettingsView(OrgAdminMixin, View):
             self.org.settings = settings
             self.org.save(update_fields=['settings'])
 
-            if 'logo' in request.FILES:
-                from .branding import image_luminance, validate_logo
-                upload = request.FILES['logo']
-                error = validate_logo(upload)
-                if error:
-                    messages.error(request, error)
-                    return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#appearance")
-                if self.org.logo:
-                    self.org.logo.delete(save=False)
-                self.org.logo = upload
-                self.org.settings = {**(self.org.settings or {}), 'logo_luminance': round(image_luminance(upload), 3)}
-                self.org.save(update_fields=['logo', 'settings'])
-            if request.POST.get('remove_logo'):
-                self.org.logo.delete(save=False)
-                self.org.settings = {k: v for k, v in (self.org.settings or {}).items() if k != 'logo_luminance'}
-                self.org.save(update_fields=['logo', 'settings'])
+            error = self._save_logo(request)
+            if error:
+                messages.error(request, error)
+                return redirect(f"{reverse('org_settings', kwargs={'org_slug': self.org.slug})}#appearance")
 
             dev_mode = request.POST.get('dev_mode') == '1'
             if dev_mode:
