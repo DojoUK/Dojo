@@ -75,7 +75,7 @@
             <a href="{{ finder_url }}" class="{% if active == 'finder' %}active{% endif %}"{% if active == 'finder' %} aria-current="page"{% endif %}><i class="bi bi-{% if active == 'finder' %}geo-alt-fill{% else %}geo-alt{% endif %}"></i> Find clubs</a>
             {% if user.is_authenticated %}
             <a href="{{ home_url }}" class="{% if active == 'home' %}active{% endif %}"{% if active == 'home' %} aria-current="page"{% endif %}><i class="bi bi-{% if active == 'home' %}grid-fill{% else %}grid{% endif %}"></i> My clubs</a>
-            <a href="{% url 'network_progression' %}" class="{% if active == 'progression' %}active{% endif %}"{% if active == 'progression' %} aria-current="page"{% endif %}><i class="bi bi-{% if active == 'progression' %}award-fill{% else %}award{% endif %}"></i> Progression</a>
+            <a href="{% url 'network_progression' %}" class="{% if active == 'progression' %}active{% endif %}"{% if active == 'progression' %} aria-current="page"{% endif %}><i class="bi bi-{% if active == 'progression' %}passport-fill{% else %}passport{% endif %}"></i> Dojo Passport</a>
             <a href="{% url 'network_details' %}" class="{% if active == 'details' %}active{% endif %}"{% if active == 'details' %} aria-current="page"{% endif %}><i class="bi bi-{% if active == 'details' %}person-fill{% else %}person{% endif %}"></i> My details</a>
             {% else %}
             <a href="{% url 'network_login' %}" class="{% if active == 'login' %}active{% endif %}"><i class="bi bi-box-arrow-in-right"></i> Sign in</a>
@@ -118,7 +118,7 @@
     <a href="{{ finder_url }}" class="p-tab{% if active == 'finder' %} active{% endif %}"><i class="bi bi-{% if active == 'finder' %}geo-alt-fill{% else %}geo-alt{% endif %}"></i><span>Find clubs</span></a>
     {% if user.is_authenticated %}
     <a href="{{ home_url }}" class="p-tab{% if active == 'home' %} active{% endif %}"><i class="bi bi-{% if active == 'home' %}grid-fill{% else %}grid{% endif %}"></i><span>My clubs</span></a>
-    <a href="{% url 'network_progression' %}" class="p-tab{% if active == 'progression' %} active{% endif %}"><i class="bi bi-{% if active == 'progression' %}award-fill{% else %}award{% endif %}"></i><span>Progression</span></a>
+    <a href="{% url 'network_progression' %}" class="p-tab{% if active == 'progression' %} active{% endif %}"><i class="bi bi-{% if active == 'progression' %}passport-fill{% else %}passport{% endif %}"></i><span>Passport</span></a>
     <a href="{% url 'network_details' %}" class="p-tab{% if active == 'details' %} active{% endif %}"><i class="bi bi-{% if active == 'details' %}person-fill{% else %}person{% endif %}"></i><span>My details</span></a>
     <form method="post" action="{% url 'network_logout' %}" class="d-contents" style="display:contents;">
         {% csrf_token %}

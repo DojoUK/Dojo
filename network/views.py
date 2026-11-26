@@ -204,7 +204,7 @@ class LeaveClubView(AccountRequiredMixin, View):
 
 class ProgressionView(AccountRequiredMixin, View):
     """
-    My progression: every grade the member holds, from the clubs on Dojo (read only: the awarding
+    The Dojo Passport: every grade the member holds, from the clubs on Dojo (read only: the awarding
     club keeps it) and the ones they've added themselves (theirs to change), by martial art.
     """
 

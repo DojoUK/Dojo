@@ -2,7 +2,7 @@
 A member's progression, wherever they gained it: grades awarded by each club on Dojo (that club's
 MemberProgression records, which only that club can change) and grades they've added themselves
 (PriorProgression, which only they can change). It follows them from club to club: the member
-sees it all under My progression, and each club sees the rest of it read only.
+sees it all as their Dojo Passport, and each club sees the rest of it read only.
 
 Grouped by martial art: the one with the most recent grade first, then the next most recent, and
 so on; within each, newest first.
