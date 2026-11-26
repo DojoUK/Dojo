@@ -874,6 +874,15 @@ class ProgressionHistoryTests(NetworkTestBase):
         MemberProgression.objects.create(member=self.me_newport, stage=self.blue, achieved_date=date(2025, 3, 1))
         self.url = reverse('network_progression')
 
+    def test_it_is_called_the_dojo_passport(self):
+        page = self.client.get(self.url)
+        self.assertContains(page, '<title>Dojo Passport</title>', html=True)
+        self.assertContains(page, 'bi-passport-fill"></i> Dojo Passport</a>')   # the account menu
+        self.assertContains(page, '<span>Passport</span>')                     # the phone tab bar
+        portal = self.client.get(reverse('member_portal', kwargs={'token': self.me_cardiff.token}))
+        self.assertContains(portal, '<span class="p-row-title">Dojo Passport</span>')
+        self.assertNotContains(portal, '<span class="p-row-title">Progression</span>')
+
     def test_history_by_martial_art_most_recent_first(self):
         from network import progression
         [me] = progression.people(self.account())
@@ -913,7 +922,7 @@ class ProgressionHistoryTests(NetworkTestBase):
         OrganisationMember.objects.create(user=staff, organisation=self.newport, role='org_admin')
         self.client.force_login(staff)
         page = self.client.get(reverse('member_detail', kwargs={'org_slug': self.newport.slug, 'pk': self.me_newport.pk})).content.decode()
-        self.assertTrue('Progression elsewhere' in page)
+        self.assertTrue('Dojo Passport <span' in page)
         self.assertTrue('Cardiff Judo' in page and 'Orange' in page and 'added by the member' in page)
         cardiff_grade = MemberProgression.objects.filter(member=self.me_cardiff).first()
         # Newport can't remove Cardiff's grade, even through its own member's URL.
