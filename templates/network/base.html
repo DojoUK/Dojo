@@ -23,10 +23,37 @@
             --p-accent: #2563EB; --p-accent-hover: #1d4ed8; --p-on-accent: #ffffff; --p-on-accent-hover: #ffffff;
         }
         .n-wordmark { height: 20px; opacity: .95; }
+        /* A compact header: the logo, then the page title with its subtitle beside it on one line. */
+        .p-hero { padding: calc(env(safe-area-inset-top) + .625rem) 0 .75rem; }
+        .p-hero .p-wrap { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: .75rem; row-gap: .125rem; }
+        .p-hero .p-brand { flex: 0 0 100%; min-height: 1.5rem; }
+        .p-hero .p-title-row { margin: .375rem 0 0; }
+        .p-hero .p-title { font-size: 1.625rem; }
+        .p-hero .p-subtitle { font-size: .9375rem; }
+        /* Club map pins: the Dojo app icon, its point on the club's address (see dojoPin below). */
+        .n-pin { display: flex; flex-direction: column; align-items: center; cursor: pointer; transform-origin: 50% 100%; transition: transform .15s ease-out; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .35)); }
+        .n-pin-badge { border: 2px solid #fff; border-radius: 10px; overflow: hidden; line-height: 0; background: #15171a; transition: border-color .15s ease; }
+        .n-pin-badge img { display: block; width: 32px; height: 32px; }
+        .n-pin::after { content: ""; margin-top: -2px; border: 7px solid transparent; border-bottom: 0; border-top: 9px solid #fff; }
+        .n-pin.is-active { transform: scale(1.2); }
+        .n-pin.is-active .n-pin-badge { border-color: var(--p-accent); }
+        .n-pin.is-active::after { border-top-color: var(--p-accent); }
+        .n-here { width: 16px; height: 16px; border-radius: 50%; background: var(--p-accent); border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .35); transform: translateY(50%); }
+        @media (prefers-reduced-motion: reduce) { .n-pin, .n-pin-badge { transition: none; } }
         .n-auth { max-width: 440px; }
         .p-bar .n-user { color: var(--p-on-accent); opacity: .85; font-size: .875rem; white-space: nowrap; }
         .p-bar .n-user button { color: inherit; }
     </style>
+    <script>
+    /* A club's map pin, for Google's AdvancedMarkerElement: the Dojo app icon. */
+    window.dojoPin = function () {
+        var pin = document.createElement('div'), badge = document.createElement('div'), logo = document.createElement('img');
+        pin.className = 'n-pin'; badge.className = 'n-pin-badge';
+        logo.src = "{% static 'img/favicon/apple-touch-icon.png' %}"; logo.alt = '';
+        badge.appendChild(logo); pin.appendChild(badge);
+        return pin;
+    };
+    </script>
     {% block extra_head %}{% endblock %}
 </head>
 <body class="portal">

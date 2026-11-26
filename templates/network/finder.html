@@ -21,7 +21,9 @@
 @media (min-width: 992px) {
     .n-results { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); align-items: start; }
     .n-results.no-map { grid-template-columns: minmax(0, 1fr); }
-    #n-map { position: sticky; top: 4.5rem; height: calc(100vh - 6.5rem); min-height: 24rem; order: 2; }
+    /* The wrapper sticks, not the map: Google Maps sets the map itself to position: relative. */
+    .n-map-wrap { position: sticky; top: 4.5rem; order: 2; }
+    #n-map { height: calc(100vh - 6.5rem); min-height: 24rem; }
 }
 .n-club { display: flex; gap: .875rem; align-items: flex-start; padding: .9rem 1.25rem; position: relative; }
 .n-club + .n-club::before { content: ""; position: absolute; top: 0; left: 1.25rem; right: 0; border-top: 1px solid var(--p-separator); }
@@ -66,7 +68,7 @@
 </div>
 
 <div class="n-results{% if not maps_key %} no-map{% endif %}">
-    {% if maps_key %}<div id="n-map" role="region" aria-label="Map of clubs"></div>{% endif %}
+    {% if maps_key %}<div class="n-map-wrap"><div id="n-map" role="region" aria-label="Map of clubs"></div></div>{% endif %}
     <div>
         <div class="p-section"><h2 id="n-count">Clubs</h2></div>
         <div class="card" id="n-list" aria-live="polite"></div>
@@ -74,6 +76,7 @@
 </div>
 
 {{ maps_key|json_script:"n-maps-key" }}
+{{ maps_map_id|json_script:"n-map-id" }}
 <script>
 (function () {
     var signedIn = {{ user.is_authenticated|yesno:"true,false" }};
@@ -180,17 +183,19 @@
 
     function highlight(slug, on) {
         var marker = markers[slug];
-        if (marker) marker.setAnimation(on ? google.maps.Animation.BOUNCE : null);
+        if (!marker) return;
+        marker.content.classList.toggle('is-active', on);
+        marker.zIndex = on ? 1000 : null;
     }
 
     function drawMap(clubs) {
         if (!map) return;
-        Object.keys(markers).forEach(function (s) { markers[s].setMap(null); });
+        Object.keys(markers).forEach(function (s) { markers[s].map = null; });
         markers = {};
         var bounds = new google.maps.LatLngBounds();
         clubs.forEach(function (club) {
             var position = {lat: club.lat, lng: club.lng};
-            var marker = new google.maps.Marker({map: map, position: position, title: club.name});
+            var marker = new google.maps.marker.AdvancedMarkerElement({map: map, position: position, title: club.name, content: dojoPin(), gmpClickable: true});
             marker.addListener('click', function () {
                 var box = el('div');
                 var a = el('a', 'fw-semibold', club.name); a.href = club.url;
@@ -210,14 +215,11 @@
             markers[club.slug] = marker;
             bounds.extend(position);
         });
-        if (here) { here.setMap(null); here = null; }
+        if (here) { here.map = null; here = null; }
         if (state.lat !== null) {
-            here = new google.maps.Marker({
-                map: map, position: {lat: state.lat, lng: state.lng}, title: state.label || 'You',
-                icon: {path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#2563EB', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 3},
-                zIndex: 999,
-            });
-            bounds.extend(here.getPosition());
+            var point = {lat: state.lat, lng: state.lng};
+            here = new google.maps.marker.AdvancedMarkerElement({map: map, position: point, title: state.label || 'You', content: el('div', 'n-here'), zIndex: 999});
+            bounds.extend(point);
         }
         if (!bounds.isEmpty()) {
             map.fitBounds(bounds, 48);
@@ -271,6 +273,7 @@
     window.dojoFinderMap = function () {
         map = new google.maps.Map(document.getElementById('n-map'), {
             center: {lat: 54.2, lng: -2.5}, zoom: 5, streetViewControl: false, mapTypeControl: false, fullscreenControl: false,
+            mapId: JSON.parse(document.getElementById('n-map-id').textContent),
         });
         info = new google.maps.InfoWindow();
         geocoder = new google.maps.Geocoder();
@@ -278,7 +281,7 @@
     };
     if (key) {
         var s = document.createElement('script');
-        s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(key) + '&callback=dojoFinderMap&loading=async';
+        s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(key) + '&callback=dojoFinderMap&loading=async&libraries=marker';
         s.async = true;
         document.head.appendChild(s);
     }

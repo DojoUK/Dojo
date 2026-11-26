@@ -9,7 +9,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.views import View
 
 from organisations import disciplines
-from organisations.location import maps_key
+from organisations.location import maps_key, maps_map_id
 from organisations.models import Organisation
 
 from dojo.mixins import OrgMixin
@@ -311,7 +311,7 @@ class FinderView(View):
             'radius_choices': finder.RADIUS_CHOICES,
             'sort_choices': finder.SORT_CHOICES, 'default_sort': finder.DEFAULT_SORT,
             'default_radius': finder.DEFAULT_RADIUS,
-            'maps_key': maps_key(),
+            'maps_key': maps_key(), 'maps_map_id': maps_map_id(),
             'account': accounts.account_for(request.user) if request.user.is_authenticated else None,
         })
 
@@ -370,7 +370,7 @@ class ClubView(View):
         club_reviews = list(org.reviews.select_related('account')[:50])
         return render(request, 'network/club.html', {
             'active': 'finder',
-            'org': org, 'account': account, 'maps_key': maps_key(),
+            'org': org, 'account': account, 'maps_key': maps_key(), 'maps_map_id': maps_map_id(),
             'status': status.get(org.pk, ''), 'favourite': org.pk in favourite_ids,
             'takes_applications': _takes_applications(org), 'portal_members': portal_members,
             'waivers': active_waivers(org),

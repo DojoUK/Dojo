@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from django.contrib.auth.models import User
 from django.core import mail
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -189,6 +189,16 @@ class FinderTests(NetworkTestBase):
         club_page = self.client.get(reverse('network_club', kwargs={'slug': self.newport.slug}))
         self.assertContains(club_page, 'Brazilian Jiu-Jitsu · MMA')
         self.assertContains(club_page, 'Apply to join')
+
+    @override_settings(GOOGLE_MAPS_API_KEY='test-key', GOOGLE_MAPS_MAP_ID='')
+    def test_maps_pin_clubs_with_the_dojo_logo(self):
+        # Google's advanced markers, which only show on a map with a Map ID (DEMO_MAP_ID unless one is set).
+        for page in (self.client.get(reverse('network_finder')),
+                     self.client.get(reverse('network_club', kwargs={'slug': self.newport.slug}))):
+            self.assertContains(page, 'libraries=marker')
+            self.assertContains(page, 'DEMO_MAP_ID')
+            self.assertContains(page, 'content: dojoPin()')
+            self.assertNotContains(page, 'google.maps.Marker(')
 
 
 class FavouriteAndJoinTests(NetworkTestBase):
