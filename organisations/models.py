@@ -49,6 +49,10 @@ class Organisation(models.Model):
     listed_in_finder = models.BooleanField(
         default=True, help_text='Show the club in the Dojo club finder (once it has a location).',
     )
+    about = models.TextField(
+        blank=True, help_text='What the club is about, on its page in the Dojo club finder (plain text).',
+    )
+    ABOUT_MAX_LENGTH = 1500
 
     @property
     def has_location(self):

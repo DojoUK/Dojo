@@ -1,3 +1,4 @@
+{% load branding %}
 <form method="post">
     {% csrf_token %}
     <input type="hidden" name="action" value="location">
@@ -7,3 +8,42 @@
     {% include 'org/_location_fields.html' %}
     <button type="submit" class="btn btn-dark btn-sm mt-3">Save location</button>
 </form>
+
+<hr class="my-4">
+{# What prospective members see on the club's page in the Dojo club finder. #}
+<form method="post" enctype="multipart/form-data" id="clubPageForm">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="club_page">
+    <h6 class="fw-semibold mb-1">Your club page</h6>
+    <p class="small text-muted mb-3">Shown on your page in the Dojo club finder, between your contact details and your reviews, so people thinking of joining can see what your club is about.{% if org.listed_in_finder and org.has_location %} <a href="{% url 'network_club' slug=org.slug %}" target="_blank" rel="noopener">See your club page <i class="bi bi-box-arrow-up-right"></i></a>{% endif %}</p>
+
+    <div class="mb-3">
+        <label class="form-label small fw-semibold" for="clubAbout">About your club</label>
+        <textarea name="about" id="clubAbout" rows="6" class="form-control" maxlength="{{ org.ABOUT_MAX_LENGTH }}"
+                  placeholder="For example: who you train (juniors, adults, beginners), your style and coaches, your gradings and competitions, and what a first session is like.">{{ org.about }}</textarea>
+        <div class="form-text d-flex justify-content-between gap-2">
+            <span>Plain text. Leave a blank line between paragraphs.</span>
+            <span class="text-nowrap" id="clubAboutCount" aria-live="polite">{{ org.about|length }} / {{ org.ABOUT_MAX_LENGTH }}</span>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label small fw-semibold" for="clubLogo">Club logo</label>
+        {% if org.logo %}
+        <div class="d-flex align-items-center gap-3 mb-2">
+            {% org_logo org '#ffffff' 56 180 %}
+            <button type="submit" name="remove_logo" value="1" class="btn btn-link btn-sm text-danger p-0" data-confirm="Remove your club's logo? It's also used in the sidebar, the member portal and emails.">Remove</button>
+        </div>
+        {% endif %}
+        <input type="file" name="logo" id="clubLogo" class="form-control form-control-sm" accept="image/png,image/jpeg,image/webp">
+        <div class="form-text">PNG, JPG or WebP, up to 2MB. This is your club's logo everywhere in Dojo, the same one as in Appearance.</div>
+    </div>
+    <button type="submit" class="btn btn-dark btn-sm">Save club page</button>
+</form>
+<script>
+(function () {
+    var box = document.getElementById('clubAbout'), count = document.getElementById('clubAboutCount');
+    if (!box || !count) return;
+    box.addEventListener('input', function () { count.textContent = box.value.length + ' / ' + box.maxLength; });
+})();
+</script>
