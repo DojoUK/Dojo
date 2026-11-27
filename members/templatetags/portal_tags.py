@@ -9,12 +9,11 @@ register = template.Library()
 @register.simple_tag(takes_context=True)
 def portal_family(context, member):
     """
-    The people to offer in the portal's switcher: [{'member', 'url', 'current'}], empty unless the member
-    is in a family with someone else. Each link opens the same page for that person where it can.
+    The people in the portal's switcher, top right of the header: [{'member', 'url', 'current'}]. It's
+    always shown, so it's where the member's name is: just them, or everyone in their family. Each
+    link opens the same page for that person where it can.
     """
-    people = family.family_members(member)
-    if len(people) < 2:
-        return []
+    people = family.family_members(member) or [member]
     request = context.get('request')
     match = getattr(request, 'resolver_match', None)
     rows = []

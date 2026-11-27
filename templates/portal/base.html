@@ -31,22 +31,18 @@
     </style>
     {% endwith %}
     <style>
-        /* A compact header, like the Dojo network's: the club's logo and name, then the page title with the
-           member's name beside it on one line, and the family picker (if any) on the right. */
+        /* A compact header, like the Dojo network's: the club's logo and name (with Find clubs on the right),
+           then the page title on the left and the member switcher on the right, under Find clubs. The
+           switcher is always there, even for one person: it's where the member's name is shown. It sits
+           tight to the right and grows to the left as family members are added, scrolling if it runs out
+           of room. */
         .p-hero { padding: calc(env(safe-area-inset-top) + .625rem) 0 .75rem; }
-        .p-hero .p-wrap { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: .75rem; align-items: baseline; }
+        .p-hero .p-wrap { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: .75rem; align-items: center; }
         .p-hero .p-brand { grid-column: 1 / -1; min-height: 1.75rem; }
         .p-hero .p-title-row { display: contents; }
         .p-hero .p-title { grid-column: 1; grid-row: 2; font-size: 1.625rem; margin-top: .375rem; }
-        .p-hero .p-subtitle { grid-column: 2; grid-row: 2; font-size: .9375rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .p-hero .p-family { grid-column: 3; grid-row: 2; align-self: center; margin-top: .375rem; max-width: none; }
-        /* Phones: the member's name drops under the title (with a family, the picker already says who). */
-        @media (max-width: 575.98px) {
-            .p-hero .p-wrap { grid-template-columns: minmax(0, 1fr) auto; }
-            .p-hero .p-subtitle { grid-column: 1 / -1; grid-row: 3; }
-            .p-hero .p-family { grid-column: 2; }
-            .p-hero.has-family .p-subtitle { display: none; }
-        }
+        .p-hero .p-family { grid-column: 2; grid-row: 2; justify-self: end; justify-content: flex-end; min-width: 0;
+                            max-width: 100%; margin-top: .375rem; }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
@@ -55,7 +51,7 @@
 {% portal_page_title as page_title %}
 
 {% portal_family member as family %}
-<header class="p-hero{% if family %} has-family{% endif %}">
+<header class="p-hero">
     <div class="p-wrap">
         <div class="p-brand">
             {% org_logo org org.theme.sidebar_color 28 130 %}
@@ -70,9 +66,8 @@
         {# The page title, with the family picker (if there's a family) on the right of the same line. #}
         <div class="p-title-row">
             <h1 class="p-title">{{ page_title }}</h1>
-            {% portal_family member as family %}
             {% if family %}
-            <div class="p-family" role="navigation" aria-label="Family members">
+            <div class="p-family" role="navigation" aria-label="{% if family|length > 1 %}Family members{% else %}Member{% endif %}">
                 <div class="p-segmented">
                     {% for person in family %}
                     <a href="{{ person.url }}" class="{% if person.current %}current{% endif %}"{% if person.current %} aria-current="page"{% endif %} title="{{ person.member.name }}"><span class="p-name-full">{{ person.member.name }}</span><span class="p-name-short" aria-hidden="true">{{ person.short_name }}</span></a>
@@ -81,7 +76,6 @@
             </div>
             {% endif %}
         </div>
-        <p class="p-subtitle">{{ member.name }}</p>
     </div>
 </header>
 

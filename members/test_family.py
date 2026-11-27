@@ -120,10 +120,15 @@ class PortalSwitcherTests(FamilyBase):
             self.assertContains(page, 'aria-label="Family members"')
             self.assertContains(page, self.portal_for(self.other, name))
 
-    def test_no_switcher_without_a_family(self):
+    def test_on_their_own_the_switcher_shows_just_their_name(self):
         family.unlink(self.other)
-        page = self.client.get(self.portal_for(self.member, 'portal_bookings'))
-        self.assertNotContains(page, 'aria-label="Family members"')
+        page = self.client.get(self.portal_for(self.member, 'portal_bookings')).content.decode()
+        switcher = page[page.index('class="p-family"'):page.index('</header>')]
+        self.assertIn('aria-label="Member"', switcher)
+        self.assertIn(f'<span class="p-name-full">{self.member.name}</span>', switcher)
+        self.assertEqual(switcher.count('<a '), 1)
+        self.assertNotIn(self.other.name, switcher)
+        self.assertNotIn('class="p-subtitle"', page)   # the name is only in the switcher now
 
     def test_each_child_books_separately(self):
         self.put_on(plan(self.org, limit=None))
