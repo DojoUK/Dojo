@@ -30,16 +30,35 @@
         }
     </style>
     {% endwith %}
+    <style>
+        /* A compact header, like the Dojo network's: the club's logo and name, then the page title with the
+           member's name beside it on one line, and the family picker (if any) on the right. */
+        .p-hero { padding: calc(env(safe-area-inset-top) + .625rem) 0 .75rem; }
+        .p-hero .p-wrap { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: .75rem; align-items: baseline; }
+        .p-hero .p-brand { grid-column: 1 / -1; min-height: 1.75rem; }
+        .p-hero .p-title-row { display: contents; }
+        .p-hero .p-title { grid-column: 1; grid-row: 2; font-size: 1.625rem; margin-top: .375rem; }
+        .p-hero .p-subtitle { grid-column: 2; grid-row: 2; font-size: .9375rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .p-hero .p-family { grid-column: 3; grid-row: 2; align-self: center; margin-top: .375rem; max-width: none; }
+        /* Phones: the member's name drops under the title (with a family, the picker already says who). */
+        @media (max-width: 575.98px) {
+            .p-hero .p-wrap { grid-template-columns: minmax(0, 1fr) auto; }
+            .p-hero .p-subtitle { grid-column: 1 / -1; grid-row: 3; }
+            .p-hero .p-family { grid-column: 2; }
+            .p-hero.has-family .p-subtitle { display: none; }
+        }
+    </style>
     {% block extra_head %}{% endblock %}
 </head>
 <body class="portal">
 {% portal_sections member active as sections %}
 {% portal_page_title as page_title %}
 
-<header class="p-hero">
+{% portal_family member as family %}
+<header class="p-hero{% if family %} has-family{% endif %}">
     <div class="p-wrap">
         <div class="p-brand">
-            {% org_logo org org.theme.sidebar_color 32 140 %}
+            {% org_logo org org.theme.sidebar_color 28 130 %}
             <span class="p-brand-name">{{ org.name }}</span>
             {# Back out to the Dojo network: all their clubs if they have a Dojo account, otherwise the club finder. #}
             {% if member.account_id %}
